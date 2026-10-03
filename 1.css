@@ -128,6 +128,115 @@ body {
     max-width: 100%;
     font-size: 68px;
 }
+
+
+/* ================= 色块（rect-1 ~ rect-4）动效 =================
+   初始透明；等 text-15 的动效走到一半（进度到 A→E 的中点）时，
+   由 JS 加上 .is-revealed：
+     1) rectFadeIn：淡入（每个色块随机一点时长/延迟，形成错落淡入）；
+     2) rectFloat ：淡入结束后开始的无限循环"随机放大 + 轻微移动"，
+        之后一直保持运行，所以继续下滑时动效是连续不断的。
+   鼠标往上滑时由 JS 换成 .is-hiding：原地淡出，色块随之消失，
+   退回触发点之前就完全看不见了，和下滑过程互为倒放。 */
+.rect-box {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+}
+
+.rect-box.is-revealed {
+    opacity: 1;   /* 兜底：万一下面的 animation 简写没生效，色块也一定是可见的 */
+    animation:
+        rectFadeIn var(--rfade, 900ms) cubic-bezier(0.22, 0.61, 0.36, 1) var(--rdelay, 0ms) both,
+        rectFloat var(--rdur, 7s) ease-in-out calc(var(--rfade, 900ms) + var(--rdelay, 0ms)) infinite;
+}
+
+/* 反向回退（上滑 / 往回滚）时的淡出：
+   位置冻结在消失那一刻 —— --rfrom 是 JS 在切换瞬间读到的当前 transform，
+   所以色块是"在原地"散掉，不会啪地弹回初始位置再淡出。
+   时长沿用该色块自己的淡入时长（--rfade），出现与消失是对称的。 */
+.rect-box.is-hiding {
+    animation: rectFadeOut var(--rfade, 900ms) ease-in both;
+}
+
+@keyframes rectFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes rectFadeOut {
+    from {
+        opacity: 1;
+        transform: var(--rfrom, none);
+    }
+    to {
+        opacity: 0;
+        transform: var(--rfrom, none);
+    }
+}
+
+/* 循环的首尾都回到基础状态（scale 1 / 位移 0），
+   所以每次循环开始时换一组随机参数只会改变轨迹，不会出现位置跳变 */
+@keyframes rectFloat {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(var(--rtx, 0px), var(--rty, 0px), 0) scale(var(--rscale, 1.08));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rect-box.is-revealed {
+        animation: rectFadeIn var(--rfade, 900ms) ease-out var(--rdelay, 0ms) both;
+    }
+}
+
+.rect-1 {
+    left: 52vw;
+    top: 57.5%;
+    width: 13vw;
+    height: 5vw;
+    border-radius: 40px;
+    background: #9CDCDD;
+    z-index: 2;
+}
+
+.rect-2 {
+    left: 67vw;
+    top: 57.7%;
+    width: 25vw;
+    height: 12vw;
+    border-radius: 50px;
+    background: #95C3F1;
+    z-index: 3;
+}
+
+.rect-3 {
+    left: 39vw;
+    top: 59%;
+    width: 30vw;
+    height: 10vw;
+    border-radius: 54px;
+    background: #C7C6F2;
+    z-index: 4;
+}
+
+.rect-4 {
+    left: 74vw;
+    top: 60.3%;
+    width: 13vw;
+    height: 5vw;
+    border-radius: 40px;
+    background: #9CDCDD;
+    z-index: 5;
+}
 .text-16 {
     top: 64%;
     right: 10%;

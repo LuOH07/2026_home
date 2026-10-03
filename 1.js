@@ -74,7 +74,13 @@ const ORDER_AFTER = [
    0.5 = 一半速度；过渡长度用来让进出区间时速度平滑变化，不会突然一顿。
    下面这条：text-11 → text-14 这一段（含 text-12 / text-13 / img-9）用一半速度 */
 const SLOW_ZONES = [
-    [".text-11", ".text-14", 0.5, 400]
+    [".text-11", ".text-14", 0.5, 400],
+    /* text-15（Solution: STING）→ text-16：色块淡入 + 循环动效的整段。
+       这一段滚轮/触摸/翻页键的位移按 0.5 倍推进（和上面一段同速，
+       比正常慢 2 倍），色块在屏幕上的停留时间拉长，方便多看一会儿。
+       过渡长度同样是 400，进出不会有顿挫。
+       还是觉得粘就继续调大（如 0.65 / 0.8），想更慢就调小。 */
+    [".text-15", ".text-16", 0.5, 400]
 ];
 
 /* ================= 与文字同样出场的图片 ================= */
@@ -377,6 +383,9 @@ function render() {
         // 组内绑定：图片跟着文字做同一套位移与缩放，相对位置保持静态不变
         applyFollowers(followers, { dx, dy, sc, op }, left, top);
     });
+
+    // 色块的出现时机跟着文字走，每帧检查一次（已点亮后立即返回）
+    updateRects();
 }
 
 /* 让绑定在文字上的图片跟随出场。
@@ -403,6 +412,79 @@ function applyFollowers(followers, state, hostLeft, hostTop) {
         f.el.style.visibility = "visible";
         f.el.style.opacity = state.op;
         f.el.style.transform = `translate(${dx}px, ${dy}px) scale(${state.sc})`;
+    });
+}
+
+/* ================= 色块（rect-1 ~ rect-4）动效 ================= */
+/* 出现时机：text-15（Solution: STING）的动效进行到一半时，四个色块开始出现：
+     1) 先各自淡入 —— 每个色块的淡入时长 / 延迟都是随机的，所以是错落淡入；
+     2) 淡入结束后进入 CSS 里那条无限循环的"随机放大 + 轻微移动"，
+        并且一直保持运行，不随页面停滑而停下，所以继续下滑时动效始终连续。
+   上滑（往回滚）时整条时间轴是倒放的，色块同样可逆：
+   进度退回触发点之前就在原地淡出，再往下滑又会重新淡入。 */
+const rectEls = Array.from(document.querySelectorAll(".rect-box"));
+const rectRand = (a, b) => a + Math.random() * (b - a);
+
+/* 触发点 = text-15 整段动效 A→E 上的位置比例：
+   0   = 刚开始飞入；0.5 = 动效到一半（正好是 H，放大刚结束、开始收拢落位）；
+   1   = 完全落位。想更早/更晚改这一个数即可。 */
+const RECT_REVEAL_AT = 0.5;
+
+/* 只改循环曲线的参数。关键帧 0% / 100% 都回到基础状态，
+   所以在循环边界上换参数只会换一条运动轨迹，不会产生位置跳变 */
+function randomizeRectMotion(el) {
+    el.style.setProperty("--rscale", rectRand(1.12, 1.34).toFixed(3));
+    el.style.setProperty("--rtx", rectRand(-36, 36).toFixed(1) + "px");
+    el.style.setProperty("--rty", rectRand(-26, 26).toFixed(1) + "px");
+}
+
+rectEls.forEach(el => {
+    // 每个色块一套独立的初始参数：循环周期 / 淡入时长 / 淡入延迟
+    el.style.setProperty("--rdur", rectRand(2.4, 4.0).toFixed(2) + "s");
+    el.style.setProperty("--rfade", Math.round(rectRand(600, 1100)) + "ms");
+    el.style.setProperty("--rdelay", Math.round(rectRand(0, 450)) + "ms");
+    randomizeRectMotion(el);
+
+    // 每转完一圈换一组新的随机参数（周期保持不变，避免打乱动画相位）
+    el.addEventListener("animationiteration", () => {
+        if (el.classList.contains("is-revealed")) randomizeRectMotion(el);
+    });
+
+    // 淡出播完就摘掉 is-hiding，让色块回到干净的"未出现"状态
+    el.addEventListener("animationend", e => {
+        if (e.animationName === "rectFadeOut") el.classList.remove("is-hiding");
+    });
+});
+
+let rectsShown = false;
+
+/* 由 render() 每帧调用：进度越过触发点就出现，退回触发点就消失 */
+function updateRects() {
+    if (rectEls.length === 0 || items.length === 0) return;
+
+    // 触发点 = text-15 动效 A→E 的 RECT_REVEAL_AT 处；找不到该文字就用入场结束兜底
+    const host = items.find(it => it.el.matches(".text-15"));
+    const triggerP = host
+        ? host.A + (host.E - host.A) * RECT_REVEAL_AT
+        : INTRO_LEN;
+
+    const shouldShow = cur >= triggerP;
+    if (shouldShow === rectsShown) return;   // 状态没变，什么都不用做
+    rectsShown = shouldShow;
+
+    rectEls.forEach(el => {
+        if (shouldShow) {
+            // 再次下滑经过这里时换一条新轨迹，再重新淡入
+            el.classList.remove("is-hiding");
+            randomizeRectMotion(el);
+            el.classList.add("is-revealed");
+        } else {
+            /* 回退：先把此刻漂浮到的位置冻结成 --rfrom，让淡出在原地进行，
+               不会弹回初始位置 —— 这样上滑才是下滑的完整倒放 */
+            el.style.setProperty("--rfrom", getComputedStyle(el).transform);
+            el.classList.remove("is-revealed");
+            el.classList.add("is-hiding");
+        }
     });
 }
 
