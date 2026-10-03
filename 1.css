@@ -130,14 +130,6 @@ body {
 }
 
 
-/* ================= 色块（rect-1 ~ rect-4）动效 =================
-   初始透明；等 text-15 的动效走到一半（进度到 A→E 的中点）时，
-   由 JS 加上 .is-revealed：
-     1) rectFadeIn：淡入（每个色块随机一点时长/延迟，形成错落淡入）；
-     2) rectFloat ：淡入结束后开始的无限循环"随机放大 + 轻微移动"，
-        之后一直保持运行，所以继续下滑时动效是连续不断的。
-   鼠标往上滑时由 JS 换成 .is-hiding：原地淡出，色块随之消失，
-   退回触发点之前就完全看不见了，和下滑过程互为倒放。 */
 .rect-box {
     position: absolute;
     display: block;
@@ -156,10 +148,7 @@ body {
         rectFloat var(--rdur, 7s) ease-in-out calc(var(--rfade, 900ms) + var(--rdelay, 0ms)) infinite;
 }
 
-/* 反向回退（上滑 / 往回滚）时的淡出：
-   位置冻结在消失那一刻 —— --rfrom 是 JS 在切换瞬间读到的当前 transform，
-   所以色块是"在原地"散掉，不会啪地弹回初始位置再淡出。
-   时长沿用该色块自己的淡入时长（--rfade），出现与消失是对称的。 */
+
 .rect-box.is-hiding {
     animation: rectFadeOut var(--rfade, 900ms) ease-in both;
 }
