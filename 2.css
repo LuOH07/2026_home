@@ -1,0 +1,436 @@
+
+.bg-video-wrap {
+    position: absolute;     /* 跟随底图/文档；不要用 fixed */
+    z-index: 0;             /* 层级：0 = 在正文之下；想让某个压在上面就在它自己那条里写 z-index */
+    pointer-events: none;   /* 不挡鼠标事件，不会影响原有滚动交互 */
+    background: transparent;/* 保持透明，1.js 画的 map.png 底图仍能看到 */
+
+    --rotate: 0deg;         /* ← 旋转角度：该类所有视频通用；单个视频可在自己那条里覆盖 */
+}
+
+/* 视频本体：宽度跟随容器，高度按视频原始比例自动，并整体旋转 --rotate */
+.bg-video-wrap > .bg-video {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+    transform: rotate(var(--rotate, 0deg));  
+    transform-origin: 50% 50%;               
+}
+
+/* ======================= CRISPR 类 ======================= */
+
+/* 出现 */
+.bg-video-wrap-crispr-1 {
+    top: 3.6%;             
+    right: 25%;             
+    width: 4vw;           
+    --rotate: 0deg;       
+}
+/* 敲除 */
+.bg-video-wrap-crispr-2 {
+    top: 10.7%;             
+    right: 16%;             
+    width: 6.5vw;           
+    --rotate: 0deg;       
+}
+/* 走路 */
+.bg-video-wrap-crispr-3 {
+    top: 10.9%;             
+    right: 24%;             
+    width: 6vw;           
+    --rotate: 0deg;       
+}
+
+/* 消失 */
+.bg-video-wrap-crispr-4 {
+    top: 5%;             
+    right: 14%;             
+    width: 9vw;           
+    --rotate: 0deg;       
+}
+
+/* ======================= gene 类 ======================= */
+
+/* 出现 */
+.bg-video-wrap-gene-1 {
+    top: 6.5%;
+    right: 22.5%;
+    width: 6vw;
+    --rotate: -8deg;         
+    z-index: 2;              
+}
+
+.bg-video-wrap-gene-2 {
+    top: 6.4%;
+    right: 23%;
+    width: 6vw;
+    --rotate: -8deg;         
+    z-index: 1;              
+}
+/* 消失 */
+.bg-video-wrap-gene-3 {
+    top: 7.5%;
+    right: 22.5%;
+    width: 6vw;
+    --rotate: -8deg;         
+    z-index: 2;              
+}
+
+.bg-video-wrap-gene-4 {
+    top: 7.4%;
+    right: 23%;
+    width: 6vw;
+    --rotate: -8deg;         
+    z-index: 1;             
+}
+
+/* ======================= TnpB 类 ======================= */
+
+/* --------------------------------------------------------------------------
+   TnpB_1：跟着滚轮移动的那个（原来走路的那条，现在改成会动的）
+   位置（起点 / 终点）全部用和视频本身一样的 top / right 写法写在下面，
+   2.js 只负责“滚到哪就走到哪”。下面那条 top / right 是它没被移动时的位置。
+   -------------------------------------------------------------------------- */
+.bg-video-wrap-tnpb-1 {
+    top: 24.3%;
+    right: 27%;
+    width: 4vw;
+    --rotate: 0deg;
+    will-change: transform; /* 跟着滚动在动，提示浏览器 */
+}
+
+/* 位移由 2.js 每帧写进 transform，这条只是给个初始值 */
+.bg-video-wrap-tnpb-1[data-tnpb-move] {
+    transform: translate3d(0px, 0px, 0);
+}
+
+/* ========================= TnpB_1 运动路径 =========================
+   下面每个 .tnpb-move-N 就是一个“点”，写法与视频本体完全一样：
+   top = 纵坐标（相对底图高度），right = 横坐标（相对底图宽度）。
+
+   规则（★ 位置完全由滚动位置决定，没有“自动播放”）：
+     · 点是【成对】的，一对 = 一段，每一段的终点不是下一段的起点：
+           .tnpb-move-1 = 第 1 段起点    .tnpb-move-2 = 第 1 段终点
+           .tnpb-move-3 = 第 2 段起点    .tnpb-move-4 = 第 2 段终点
+           .tnpb-move-5 = 第 3 段起点    .tnpb-move-6 = 第 3 段终点
+           .tnpb-move-7 = 第 4 段起点    .tnpb-move-8 = 第 4 段终点
+     · 人的纵坐标始终 = 视口竖直中心线的纵坐标：滚轮滚到哪儿，人就站在哪儿；
+     · 中心线落在某一段【起点 top → 终点 top】之间时，人就在这一段上，
+       按中心线在这段里占的纵向比例取一个点（横向 right / left 也跟着这个比例走）；
+     · 中心线落在两段之间（比如第 3 段终点和第 4 段起点中间）→
+       这段纵向范围里没有轨迹，人停在【下一段的起点】等着，
+       中心线扫到这个起点，才开始跟着中心线往这一段终点走；
+     · 中心线在第 1 段起点之上 → 停在第 1 段起点；
+       中心线在最后一段终点之下 → 停在最后一段终点；
+     · 往回滚完全对称，不循环、也不会消失；
+     · 页面滚到头之后继续往下滚：不再滚页面，而是继续把最后一段轨迹走完
+       （页面保持不动）；往上滚时先原路退回这段“额外滑动”
+       —— 见 2.js 里的 feedMotion()。
+
+   单位随便：%、vw、vh、px（px 直接写数字）都可以。
+
+   这些点由 2.js 自动创建在 <body> 下的 .tnpb-points 里 ——
+   必须挂在 body 上（不能写进 .bg-video-wrap-tnpb-1 里面），
+   否则 top / right 会变成相对视频容器计算，和视频本体就不是一个参照系了。
+
+   改法举例：
+       第 2 段覆盖哪段滚动   → 改 .tnpb-points > .tnpb-move-3 / -4 的 top
+                               （第 3 段的 top 是这一段的起点，第 4 段的 top 是终点）
+       第 2 段横向走多远     → 改这两个点的 right / left
+       加一段                → ① 把下面的 --tnpb-points 加 2（例如 42 → 44）
+                               ② 照抄 .tnpb-move-1 ～ -2 的格式，补上下一对点
+                               （2.js 不用动，它会自己数出来）
+   ================================================================== */
+
+/* 这些点只是给 2.js 读 top / right 用的，不显示、不挡东西、不参与布局。
+   注意这里不能给 .tnpb-points 设 0 高度：它的后代写的是百分比 top，
+   百分比会相对“包含块高度”解析，一旦包含块高度是 0，
+   top: 24.3% 会变成 0px（2.js 里也因此改成自己按底图尺寸换算 %）。
+
+   ★ --tnpb-points = 这里一共写了几个点。2.js 按这个数把点建出来，
+     段数 = 点数 ÷ 2，所以改段数只需改这一个数字 + 补/删下面的点规则。
+     现在是 42 个点 = 21 段；要 22 段就改成 44，再往下补 .tnpb-move-43 / -44。 */
+.tnpb-points {
+    --tnpb-points: 42;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.tnpb-points > div {
+    position: absolute;
+    width: 0;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* ---- 第 1 段：点 1 → 点 2 ---- */
+
+/* 第 1 段起点（人一开始站在这里） */
+.tnpb-points > .tnpb-move-1 {
+    top: 20.7%;
+    right: 20%;
+}
+
+/* 第 1 段终点 */
+.tnpb-points > .tnpb-move-2 {
+    top: 21.1%;
+    right: 31%;
+}
+
+/* ---- 第 2 段：点 3 → 点 4（它的起点 top = 这一段什么时候开始走）---- */
+
+/* 第 2 段起点 */
+.tnpb-points > .tnpb-move-3 {
+    top: 21.1%;
+    right: 31%;
+}
+
+/* 第 2 段终点 */
+.tnpb-points > .tnpb-move-4 {
+    top: 23.5%;
+    right: 10%;
+}
+
+/* ---- 第 3 段：点 5 → 点 6 ---- */
+
+/* 第 3 段起点 */
+.tnpb-points > .tnpb-move-5 {
+    top: 23.5%;
+    right: 10%;
+}
+
+/* 第 3 段终点 */
+.tnpb-points > .tnpb-move-6 {
+    top: 24.3%;
+    right: 32%;
+}
+
+
+/* 第 4 段起点 */
+.tnpb-points > .tnpb-move-7 {
+    top: 34.3%;
+    right: 14%;
+}
+
+/* 第 4 段终点 */
+.tnpb-points > .tnpb-move-8 {
+    top: 34.6%;
+    right: 25%;
+}
+
+/* 第 5 段起点 */
+.tnpb-points > .tnpb-move-9 {
+    top: 38.8%;
+    right: 20%;
+}
+
+/* 第 5 段终点 */
+.tnpb-points > .tnpb-move-10 {
+    top: 39.8%;
+    right: 16%;
+}
+
+/* 第 6 段起点 */
+.tnpb-points > .tnpb-move-11 {
+    top: 39.8%;
+    right: 16%;
+}
+
+/* 第 6 段终点 */
+.tnpb-points > .tnpb-move-12 {
+    top: 40%;
+    right: 14%;
+}
+
+/* 第 7 段起点 */
+.tnpb-points > .tnpb-move-13 {
+    top: 40%;
+    right: 14%;
+}
+
+/* 第 7 段终点 */
+.tnpb-points > .tnpb-move-14 {
+    top: 40.7%;
+    right: 20%;
+}
+
+/* 第 8 段起点 */
+.tnpb-points > .tnpb-move-15 {
+    top: 40.7%;
+    right: 20%;
+}
+
+/* 第 8 段终点 */
+.tnpb-points > .tnpb-move-16 {
+    top: 42%;
+    right: 9%;
+}
+
+/* 第 9 段起点 */
+.tnpb-points > .tnpb-move-17 {
+    top: 49.7%;
+    right: 21%;
+}
+
+/* 第 9 段终点 */
+.tnpb-points > .tnpb-move-18 {
+    top: 51%;
+    right:11%;
+}
+
+/* 第 10 段起点 */
+.tnpb-points > .tnpb-move-19 {
+    top: 51%;
+    right:11%;
+}
+
+/* 第 10 段终点 */
+.tnpb-points > .tnpb-move-20 {
+    top: 51.4%;
+    right: 25%;
+}
+
+/* 第 11 段起点 */
+.tnpb-points > .tnpb-move-21 {
+    top: 51.4%;
+    right: 25%;
+}
+
+/* 第 11 段终点 */
+.tnpb-points > .tnpb-move-22 {
+    top: 52.4%;
+    right: 21%;
+}
+
+/* 第 12 段起点 */
+.tnpb-points > .tnpb-move-23 {
+    top: 52.4%;
+    right: 21%;
+}
+
+/* 第 12 段终点 */
+.tnpb-points > .tnpb-move-24 {
+    top: 53.2%;
+    right: 27%;
+}
+
+/* 第 13 段起点 */
+.tnpb-points > .tnpb-move-25 {
+    top: 53.2%;
+    right: 27%;
+}
+
+/* 第 13 段终点 */
+.tnpb-points > .tnpb-move-26 {
+    top: 54.8%;
+    left: 10%;
+}
+
+/* 第 14 段起点 */
+.tnpb-points > .tnpb-move-27 {
+    top: 54.8%;
+    left: 10%;
+}
+
+/* 第 14 段终点 */
+.tnpb-points > .tnpb-move-28 {
+    top: 55.8%;
+    left: 14%;
+}
+
+/* 第 15 段起点 */
+.tnpb-points > .tnpb-move-29 {
+    top: 64.2%;
+    left: 17%;
+}
+
+/* 第 15 段终点 */
+.tnpb-points > .tnpb-move-30 {
+    top: 65.7%;
+    left: 31%;
+}
+
+/* 第 16 段起点 */
+.tnpb-points > .tnpb-move-31 {
+    top: 65.7%;
+    left: 31%;
+}
+
+/* 第 16 段终点 */
+.tnpb-points > .tnpb-move-32 {
+    top: 66.1%;
+    left: 15%;
+}
+
+/* 第 17 段起点 */
+.tnpb-points > .tnpb-move-33 {
+    top: 71.8%;
+    left: 27%;
+}
+
+/* 第 17 段终点 */
+.tnpb-points > .tnpb-move-34 {
+    top: 72.3%;
+    left: 9.5%;
+}
+
+/* 第 18 段起点 */
+.tnpb-points > .tnpb-move-35 {
+    top: 72.3%;
+    left: 9.5%;
+}
+
+/* 第 18 段终点 */
+.tnpb-points > .tnpb-move-36 {
+    top: 74.5%;
+    left: 30%;
+}
+
+/* 第 19 段起点 */
+.tnpb-points > .tnpb-move-37 {
+    top: 83.3%;
+    left: 26%;
+}
+
+/* 第 19 段终点 */
+.tnpb-points > .tnpb-move-38 {
+    top: 83.8%;
+    left: 10%;
+}
+
+/* 第 20 段起点 */
+.tnpb-points > .tnpb-move-39 {
+    top: 83.8%;
+    left: 10%;
+}
+
+/* 第 20 段终点 */
+.tnpb-points > .tnpb-move-40 {
+    top: 85.3%;
+    left: 24%;
+}
+
+/* 第 21 段起点 */
+.tnpb-points > .tnpb-move-41 {
+    top: 93.7%;
+    left: 14%;
+}
+
+/* 第 21 段终点 */
+.tnpb-points > .tnpb-move-42 {
+    top: 95.4%;
+    left: 26.5%;
+}
+
+/* 消失：TnpB_2 不参与移动，仍然待在它原来的位置（和之前完全一样） */
+.bg-video-wrap-tnpb-2 {
+    top: 23.7%;
+    right: 20%;
+    width: 4.5vw;
+    --rotate: 0deg;
+}

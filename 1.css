@@ -1,0 +1,318 @@
+@font-face {
+    font-family: 'harding-text-web-regular-regular';
+    src: url('https://static.igem.wiki/teams/6059/wiki/font/harding-text-web-regular-regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+html {
+    margin: 0;
+    padding: 0;
+    height: auto;
+    scroll-behavior: auto;
+}
+body {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    height: auto;
+    overflow-x: hidden;
+}
+.text-box {
+    font-family: 'harding-text-web-regular-regular', sans-serif;
+    color: #000000;
+    position: absolute;
+    transform-origin: 0 0;      
+    will-change: transform, opacity;
+    visibility: hidden;         
+    pointer-events: none;
+
+
+    display: flex;                
+    flex-direction: column;
+    align-items: center;          
+    text-align: center;           
+}
+.text-1 {
+    top: 3%;
+    left: 12%;
+    max-width: 40%;
+    font-size: 28px;
+}
+.text-2 {
+    top: 7%;
+    left: 10%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-3 {
+    top: 11%;
+    left: 20%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-4 {
+    top: 13.2%;
+    left: 20%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-5 {
+    top: 15.5%;
+    left: 20%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-6 {
+    top: 21%;
+    left: 10%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-7 {
+    top: 26%;
+    left: 3%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-8 {
+    top: 28%;
+    left: 3%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-9 {
+    top: 30%;
+    left: 3%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-10 {
+    top: 34.5%;
+    left: 15%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-11 {
+    top: 40%;
+    left: 10%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-12 {
+    top: 43%;
+    left: 30%;
+    max-width: 40%;
+    font-size: 28px;
+}
+.text-13 {
+    top: 46%;
+    left: 15%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-14 {
+    top: 50%;
+    left: 13%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-15 {
+    top: 59%;
+    right: 20%;
+    max-width: 100%;
+    font-size: 68px;
+}
+
+
+.rect-box {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+    animation: rectFloat var(--rdur, 7s) ease-in-out infinite;
+}
+
+@keyframes rectFloat {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(var(--rtx, 0px), var(--rty, 0px), 0) scale(var(--rscale, 1.08));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rect-box {
+        animation: none;
+    }
+}
+
+.rect-1 {
+    left: 52vw;
+    top: 57.5%;
+    width: 13vw;
+    height: 5vw;
+    border-radius: 40px;
+    background: #9CDCDD;
+    z-index: 2;
+}
+
+.rect-2 {
+    left: 67vw;
+    top: 57.7%;
+    width: 25vw;
+    height: 12vw;
+    border-radius: 50px;
+    background: #95C3F1;
+    z-index: 3;
+}
+
+.rect-3 {
+    left: 39vw;
+    top: 59%;
+    width: 30vw;
+    height: 10vw;
+    border-radius: 54px;
+    background: #C7C6F2;
+    z-index: 4;
+}
+
+.rect-4 {
+    left: 74vw;
+    top: 60.3%;
+    width: 13vw;
+    height: 5vw;
+    border-radius: 40px;
+    background: #9CDCDD;
+    z-index: 5;
+}
+.text-16 {
+    top: 64%;
+    right: 10%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-16 {
+    top: 65%;
+    right: 10%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-17 {
+    top: 73%;
+    right: 8%;
+    max-width: 45%;
+    font-size: 28px;
+}
+.text-18 {
+    top: 79.5%;
+    right: 9%;
+    max-width: 38%;
+    font-size: 28px;
+}
+.text-19 {
+    top: 86%;
+    right: 10%;
+    max-width: 40%;
+    font-size: 28px;
+}
+.text-20 {
+    top: 92%;
+    right: 9%;
+    max-width: 45%;
+    font-size: 28px;
+}
+
+
+.img-box {
+    display: block;
+    position: absolute;        
+    transform-origin: 0 0;     
+    will-change: transform, opacity;
+    visibility: hidden;        
+    height: auto;
+    z-index: 1;
+    pointer-events: none;      
+}
+
+.img-1 {
+    top: 0.6%;
+    left: 15%;
+    width: 35%;
+}
+.img-2 {
+    top: 10%;
+    left: 3%;
+    width: 15%;
+}
+.img-3 {
+    top: 12.2%;
+    left: 3%;
+    width: 15%;
+}
+.img-4 {
+    top: 14.5%;
+    left: 3%;
+    width: 15%;
+}
+.img-5 {
+    top: 22%;
+    left: 15%;
+    width: 35%;
+}
+.img-6 {
+    top: 25%;
+    left: 48%;
+    width: 15%;
+}
+.img-7 {
+    top: 27%;
+    left: 48%;
+    width: 15%;
+}
+.img-8 {
+    top: 30%;
+    left: 48%;
+    width: 15%;
+}
+.img-9 {
+    top: 42%;
+    left: 8%;
+    width: 20%;
+}
+.img-10 {
+    top: 67%;
+    right: 43%;
+    width: 15%;
+}
+.img-11 {
+    top: 67%;
+    right: 25%;
+    width: 15%;
+}
+.img-12 {
+    top: 67%;
+    right: 5%;
+    width: 15%;
+}
+.img-13 {
+    top: 76%;
+    right: 10%;
+    width: 40%;
+}
+.img-14 {
+    top: 94%;
+    right: 12%;
+    width: 40%;
+}

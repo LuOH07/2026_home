@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>home</title>
+    <link rel="stylesheet" href="./1.css">
+    <link rel="stylesheet" href="./2.css">
+</head>
+<body>
+    <div class="text-box text-1">Genome editing is a cornerstone of synthetic biology. </div>
+    <div class="text-box text-2">With the capacity to precisely knock out, insert, or replace specific DNA sequences, CRISPR has substantially broadened the scope of synthetic biology:</div>
+    <div class="text-box text-3">1. Enhancing target metabolite yields in model microbes;</div>
+    <div class="text-box text-4">2. Precisely engineering genomes to construct specialized chassis cells;</div>
+    <div class="text-box text-5">3. Developing biosensors responsive to environmental signals.</div>
+    <div class="text-box text-6">However, conventional CRISPR-Cas9 and Cas12 systems face notable limitations:</div>
+    <div class="text-box text-7">1. High plasmid burden: The large molecular size of Cas9/Cas12 effector proteins severely limits transmembrane transformation efficiency [1].</div>
+    <div class="text-box text-8">2. High heterologous expression toxicity: Abundant intracellular expression frequently causes non-specific cytotoxicity and imposes heavy metabolic burdens on host cells [2].</div>
+    <div class="text-box text-9">3. Low editing efficiency in non-model hosts: Most characterized promoters and sgRNA scaffolds are tailored to standard model strains, often leading to transcriptional incompatibility and restricted target recognition in non-model bacteria [3].</div>
+    <div class="text-box text-10">In this context, TnpB—a compact nuclease and evolutionary ancestor of Cas12,offers a promising path toward highly flexible, miniature editing tools.</div>
+    <div class="text-box text-11">Transposon-encoded TnpB nucleases provide a compelling template for compact genome editor development owing to their minimal molecular size [4]. </div>
+    <div class="text-box text-12">While retaining RNA-guided endonuclease activity, the compact architecture of TnpB substantially reduces protein folding and expression bottlenecks, resulting in lower metabolic burden and superior cellular expression stability [5].</div>
+    <div class="text-box text-13">We selected the ISHahl1 subtype of TnpB from Halorhodospira halochloris, which exhibits high cleavage activity and well-defined native TAM (Transposon-Associated Motif; 5'-CTAC-3') recognition [6]. </div>
+    <div class="text-box text-14">However, ISHahl1 TnpB remains constrained by its strict sequence preference for target-flanking motifs, hindering comprehensive target coverage across critical genomic regions.</div>
+    <div class="text-box text-15">Solution: STING</div>
+
+    <div class="rect-box rect-1"></div>
+    <div class="rect-box rect-2"></div>
+    <div class="rect-box rect-3"></div>
+    <div class="rect-box rect-4"></div>
+
+    <div class="text-box text-16">Using a "structure prediction–semi-rational design–experimental validation" workflow, we expanded the TAM recognition spectrum of ISHahl1 TnpB, successfully establishing an efficient, miniature genome editing platform.</div>
+    <div class="text-box text-17">We modeled ISHahl1 TnpB using AlphaFold3 and ESMFold, aligning its 3D coordinates with the ISDra2 ternary complex (PDB: 8EXA) to identify residues within the WED domain that directly interact with the TAM.</div>
+    <div class="text-box text-18">We performed targeted random mutagenesis on the predicted contact regions and cloned the resulting library into the pSTING backbone. Variants were subjected to positive and negative dual-selection using fluorescent and toxic reporter systems, followed by sequencing to identify potential relaxed-specificity variants [7]. Broadened TAM recognition was subsequently confirmed via plasmid interference assays.</div>
+    <div class="text-box text-19">Quantitative editing efficiencies derived from plasmid interference assays were used to train predictive machine-learning models for downstream iterative engineering.</div>
+    <div class="text-box text-20">Through semi-rational engineering, we expanded the targeting scope of ISHahl1 TnpB, delivering a versatile, high-efficiency genome editing solution.</div>
+
+    <img class="img-box img-1" src="./1.png" alt="">
+    <img class="img-box img-2" src="./2.png" alt="">
+    <img class="img-box img-3" src="./3.png" alt="">
+    <img class="img-box img-4" src="./4.png" alt="">
+    <img class="img-box img-5" src="./1.png" alt="">
+    <img class="img-box img-6" src="./2.png" alt="">
+    <img class="img-box img-7" src="./3.png" alt="">
+    <img class="img-box img-8" src="./4.png" alt="">
+    <img class="img-box img-9" src="./4.png" alt="">
+    <img class="img-box img-10" src="./2.png" alt="">
+    <img class="img-box img-11" src="./3.png" alt="">
+    <img class="img-box img-12" src="./4.png" alt="">
+    <img class="img-box img-13" src="./1.png" alt="">
+    <img class="img-box img-14" src="./1.png" alt="">
+
+    <!-- 背景视频（含一直在移动的 TnpB_2）由 2.js 自动挂载，
+         位置在 2.css，移动的起点/终点也在 2.css，移动方式在 2.js -->
+    <script src="./1.js"></script>
+    <script src="./2.js"></script>
+</body>
+</html>
