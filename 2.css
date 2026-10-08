@@ -1,4 +1,49 @@
 
+/* ==========================================================================
+   ★ 顶部“引导段” --lead-in：给页面顶上留一段可滚动的空白（随时可以整块删掉）
+   --------------------------------------------------------------------------
+   为什么需要它：人物的纵坐标 = 视口竖直中心线的纵坐标，而中心线最低只能到
+   “视口高 ÷ 2”那个位置 —— 底图最顶上那一带（大约半个视口高以内）永远扫不到，
+   轨迹最上面那几个点就走不了（crispr-3 的第一个点就在那一带）。
+
+   这里做的事：把【底图 + 页面里所有内容】一起往下挪 --lead-in 这么多，
+   于是整页在顶上多出这么一段可滚动的距离，中心线就能一路扫到底图的最顶端。
+   因为它们是一起挪的，底图 / 视频 / 文字 / 图片 / 色块 / 轨迹点之间的
+   相对位置完全不变，只是整页整体往下了一段。
+
+   · 改高度 / 关掉：只改下面 :root 里的 --lead-in（0 = 关掉，页面和以前一模一样）；
+   · :root 和下面这一组规则随时可以整块删掉，删掉就等于 0；
+   · 它只是为了让鼠标多滚一点、把人能送到最上面那几个点，和底图内容无关。
+   ========================================================================== */
+:root {
+    --lead-in: 50vh;
+}
+
+/* 底图跟着往下挪同样的距离 —— 1.js 只设了 background-image / repeat / size，
+   background-position 留在这里控制 */
+body {
+    background-position: 0 var(--lead-in, 0px);
+}
+
+/* 1.js 管的那两类（文字 / 图片）：挪的是它们的“静态位置”，
+   1.js 量到的 top 会跟着变 → 它们出场的时间点也自动跟着挪；
+   而“钉在画面竖直中心”那一位移是 1.js 每帧算的，所以看起来还是钉在中心。 */
+.text-box,
+.img-box {
+    margin-top: var(--lead-in, 0px);
+}
+
+/* 色块：1.js 每帧会覆盖它们的 margin-top，所以这里用独立的 translate 属性
+   （和它那套 transform 漂浮动画互不干扰）来挪同样的距离。 */
+.rect-box {
+    translate: 0 var(--lead-in, 0px);
+}
+
+/* 视频容器（crispr-* / gene-* / tnpb-*）：同样往下挪 */
+.bg-video-wrap {
+    margin-top: var(--lead-in, 0px);
+}
+
 .bg-video-wrap {
     position: absolute;     /* 跟随底图/文档；不要用 fixed */
     z-index: 0;             /* 层级：0 = 在正文之下；想让某个压在上面就在它自己那条里写 z-index */
@@ -20,21 +65,24 @@
 
 /* ======================= CRISPR 类 ======================= */
 
-/* 出现 */
+/* 出现动画 —— ★ 位置已经去掉了：它平时完全不显示，只在“第一次滑到 crispr-3
+   第一个轨迹点”时，由 2.js 钉在【第 1 段起点】上播一遍（每次刷新只播一次），
+   播完 crispr-3 才出现。位置 / 倍速都写在 2.js 的 MOVE_FX 里。
+   ★ 宽度现在比 crispr-3 小 30%（4.2vw vs 6vw），所以出场动画切到 crispr-3
+     时大小会变大一点；想跟 crispr-3 一样大就改回 6vw。 */
 .bg-video-wrap-crispr-1 {
-    top: 3.6%;             
-    right: 25%;             
-    width: 4vw;           
+    width: 4.2vw;         
     --rotate: 0deg;       
 }
-/* 敲除 */
-.bg-video-wrap-crispr-2 {
-    top: 10.7%;             
-    right: 16%;             
-    width: 6.5vw;           
-    --rotate: 0deg;       
-}
-/* 走路 */
+
+/* crispr-2 已经去掉了 —— 2.js 的 VIDEO_GROUPS 里 CRISPR 第 2 格写成了 null，
+   所以根本不会创建这个容器，这里也不用再写规则。
+   想恢复：把那一格改回 "./assets/CRISPR_2.webm"，再在这里补回 top / right / width。 */
+
+/* 走路 —— ★ 这个现在和 TnpB_1 一样会跟着滚动位置走（完整的那套走动逻辑）。
+   它的轨迹点在下面 crispr-3 那一节（.crispr3-points > .crispr3-move-N），
+   数字随你改；那份删掉的话它会自动借用 tnpb-1 的点。
+   （它自己这条 top / right 对走动没有影响 —— 位置完全由轨迹点决定。） */
 .bg-video-wrap-crispr-3 {
     top: 10.9%;             
     right: 24%;             
@@ -42,10 +90,11 @@
     --rotate: 0deg;       
 }
 
-/* 消失 */
+/* 终点动画（敲除）—— ★ 位置也已经去掉了：它平时完全不显示，只在 crispr-3
+   往下滑走到【第 2 段终点】时，由 2.js 挪到那个点上播一遍；播完它消失、
+   crispr-3 再出现并常驻在终点。再滑下来会再播一次。
+   位置 / 倍速同样写在 2.js 的 MOVE_FX 里。 */
 .bg-video-wrap-crispr-4 {
-    top: 5%;             
-    right: 14%;             
     width: 9vw;           
     --rotate: 0deg;       
 }
@@ -61,6 +110,7 @@
     z-index: 2;              
 }
 
+/* gene-2：静态可见，和 gene-1 是并排的一对（两个重复的） */
 .bg-video-wrap-gene-2 {
     top: 6.4%;
     right: 23%;
@@ -68,18 +118,20 @@
     --rotate: -8deg;         
     z-index: 1;              
 }
-/* 消失 */
+
+/* gene-3 / gene-4：★ 原来静态摆着的那两个不要了 —— 位置去掉了，平时完全不显示。
+   它们现在只做“同步动画”：crispr-4 那个终点动画一触发，2.js 就把
+     gene-3 摆到 gene-1 的位置上、gene-4 摆到 gene-2 的位置上，各播一遍，
+   同时把 gene-1 / gene-2 藏起来；它们播完再过 2 秒，gene-1 / gene-2 重新出现。
+   （位置 / 倍速 / 藏谁 / 几秒后恢复都写在 2.js 的 MOVE_FX 里，end.also 那两项。
+     这里只留宽度和角度 —— 要和各自的参照视频一致（都是 6vw / -8deg）才叠得准。） */
 .bg-video-wrap-gene-3 {
-    top: 7.5%;
-    right: 22.5%;
     width: 6vw;
     --rotate: -8deg;         
     z-index: 2;              
 }
 
 .bg-video-wrap-gene-4 {
-    top: 7.4%;
-    right: 23%;
     width: 6vw;
     --rotate: -8deg;         
     z-index: 1;             
@@ -154,7 +206,7 @@
 .tnpb-points {
     --tnpb-points: 42;
     position: absolute;
-    top: 0;
+    top: var(--lead-in, 0px);   /* 和底图/内容一起被“引导段”往下推 */
     left: 0;
     width: 100%;
     height: 100%;
@@ -427,7 +479,77 @@
     left: 26.5%;
 }
 
-/* 消失：TnpB_2 不参与移动，仍然待在它原来的位置（和之前完全一样） */
+/* ===================== crispr-3（走路那个）的运动路径 =====================
+   ★ crispr-3 现在和 TnpB_1 用的是同一套走动逻辑（滚动到哪就走到哪、
+     中心线在两段之间就停在下一段起点等着、页面滚到头继续滑会把最后一段走完 ……），
+     只是它有自己的一套点，写在下面 —— 数字随你改。
+
+   规则和上面 tnpb 那套一模一样：
+     · 点是【成对】的：点 1 = 第 1 段起点，点 2 = 第 1 段终点，
+                     点 3 = 第 2 段起点，点 4 = 第 2 段终点 …… 以此类推；
+     · 写法：top = 纵坐标（相对底图高度），right / left = 横坐标（相对底图宽度），
+       和视频本体的 top / right 是同一套参照系，单位 % / vw / vh / px 都行；
+     · --crispr3-points 写几个点，2.js 就自动建几个点（偶数 = 整段）；
+       要加段数就加大这个数字，再往下补 .crispr3-move-N 的规则（2.js 不用改）；
+     · 想删掉某一段：把它的起点 / 终点规则删掉即可（中间缺号也不会错位）。
+     · ★ crispr-3 不参加 TnpB_2 那个“终点消失动画”（那个只跟 tnpb-1 走）。
+
+   ★ 这段整体删掉（或把 --crispr3-points 写成 0）的话，2.js 会【借用】
+     tnpb-1 的那套点 —— 也就是让 crispr-3 先跟着 TnpB_1 走同一条路线。
+     下面的 4 个点只是示意值，请换成你要的位置。 */
+
+.crispr3-points {
+    --crispr3-points: 4;
+    position: absolute;
+    top: var(--lead-in, 0px);   /* 和底图/内容一起被“引导段”往下推 */
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.crispr3-points > div {
+    position: absolute;
+    width: 0;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* ---- 第 1 段：点 1 → 点 2 ---- */
+
+/* 第 1 段起点（它一开始站在这里） */
+.crispr3-points > .crispr3-move-1 {
+    top: 3.6%;             
+    right: 30.7%;
+}
+
+/* 第 1 段终点 */
+.crispr3-points > .crispr3-move-2 {
+    top: 3.8%;
+    right: 28%;
+}
+
+/* ---- 第 2 段：点 3 → 点 4 ---- */
+
+/* 第 2 段起点 */
+.crispr3-points > .crispr3-move-3 {
+    top: 3.8%;
+    right: 28%;
+}
+
+/* 第 2 段终点 */
+.crispr3-points > .crispr3-move-4 {
+    top: 5%;             
+    right: 22.2%;    
+}
+
+/* 消失动画 TnpB_2：★ 不再固定摆在页面上了 —— 平时完全不显示，
+   只在 2.js 的 END_ANIM_SEGMENTS 里那几段（第 3、4、8、14、16、18、20 段）
+   被【往下滑】走到终点时，由 2.js 挪到那个终点上播放一次，播完 TnpB_1 再出现在
+   下一段起点。下面这条 top / right 只是它“没被挪动时”的位置，
+   2.js 会用 transform 覆盖它（改这里的 top/right 对动画最终位置没有影响）；
+   width / --rotate 仍然决定它的大小和角度，
+   位置微调（相对终点往上挪多少）在 2.js 的 END_ANIM_UP_PERCENT。 */
 .bg-video-wrap-tnpb-2 {
     top: 23.7%;
     right: 20%;
