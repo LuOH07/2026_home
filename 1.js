@@ -200,7 +200,7 @@ function buildFrozenZones() {
      直接把 A 定成静态位置、再按 top0 顺序串一遍即可，简单且可预期。
    ★ 冻结组用 top0（原始静态位置）判断先后：it.top 会被这里改写。 */
 function relaxNonFrozenToAuthored(skippedEls) {
-    /* 冻结组：保持 buildOneZone / 组内串行算出来的 A（它们本来就在正确的一屏） */
+    /* 冻结组：保持 buildOneZone 里串好的 A（它们本来就在正确的一屏） */
     /* 非冻结：A 直接回到作者写的位置 */
     items.forEach(it => {
         if (skippedEls.has(it.el)) return;
@@ -642,11 +642,12 @@ function layout() {
         });
         frozenZones.push(z);
     });
-    /* 把所有非冻结文字放回作者写的静态位置（冻结组自己不动） */
-    relaxNonFrozenToAuthored(skippedEls);
+
     frozenZones.sort((a, b) => a.hit - b.hit);
     frozenZone = frozenZones[0] || null;
 
+    /* 把所有非冻结文字放回作者写的静态位置（冻结组自己不动） */
+    relaxNonFrozenToAuthored(skippedEls);
 
     items.forEach(it => {
         if (skippedEls.has(it.el)) {
@@ -755,8 +756,6 @@ function render() {
     /* 冻结期间给 <body> 挂一个类（1.css 里可用 body.frozen-scroll 写别的样式）；
        只在真的锁着、进度还在区间里时挂。 */
     document.body.classList.toggle("frozen-scroll", freezeLatched());
-
-    updateTopIndicator();
 }
 
 /* 色块的透明度包络（已注释）：宿主淡入区间内按各自随机延迟错落拉起，
@@ -1067,45 +1066,7 @@ window.__home = {
     render
 };
 
-/* ============================ 10. 右侧竖直中心的 top% 圆圈 ============================ */
-/* 固定在页面右边的竖直中心（就是组件被钉住的那条中心线），实时显示这条中心线
-   落在【页面 / 底图高度的百分之几】—— 也就是你在 1.css 里给 .text-* 写 top 时
-   该填的那个百分比。
-   用法：滚到想放元素的位置 → 看圆圈读数 → 把它写进 .text-xx { top: xx% }。
-   例：圆圈显示 34.50%，想让它正对着中心线，就写 top: 34.5%。
-   样式在 1.css 的 .top-indicator；不想要就整段注释掉（render() 里那行调用一起注释）。 */
-const topIndicator = document.createElement("div");
-topIndicator.className = "top-indicator";
-topIndicator.innerHTML = '<span class="top-indicator-label">top</span>' +
-                         '<span class="top-indicator-value">--%</span>';
-document.body.appendChild(topIndicator);
-
-const topIndicatorValue = topIndicator.querySelector(".top-indicator-value");
-
-/* 先算一次，底图还没加载完时也会显示（此时页面高度未知就显示 --%） */
-updateTopIndicator();
-
-function updateTopIndicator() {
-    /* 页面高度 = 底图铺满后的高度（updateBodyHeight() 写在 body 上） */
-    const pageH = document.body.offsetHeight || document.documentElement.scrollHeight;
-    if (!pageH) {
-        topIndicatorValue.textContent = "--%";
-        return;
-    }
-
-    /* 底图在文档里的上沿：顶部视频那段是 2.css 的 --lead-in 把底图往下推的，
-       读数要减掉它，显示的才是“底图高度的百分之几”（= 1.css 里该写的 top 值） */
-    const leadIn = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lead-in")) || 0;
-    const mapTop = document.body.getBoundingClientRect().top + window.scrollY + leadIn;
-
-    /* 锚线（文字钉住的那条线，默认从上往下 40%）在【底图坐标系】里的位置
-       （负数 = 锚线还在底图上方，即视频那段里） */
-    const centerY = window.scrollY + anchorY() - mapTop;
-
-    topIndicatorValue.textContent = (centerY / pageH * 100).toFixed(2) + "%";
-}
-
-/* ============================ 11. 页面顶部的视频（点按钮播放） ============================ */
+/* ============================ 10. 页面顶部的视频（点按钮播放） ============================ */
 /* 位置：页面最顶端、和页面等宽；底图（map.png）从视频下沿开始，视频不盖住底图。
    怎么做到“底图接在视频下面”且不错位：
      用 2.css 现成的“引导段”变量 --lead-in（= 视频高度）把【底图 + 文字 + 图片 +
