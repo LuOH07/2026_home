@@ -1,0 +1,72 @@
+/* ==========================================================================
+   3.css —— 三个宿主图标（b-subtilis / e-coli / p-putida）的位置与大小
+   --------------------------------------------------------------------------
+   · 图标节点、图片链接（src）、淡入 / 淡出全部在 3.js 里；
+     这个文件只管“放在哪、多大、怎么排”，要挪位置只改这里。
+   · 一行容器 .bug-icons 用 position: fixed 钉在屏幕上：
+       - 竖直：从文字锚线往下让出 --icons-gap（锚线 = 1.js 的 ANCHOR_RATIO = 0.4
+               → 40vh；1.js 把所有文字的中心都钉在这条线上），
+               所以图标永远在文字下方，而且页面滚动时纹丝不动；
+       - 水平：默认居中在文字块的水平中心（--icons-center）。
+   · 三个图标的左右顺序 = 3.js 里 ICONS 数组的顺序：
+       bug-icon-1 b-subtilis → bug-icon-2 e-coli → bug-icon-3 p-putida
+   ========================================================================== */
+
+.bug-icons {
+    /* ---- 位置 / 尺寸旋钮（想调整只动这几行）---- */
+    --anchor: 40vh;          /* 文字锚线：等于 1.js 的 ANCHOR_RATIO(0.4) 换算成的高度。
+                                哪天 1.js 里改了 ANCHOR_RATIO，这里要跟着改（0.35 → 35vh） */
+    --icons-gap: 110px;      /* 锚线往下再让多少：调大 = 图标离文字更远。
+                                这一页最长的文字（.text-5）盒子高 170px（半高 85px），
+                                110px 正好让图标落在它下方 ~25px 处；
+                                要是以后改了字号 / 行数导致图标压到文字，把这个值调大即可 */
+    --icons-center: 34.5%;   /* 这一行的水平中心。文字块是 left 12% + 最宽 45%（见 1.css），
+                                中心约 12% + 22.5% = 34.5% */
+    --icons-spacing: 40px;   /* 两个图标之间的间距 */
+    --icon-height: 300px;     /* 图标高度（宽度按图片自身比例自适应） */
+
+    position: fixed;                            /* 钉在屏幕上：页面怎么滚都不动 */
+    left: var(--icons-center);
+    top: calc(var(--anchor) + var(--icons-gap));
+    transform: translateX(-50%);                /* 让这一行的中心落在 --icons-center 上 */
+
+    /* 想改成“从文字左边界开始排”而不是居中：
+       left: 12%;  transform: none;  （两行一起改） */
+
+    display: flex;                              /* 三个图标排成一行 */
+    align-items: flex-end;                      /* 底边对齐，高矮不同的图也站得住 */
+    gap: var(--icons-spacing);
+
+    z-index: 50;            /* 1.js 给文字写的 z-index 是 1..N（N ≤ 33），这里保证压在最上面；
+                               2.js 的背景视频是 0~2，也不会盖住图标 */
+    pointer-events: none;   /* 不挡滚轮 / 点击（这一页是纯滚轮驱动的） */
+    visibility: hidden;     /* 三个都全透明时由 3.js 把整行收起来，省一点合成开销 */
+}
+
+/* 单个图标：透明度每帧由 3.js 按时间轴写进内联 style.opacity，这里只给初始值和外观 */
+.bug-icon {
+    display: block;
+    height: var(--icon-height, 84px);   /* 继承容器的 --icon-height，也可被下面单条覆盖 */
+    width: auto;
+    opacity: 0;                         /* 初始不可见；之后由 3.js 驱动 */
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    will-change: opacity;
+}
+
+/* 想让某一个图标单独大一点 / 小一点：在它自己这条里覆盖 --icon-height（想调宽也可写 width） */
+.bug-icon-1 { --icon-height: 300px; }    /* Bacillus subtilis  */
+.bug-icon-2 { --icon-height: 300px; }    /* Escherichia coli   */
+.bug-icon-3 { --icon-height: 300px; }    /* Pseudomonas putida */
+
+/* 窄屏：文字列更窄、会折成更多行（盒子更高），所以图标要整体往下让；
+   顺便把图标和间距收小一点。要是这一档里图标还是压到文字，继续调大 --icons-gap。 */
+@media (max-width: 900px) {
+    .bug-icons {
+        --icons-gap: 170px;
+        --icons-spacing: 18px;
+        --icon-height: 64px;
+    }
+}
