@@ -1,15 +1,17 @@
 /* ==========================================================================
    3.js —— .text-3 / .text-4 / .text-5 下方那三个宿主图标
    --------------------------------------------------------------------------
-   要做的事：
-     · text-3 淡入时 → b-subtilis 图标跟着淡入；
-     · text-4 淡入时 → e-coli     图标跟着淡入；
-     · text-5 淡入时 → p-putida   图标跟着淡入；
+   要做的事（出场顺序，一个比一个晚）：
+     · 图标 1（b-subtilis）：text-3 一淡入就跟着淡入 —— 出场时间不变；
+     · 图标 2（e-coli）    ：text-3【淡出结束】之后才开始淡入；
+     · 图标 3（p-putida）  ：text-4【淡入结束】之后才开始淡入；
+     · 三个图标各自的淡入时长都是同一条曲线、同一个长度；
      · 这三个图标【不在各自宿主淡出时消失】，而是等 text-6 开始淡出时一起淡出
        （text-6 完全消失时，它们也正好全没了）。
    分工（按需求）：
      · 3.js  ＝ 图片链接（src）+ 淡入 / 淡出动效；
      · 3.css ＝ 位置 / 大小 / 间距（图标钉在屏幕上、永远待在文字下方）。
+   ★ 想再调出场次序，只改下面 ICONS 里的 start / end 两个字段（见那里的注释）。
 
    怎么和 1.js 对上（不要去改 1.js）：
      1.js 每画一帧都会调用它自己的全局 render()，3.js 把 window.render 包一层：
@@ -21,29 +23,52 @@
 (function () {
     "use strict";
 
-    /* ======================= 1. 三个图标（图片链接在这里改） =======================
+    /* ======================= 1. 三个图标（图片链接 / 出场点在这里改） =======================
        cls  ：3.css 里对应的样式钩子（要单独调某个图标的大小就改那里）
-       host ：跟着哪个文字淡入 —— 用它的淡入区间 [A, H]，和文字同一帧、同一条曲线
+       host ：图标“属于”哪一段文字 —— 找不到它时这个图标就整个不显示；
+              它同时也是淡出包络的判断依据
+       src  ：图片链接
        name ：仅用于控制台报错信息
+       start：这个图标【什么时候开始淡入】—— 写“认哪一段文字的哪个时刻”：
+                from : 用哪一段文字当时钟（用它的淡入区间 [A, H] 算曲线）
+                mark : "A" = 这段文字刚开始淡入（出场时间不变的那个选项）
+                       "H" = 这段文字淡入结束（完全看清了）
+                       "E" = 这段文字完全消失（淡出结束）
+                shift: 在 mark 之后再往后推多少（一般 0）
+              —— 图标 1 写 ".text-3" + "A" 就等于原来的行为：text-3 一淡入它就淡入；
+                 图标 2 写 ".text-3" + "E"：等 text-3 完全淡出之后它才出现；
+                 图标 3 写 ".text-4" + "H"：等 text-4 完全淡入之后它才出现。
+              ★ 图标 3 认的 text-4 属于冻结组（1.js 的 FREEZE_GROUPS），
+                它的进度由滚轮驱动的 freezePos 给出，下面 resolveWindow() 会自动认对时钟，
+                所以“text-4 淡入结束”这一刻是准的，不需要改 1.js。
+       end  ：淡入什么时候结束（可选）。
+              写了：从 start 到 end 之间淡入，于是“三者出现时间不变”＝淡入时长都一样；
+              不写：从 start 往后淡入 host.H - host.A 那么长（和图标 1 的时长一致）。
        ========================================================================== */
     const ICONS = [
         {
             cls: "bug-icon-1",
             host: ".text-3",
             src: "https://static.igem.wiki/teams/6059/wiki/home/b-subtilis.avif",
-            name: "Bacillus subtilis"
+            name: "Bacillus subtilis",
+            /* 出场时间不变：text-3 一淡入就跟着淡入，时长 = text-3 的淡入区间 */
+            start: { from: ".text-3", mark: "A" }
         },
         {
             cls: "bug-icon-2",
             host: ".text-4",
             src: "https://static.igem.wiki/teams/6059/wiki/home/e-coli.avif",
-            name: "Escherichia coli"
+            name: "Escherichia coli",
+            /* text-3【完全淡出】之后才开始淡入；时长仍然和图标 1 一样（见下面 resolveWindow） */
+            start: { from: ".text-3", mark: "E" }
         },
         {
             cls: "bug-icon-3",
             host: ".text-5",
             src: "https://static.igem.wiki/teams/6059/wiki/home/p-putida.avif",
-            name: "Pseudomonas putida"
+            name: "Pseudomonas putida",
+            /* text-4【完全淡入】之后才开始淡入；时长仍然和图标 1 一样 */
+            start: { from: ".text-4", mark: "H" }
         }
     ];
 
@@ -118,6 +143,43 @@
         const h = HOME();
         if (h.freezeActive && it.freezeZone && it.freezeZone === h.frozenZone) return h.freezePos;
         return h.cur;
+    }
+
+    /* ---- 把 ICONS 里的 start / end 翻译成时间轴上的绝对进度 ----
+       一段文字的四个时刻（1.js 的时间轴里就这么叫）：
+           A = 开始淡入     H = 淡入结束（完全看清）
+           B = 开始淡出     E = 完全消失
+       返回 { a, b, clock }
+           a / b = 淡入窗口的两个端点（进度值，b > a）
+           clock = 这段窗口该看哪个时钟（cur 或 freezePos）
+       ★ 图标 3 认的 text-4 是冻结组：它的 A/H 只在冻结播放期间才被走到，
+         而那时冻结组的时钟是 freezePos（1.js 的 render() 也是这么取），
+         所以这里必须把时钟一起算出来，不能一律用 cur，
+         否则 text-4 的 H 对应不到正确的时刻。 */
+    function resolveWindow(cfg, host) {
+        /* 这一段窗口认哪一段文字当时钟：默认 host 自己，也可用 start.from 指定 */
+        const fromItem = (cfg.start && cfg.start.from) ? findItem(cfg.start.from) : host;
+        if (!fromItem) return null;
+
+        const clock = clockOf(fromItem);
+        const mark = { A: fromItem.A, H: fromItem.H, E: fromItem.E };
+        const at = (side, fallback) => {
+            const spec = cfg[side];
+            const key = (spec && spec.mark) || fallback;
+            const v = mark[key];
+            return (typeof v === "number" ? v : 0) + ((spec && spec.shift) || 0);
+        };
+
+        /* 淡入起点：图标 1 = text-3 的 A（时间不变）、图标 2 = text-3 的 E、图标 3 = text-4 的 H */
+        const a = at("start", "A");
+
+        /* 淡入终点：显式写了 end 就用它，否则默认“从起点往后淡入 host 的淡入时长”，
+           于是图标 2 / 3 的淡入时长和图标 1 完全一样 —— 三者出现时间不变。 */
+        const span = Math.max(1e-6, host.H - host.A);
+        let b = cfg.end ? at("end", "H") : a + span;
+        if (b <= a + 1e-6) b = a + span;
+
+        return { a, b, clock, fromItem };
     }
 
     /* ---- text-6 的淡出走到哪了：0 = 还没淡出（三个图标全亮），1 = 已经全淡出 ----
@@ -199,21 +261,40 @@
                 return;
             }
 
-            const p = clockOf(host);
-
-            /* 淡入 = 宿主文字的淡入区间 [A, H]，曲线也一样（easeOut）；
-               H 之后再乘上 (1 - outT)：只要 text-6 开始淡出，三个一起暗下去。
-               fadeInEnd 取 min(H, text-6 的 B) 只是保险：淡入永远不会拖到淡出之后。 */
-            const fadeInEnd = Math.min(host.H, outItem.B);
-            let op;
-            if (stranded || p <= host.A || p >= outItem.E) {
-                op = 0;
-            } else if (p < fadeInEnd) {
-                op = easeOut((p - host.A) / Math.max(1e-6, fadeInEnd - host.A));
-            } else {
-                op = 1;
+            const win = resolveWindow(n.cfg, host);
+            if (!win) {
+                n.el.style.opacity = "0";
+                return;
             }
+
+            const p = win.clock;
+            let op = 0;
+
+            if (p <= win.a) {
+                /* 还没轮到（往回滚也一样：退到窗口之前就归零，不会“卡在亮着”） */
+                op = 0;
+            } else if (p < win.b) {
+                /* 自己的淡入窗口：曲线和文字同一套 easeOut，所以亮起来的手感和文字一致 */
+                op = easeOut((p - win.a) / (win.b - win.a));
+            } else {
+                /* 淡入已经走完，之后一直亮着。
+                   ★ 唯一的例外：这一段的淡入算在冻结组的账上（图标 3 认的 text-4），
+                     冻结组演到头就停了 —— 要是淡入尾巴被切在 z1 外面，
+                     干脆把整条淡入曲线按 z1 收尾，收不干净的部分交给下面 (1 - outT) 收，
+                     免得图标在冻结演完时“啪”地闪一下才消失。 */
+                const wZ = win.fromItem && win.fromItem.freezeZone;
+                const wEnd = wZ ? (wZ.z1 - wZ.hit) : Infinity;
+                const bEnd = Math.min(win.b, wEnd);
+                op = (bEnd > p)
+                    ? easeOut(clamp01((p - win.a) / (bEnd - win.a)))
+                    : 1;
+            }
+
+            /* 只要 text-6 开始淡出，三个一起暗下去（到 text-6 完全消失时它们也正好全没了） */
             op *= 1 - outT;
+
+            /* 页面停在冻结组中间、而这一组一次都没播过：整行不显示（见上面 stranded 说明） */
+            if (stranded) op = 0;
 
             if (op > 0.001) {
                 n.el.style.opacity = op.toFixed(4);

@@ -85,7 +85,7 @@ const SLOW_ZONES = [];
 
 /* ============================ 2. 底图 ============================ */
 const bgImg = new Image();
-bgImg.src = "./map.png";
+bgImg.src = "https://static.igem.wiki/teams/6059/wiki/home/map-1.pdf";
 
 function updateBodyHeight() {
     const displayWidth = document.documentElement.clientWidth;
