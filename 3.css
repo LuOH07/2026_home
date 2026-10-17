@@ -1,72 +1,122 @@
 /* ==========================================================================
-   3.css —— 三个宿主图标（b-subtilis / e-coli / p-putida）的位置与大小
+   3.css —— 四个宿主图标（b-subtilis / e-coli / p-putida / e-coli-1）的大小与图层
    --------------------------------------------------------------------------
-   · 图标节点、图片链接（src）、淡入 / 淡出全部在 3.js 里；
-     这个文件只管“放在哪、多大、怎么排”，要挪位置只改这里。
-   · 一行容器 .bug-icons 用 position: fixed 钉在屏幕上：
-       - 竖直：从文字锚线往下让出 --icons-gap（锚线 = 1.js 的 ANCHOR_RATIO = 0.4
-               → 40vh；1.js 把所有文字的中心都钉在这条线上），
-               所以图标永远在文字下方，而且页面滚动时纹丝不动；
-       - 水平：默认居中在文字块的水平中心（--icons-center）。
-   · 三个图标的左右顺序 = 3.js 里 ICONS 数组的顺序：
-       bug-icon-1 b-subtilis → bug-icon-2 e-coli → bug-icon-3 p-putida
+   · 图标节点、图片链接（src）、淡入 / 淡出、飘动全部在 3.js 里；
+     这个文件只管【多大、在哪一层】，以及给飘动一个兜底位置。
+   · .bug-icons 是一个 position: fixed、铺满整个视口的“台球桌”，本身不可见、
+     也不接收鼠标事件；页面怎么滚它都不动，所以飘动的位置＝屏幕上的位置。
+   · 四个图标【不再是排成一行】的：每个图标各自绝对定位，
+     位置由 3.js 每帧写进它自己的 left / top（视口百分比）。
+     运动是“沿直线匀速前进，图片边缘碰到活动范围边界或另一个图标的边缘就按反射弹回”。
+     活动范围现在限定在【屏幕左侧 0%~60%】（竖直 0%~100%），
+     改范围去 3.js 的 DRIFT.area（逻辑在 3.js 的飘动引擎里）。
+     下面 .bug-icon-N 里的 left / top 只是【第一帧之前的兜底落点】。
+   · 图层：夹在背景和文字之间 ——
+       2.js 的底图 / 背景视频是 z-index 0~2；
+       1.js 给每段文字写的是 1~33（按出场顺序递增，见 1.js 的图层顺序那段）；
+       这里取 3：盖得住底图（body 背景，永远在最底）和 z-index 0~2 的那些视频；
+       跟 z-index 1~2 的文字【谁压谁按 DOM 顺序】，跟 z-index ≥ 3 的文字则一定在文字下面。
+       ★ 图标现在会飘到文字所在的区域上。想让它【一定】待在所有文字下面，
+         把这里的 z-index 改成 1 即可（代价：压不到 gene-1 / gene-3 那两个 z-index 2 的视频）。
    ========================================================================== */
 
 .bug-icons {
-    /* ---- 位置 / 尺寸旋钮（想调整只动这几行）---- */
-    --anchor: 40vh;          /* 文字锚线：等于 1.js 的 ANCHOR_RATIO(0.4) 换算成的高度。
-                                哪天 1.js 里改了 ANCHOR_RATIO，这里要跟着改（0.35 → 35vh） */
-    --icons-gap: 110px;      /* 锚线往下再让多少：调大 = 图标离文字更远。
-                                这一页最长的文字（.text-5）盒子高 170px（半高 85px），
-                                110px 正好让图标落在它下方 ~25px 处；
-                                要是以后改了字号 / 行数导致图标压到文字，把这个值调大即可 */
-    --icons-center: 34.5%;   /* 这一行的水平中心。文字块是 left 12% + 最宽 45%（见 1.css），
-                                中心约 12% + 22.5% = 34.5% */
-    --icons-spacing: 40px;   /* 两个图标之间的间距 */
     --icon-height: 300px;     /* 图标高度（宽度按图片自身比例自适应） */
 
-    position: fixed;                            /* 钉在屏幕上：页面怎么滚都不动 */
-    left: var(--icons-center);
-    top: calc(var(--anchor) + var(--icons-gap));
-    transform: translateX(-50%);                /* 让这一行的中心落在 --icons-center 上 */
+    position: fixed;          /* 钉在屏幕上：页面怎么滚都不动 */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;        /* 不裁切：hover 的名字有可能伸到图标外侧，裁掉就看不全了。
+                                 （容器是 position: fixed，超出视口也不会撑出滚动条） */
 
-    /* 想改成“从文字左边界开始排”而不是居中：
-       left: 12%;  transform: none;  （两行一起改） */
-
-    display: flex;                              /* 三个图标排成一行 */
-    align-items: flex-end;                      /* 底边对齐，高矮不同的图也站得住 */
-    gap: var(--icons-spacing);
-
-    z-index: 50;            /* 1.js 给文字写的 z-index 是 1..N（N ≤ 33），这里保证压在最上面；
-                               2.js 的背景视频是 0~2，也不会盖住图标 */
-    pointer-events: none;   /* 不挡滚轮 / 点击（这一页是纯滚轮驱动的） */
-    visibility: hidden;     /* 三个都全透明时由 3.js 把整行收起来，省一点合成开销 */
+    z-index: 3;               /* ★ 背景（0~2）之上、文字（≥3）之下 —— 见文件头说明 */
+    pointer-events: none;     /* 画框本身不接收鼠标；只有亮着的图标自己才接收（见 .is-live） */
+    visibility: hidden;       /* 全部透明时由 3.js 把整个画框收起来 */
 }
 
-/* 单个图标：透明度每帧由 3.js 按时间轴写进内联 style.opacity，这里只给初始值和外观 */
+/* ---------------------------- 单个图标位 ----------------------------
+   每个图标 = 一个 .bug-icon-slot（定位盒子里装 <img> + <span class="bug-label">）：
+   · left / top 每帧由 3.js 按飘动位置写进内联样式；
+   · 透明度也每帧由 3.js 按时间轴写进内联 opacity
+     —— 写在 slot 上，所以 hover 显示的名字也跟着图标一起淡入淡出。 */
+.bug-icon-slot {
+    position: absolute;                 /* 相对 .bug-icons 这个铺满视口的画框定位 */
+    left: 25%;                          /* 兜底落点；真正的位置由 3.js 每帧覆盖 */
+    top: 50%;
+    opacity: 0;                         /* 初始不可见；之后由 3.js 驱动 */
+    pointer-events: none;               /* 默认不挡鼠标；亮起来时加 .is-live 才可 hover */
+    will-change: opacity, left, top;    /* 每帧都在动，提前交给合成器 */
+}
+
+/* 亮着的时候才接受鼠标：hover 到图标上显示名字，移开自动消失 */
+.bug-icon-slot.is-live {
+    pointer-events: auto;
+}
+
+/* 图片本身：只负责大小和外观，不再参与定位 / 透明度（那些在 slot 上） */
 .bug-icon {
     display: block;
-    height: var(--icon-height, 84px);   /* 继承容器的 --icon-height，也可被下面单条覆盖 */
+    height: var(--icon-height, 300px);  /* 继承 .bug-icons 的 --icon-height，也可被单条覆盖 */
     width: auto;
-    opacity: 0;                         /* 初始不可见；之后由 3.js 驱动 */
     object-fit: contain;
-    pointer-events: none;
+    pointer-events: none;               /* 鼠标事件由 slot 接（整块矩形都可 hover） */
     user-select: none;
     -webkit-user-drag: none;
-    will-change: opacity;
 }
 
-/* 想让某一个图标单独大一点 / 小一点：在它自己这条里覆盖 --icon-height（想调宽也可写 width） */
-.bug-icon-1 { --icon-height: 300px; }    /* Bacillus subtilis  */
-.bug-icon-2 { --icon-height: 300px; }    /* Escherichia coli   */
-.bug-icon-3 { --icon-height: 300px; }    /* Pseudomonas putida */
+/* ---------------------------- hover 显示的名字 ----------------------------
+   · 字体 = 正文字体（1.css 里 .text-box 用的就是 'verdana', sans-serif）
+   · 颜色 = #465E77
+   · 平时 opacity: 0；.bug-icon-slot:hover 时淡入，鼠标移开就淡出
+   · 位置默认贴在图标正下方；图标贴近屏幕底部时，3.js 会给 slot 加 .is-above 翻到上方
+   想改字号 / 位置，只动这一条即可。 */
+.bug-label {
+    position: absolute;
+    left: 50%;
+    top: 100%;                          /* 图标下方 */
+    transform: translateX(-50%);        /* 水平居中在图标中线上 */
+    margin-top: 6px;
 
-/* 窄屏：文字列更窄、会折成更多行（盒子更高），所以图标要整体往下让；
-   顺便把图标和间距收小一点。要是这一档里图标还是压到文字，继续调大 --icons-gap。 */
+    font-family: 'verdana', sans-serif; /* ← 正文字体 */
+    font-size: 28px;                    /* 和正文 .text-box 一致 */
+    line-height: 1.2;
+    color: #465E77;                     /* ← 需求指定的颜色 */
+    white-space: nowrap;                /* 名字不断行 */
+
+    opacity: 0;                         /* 平时不显示 */
+    transition: opacity .18s ease;      /* 移入淡入、移出淡出，不会突然闪 */
+    pointer-events: none;               /* 名字本身不接鼠标，免得一碰就消失 */
+    user-select: none;
+}
+
+/* 图标贴底 → 名字翻到图标上方 */
+.bug-icon-slot.is-above .bug-label {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+/* ★ hover 显示 / 移开消失：纯 CSS，不需要 JS 监听鼠标 */
+.bug-icon-slot:hover .bug-label {
+    opacity: 1;
+}
+
+/* 四个图标各自的起始落点（分布开，别叠在一起）—— 之后都跟着飘动走。
+   ★ 这里的 left / top 只是【第一帧之前的兜底落点】，真正的位置由 3.js 每帧覆盖；
+     要改初始落点请改 3.js 里的 DRIFT.seed（那边才是权威，这里只是同值兜底）。
+   想让某一个图标单独大一点 / 小一点：在它自己这条里覆盖 --icon-height。 */
+.bug-icon-1 { --icon-height: 300px; left: 16%; top: 30%; }    /* Bacillus subtilis    */
+.bug-icon-2 { --icon-height: 300px; left: 30%; top: 60%; }    /* Escherichia coli     */
+.bug-icon-3 { --icon-height: 300px; left: 44%; top: 45%; }    /* Pseudomonas putida   */
+.bug-icon-4 { --icon-height: 300px; left: 36%; top: 3%;  }    /* Escherichia coli (2) */
+
+/* 窄屏：画框本来就铺满视口，位置是百分比、自动跟着缩；
+   只需要把图标本身收小一点，免得在小屏上占掉半屏。 */
 @media (max-width: 900px) {
     .bug-icons {
-        --icons-gap: 170px;
-        --icons-spacing: 18px;
-        --icon-height: 64px;
+        --icon-height: 90px;
     }
 }
