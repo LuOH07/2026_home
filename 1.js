@@ -353,6 +353,12 @@ let freezeArmed = false;
 let freezeActive = false;
 let frozenAt = 0;
 
+/* “点右下角箭头 → 自动下拉到视频下方”正在进行中。
+   ★ 这段时间页面位置由 tick 平滑推进（见 scrollPastTopVideo），
+     所以 scroll 监听里要【只重绘、不回写 cur / target】，
+     否则滚动事件会把 target 拉回“当前页位置”，动画半路就停住。 */
+let autoScroll = false;
+
 /* 冻结动效自己的进度（滚轮驱动）。
    它和 cur（页面进度）分开：冻结期间页面不动，cur 就停在触发线上。
    往下滑它在 [hit, z1] 里往前走，往上滑往回退 —— 淡入/淡出是同一条包络，
@@ -462,6 +468,7 @@ const freezeLatched = () => freezeActive && inFrozenZone();
 function resetFreeze() {
     freezeArmed = false;
     frozenAt = 0;
+    autoScroll = false;        /* 箭头下拉的自动滚动也一并作废（改尺寸后落点会变） */
     /* 上膛状态按页面此刻位置重算，免得上一次留下的旧值造成误触发 */
     syncZoneArmsNow();
 }
@@ -924,6 +931,10 @@ function tick(now) {
         cur += (target - cur) * k;
 
         if (Math.abs(target - cur) < 0.1) cur = target;
+
+        /* 箭头下拉到位（或用户中途用滚轮改了目标、已经走到）就解除锁定，
+           之后滚动事件恢复正常的“按位置回写进度”兜底。 */
+        if (autoScroll && Math.abs(target - cur) < 0.5) autoScroll = false;
     }
 
     /* 冻结时页面钉在触发线上（一点不动）；其余情况走普通映射 */
@@ -1102,6 +1113,13 @@ window.addEventListener("scroll", () => {
         return;
     }
 
+    /* 点箭头自动下拉期间（见 scrollPastTopVideo）：位置是 tick 自己推的，
+       这里只重绘，绝不能用滚动事件回写 cur / target —— 否则动画会被拉回当前位置、半路停住。 */
+    if (autoScroll) {
+        render();
+        return;
+    }
+
     /* ---- 解冻后不存在“滑行”这回事 ----
        cur 冻结期间没动，解冻时直接落到触发线之后的 z1，页面位置就是冻结点，
        之后全程滚轮 1:1 —— 所以这里不需要任何特殊处理。 */
@@ -1230,13 +1248,18 @@ window.__home = {
       人物会整体偏掉一个视频高度。
    ★ 视频和整块容器都是 pointer-events: none（见 1.css）：
       这一页是纯滚轮驱动的（2.css 里 .bg-video-wrap 一直 pointer-events: none 也是这个原因），
-      所以【播放过程中随时可以下滑】，视频绝不会拦住滚轮；只有播放按钮是可点的。
+      所以【播放过程中随时可以下滑】，视频绝不会拦住滚轮；
+      只有左下角的播放三角和右下角的提示箭头是可点的。
    交互：
       加载：自动从头播放一遍（title.mp4 没有音轨，且已设 muted=true，浏览器才会放行；
             首帧是白场，不自动播的话顶部会一直空着）；自动播放被拦时退回“显示播放按钮”。
       播完：ended 里只摘掉 .is-playing，不 seek、不重置、不隐藏 video ——
-            画面就停在最后一帧，播放按钮重新出现；
-      再点：currentTime 归零，从头再播。
+            画面就停在最后一帧，左下角的播放三角重新出现；
+            同时给 wrap 加 .is-ended → 视频右下角常驻“向下滑”提示箭头
+            （.top-video-scroll-hint，颜色 465E77，跟着视频本体的相对位置走，见 1.css）；
+      再点：currentTime 归零，先摘掉 .is-ended（右下角箭头消失），从头再播一遍；
+            这一遍 ended 时箭头又回来 —— 也就是“重播时消失、播完再出现”。
+      点右下角箭头：页面下拉到“视频底部贴住视口顶部”（scrollPastTopVideo，落点 = 视频高度）。
    想换成原生控件（暂停 / 音量 / 进度 / 全屏）：把 1.css 里 .top-video-media 的
    pointer-events 改成 auto，代价是鼠标停在视频区域时滚轮不再驱动页面。
    以后换成有音轨的素材、想让声音外放：把下面 topVideo.muted 改成 false（自动播放可能被拦）。 */
@@ -1270,10 +1293,27 @@ const topVideoPlay = document.createElement("button");
 topVideoPlay.type = "button";
 topVideoPlay.className = "top-video-play";
 topVideoPlay.setAttribute("aria-label", "播放视频");
-topVideoPlay.innerHTML = '<span class="top-video-play-icon"></span>';
+topVideoPlay.innerHTML = '<span class="top-video-play-icon"></span>';   /* 侧三角形，颜色见 1.css（#465E77） */
+
+/* 播完一遍后常驻在视频右下角的“向下滑”提示箭头（可点：点一下跳到视频下方）。
+   ★ 挂在 topVideoWrap 里面（不是 body、也不是 fixed）：它跟着视频本体走，
+     视频滚上去它就一起滚上去，相对位置永远是“视频右下角”。
+   ★ 显隐只靠 wrap 上的 .is-ended（1.css）：ended 时加 → 常驻；点播放键重播时摘掉 → 消失，再播完再出现。
+   ★ 用 <button>：没出现时 visibility: hidden + pointer-events: none（点不到），
+     出现后可点，点击 = scrollPastTopVideo()（把页面拉到视频底部）。 */
+const topVideoHint = document.createElement("button");
+topVideoHint.type = "button";
+topVideoHint.className = "top-video-scroll-hint";
+topVideoHint.setAttribute("aria-label", "向下滑动，跳到视频下方");
+topVideoHint.innerHTML =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+    ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    '<path d="M12 3v15" /><path d="M5 12.5 12 19.5 19 12.5" />' +
+    "</svg>";
 
 topVideoWrap.appendChild(topVideo);
 topVideoWrap.appendChild(topVideoPlay);
+topVideoWrap.appendChild(topVideoHint);
 document.body.appendChild(topVideoWrap);
 
 /* 视频高度 = 页面宽度 × 9/16（title.mp4 是 1280×720），并用 2.css 的“引导段”变量 --lead-in
@@ -1306,6 +1346,10 @@ function playTopVideo() {
         topVideo.currentTime = 0;
     }
 
+    /* 用户选择重播 → 右下角的“向下滑”箭头立刻退场：
+       这一遍还没播完，箭头不该还挂着；播完时 ended 会再把它放回来。 */
+    topVideoWrap.classList.remove("is-ended");
+
     topVideoWrap.classList.add("is-playing");   /* 播放中藏起播放按钮（CSS） */
 
     const p = topVideo.play();
@@ -1316,6 +1360,25 @@ function playTopVideo() {
             console.warn("顶部视频播放失败：", err);
         });
     }
+}
+
+/* 点右下角箭头：把页面下拉到“视频底部贴住视口顶部”的那一屏 ——
+   也就是 --lead-in 这条线、底图开始的地方（落点 = 视频高度 = topVideoWrap.offsetHeight）。
+   ★ 走本页自己的滚动机制（设 target，让 tick 平滑推进），不直接 window.scrollTo：
+     否则会和 tick 里每帧的 scrollTo 打架，滚动事件也会把进度打乱。
+   ★ 这不是滚轮输入：先关掉 freezeArmed，免得半路越过冻结组的触发线被意外锁住
+     （和“刷新 / 从链接进入”是同一套处理）；autoScroll 期间滚动事件只重绘不回写。
+   ★ 只往下、不往上：箭头能点到的时候，视频底部一定还在视口下方。 */
+function scrollPastTopVideo() {
+    freezeArmed = false;
+
+    const videoBottom = topVideoWrap.offsetTop + topVideoWrap.offsetHeight;
+    const dest = Math.min(Math.max(window.scrollY, videoBottom), pageMaxScroll());
+
+    autoScroll = true;
+    /* 普通映射下 页面位置 = 进度 - introLen()，所以落点的进度 = dest + introLen() */
+    target = clamp(introLen() + dest, 0, maxProgress());
+    startLoop();
 }
 
 /* 页面加载后自动播一遍（标题动画，首帧白场，需要自己动起来）。
@@ -1335,14 +1398,20 @@ function autoplayTopVideo() {
 }
 
 /* 播完：什么都不做，画面保持最后一帧（不 seek、不清空 src、不隐藏），
-   只把播放按钮放回来 —— 再点就是重播。 */
+   只把播放按钮放回来 —— 再点就是重播。
+   ★ 同时给 wrap 加 .is-ended：右下角的“向下滑”提示箭头由此常驻（1.css 控制显隐）。
+     它跟视频本体在同一个容器里，所以永远贴着视频右下角，不随页面脱离视频。 */
 topVideo.addEventListener("ended", () => {
     topVideoWrap.classList.remove("is-playing");
+    topVideoWrap.classList.add("is-ended");
     topVideoPlay.setAttribute("aria-label", "重新播放视频");
     topVideoPlay.title = "重新播放";
 });
 
 topVideoPlay.addEventListener("click", playTopVideo);
+
+/* 右下角箭头：点一下 = 下拉到视频下方（底图顶部对齐视口顶部） */
+topVideoHint.addEventListener("click", scrollPastTopVideo);
 
 /* 所有监听都挂好后再自动开播，避免片头刚播完那一下没有 ended 收尾 */
 autoplayTopVideo();

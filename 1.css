@@ -375,9 +375,12 @@ body.frozen-scroll .text-6 {
    —— 高度由 1.js 按 16:9 写死（title.mp4 是 1280×720，这里的 aspect-ratio 只是 JS 生效前的兜底）。
    —— 交互（逻辑全在 1.js 第 10 节）：
       页面加载后自动从头播一遍（title.mp4 没有音轨，1.js 里设了 muted=true，浏览器才放行自动播放）；
-      播完停在最后一帧不动，播放按钮出现，再点就从头重播；
+      播完停在最后一帧不动，左下角的播放三角出现，再点就从头重播；
+      播完一遍后，视频右下角常驻一个向下的提示箭头（.top-video-scroll-hint，颜色 465E77）——
+      它跟着视频走，提示可以继续下滑；点重播时箭头消失，这一遍播完再出现；
+      点这个箭头 = 把页面下拉到“视频底部贴住视口顶部”（详见 1.js 的 scrollPastTopVideo）；
       自动播放被浏览器拦下时，播放按钮直接显示，点一下开始。
-   —— 整块 pointer-events: none（只有播放按钮单独打开）：
+   —— 整块 pointer-events: none（只有播放按钮和右下角箭头单独打开）：
       视频区域完全不拦滚轮，所以【播放过程中随时可以下滑】，页面照常滚。
    —— 想让视频带原生控件（暂停 / 音量 / 进度 / 全屏）：把 .top-video-media 的
       pointer-events 改成 auto；代价是鼠标停在视频区域时滚轮不再驱动页面。
@@ -407,43 +410,122 @@ body.frozen-scroll .text-6 {
     pointer-events: none;
 }
 
-/* 播放按钮：居中一个圆 + 三角形
+/* 播放按钮：靠【视频左下角】的“侧三角形”（指向右的实心三角，没有圆圈），颜色 465E77
+   —— 内缩量和右下角的提示箭头用同一组（left / bottom 3.5% / 8%），左右视觉对齐；
+   —— 盒子只包住三角形（padding 就是可点击热区，约 83×88），不再是一个大圆；
    —— 自动播放 / 手动播放过程中隐藏；页面加载时自动播放被拦、或播放结束定格在最后一帧时显示。 */
 .top-video-play {
     position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 88px;
-    height: 88px;
-    padding: 0;
-    border: 2px solid rgba(255, 255, 255, 0.9);
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.45);
+    left: 3.5%;
+    bottom: 8%;
+    padding: 10px;
+    border: 0;
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     pointer-events: auto;      /* 父层 none，这里单独打开 */
-    transition: background 0.2s, transform 0.2s;
+    transition: transform 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .top-video-play:hover {
-    background: rgba(0, 0, 0, 0.7);
-    transform: translate(-50%, -50%) scale(1.06);
+    transform: scale(1.12);
 }
 
+.top-video-play:focus-visible {
+    outline: 2px solid #465E77;
+    outline-offset: 4px;
+    border-radius: 6px;
+}
+
+/* 侧三角形（指向右 = 播放）：border 画的实心三角，尖朝右，颜色 465E77。
+   margin-left 把三角的视觉重心拉回按钮中心（三角占宽 = border-left，重心偏左）。 */
 .top-video-play-icon {
     width: 0;
     height: 0;
-    margin-left: 7px;          /* 三角形视觉居中 */
+    margin-left: 7px;
     border-style: solid;
-    border-width: 16px 0 16px 26px;
-    border-color: transparent transparent transparent #ffffff;
+    border-width: 34px 0 34px 56px;
+    border-color: transparent transparent transparent #465E77;
 }
 
 /* 播放中（.is-playing 由 1.js 在 play() 后加上）：藏起播放按钮。
    视频 ended 时 1.js 会摘掉 .is-playing → 按钮重新出现 = 点击重播。 */
 .top-video-wrap.is-playing .top-video-play {
     display: none;
+}
+
+/* ==========================================================================
+   播完一遍后常驻的“向下滑”提示箭头（右下角，颜色 465E77，可点）
+   —— 它挂在 .top-video-wrap 里面，相对【视频本体】定位，视频滚到哪就跟到哪。
+   —— 显隐由 1.js 控制：ended 时给 wrap 加 .is-ended → 淡入常驻；
+      点重播时摘掉 .is-ended → 立刻消失，这一遍播完再出现。
+   —— 它是 <button>：点一下 = 页面下拉到“视频底部贴住视口顶部”（1.js 的 scrollPastTopVideo）。
+      没出现时 pointer-events: none（不挡滚动）；出现后只吃点击，滚轮照样冒泡给 window。
+   —— 上下浮动是“提示可以往下滑”；系统关掉动效时自动停止（见下方 media 查询）。
+   ========================================================================== */
+.top-video-scroll-hint {
+    position: absolute;
+    right: 3.5%;
+    bottom: 8%;
+    z-index: 1;
+    width: clamp(26px, 2.8vw, 46px);
+    height: clamp(26px, 2.8vw, 46px);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    display: block;
+    color: #465E77;            /* 箭头颜色：SVG 用 currentColor 取这里的值 */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    cursor: pointer;
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+    animation: topVideoHintBob 1.8s ease-in-out infinite;
+}
+
+.top-video-wrap.is-ended .top-video-scroll-hint {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;      /* 出现后才可点（→ 下拉到视频下方） */
+}
+
+.top-video-wrap.is-ended .top-video-scroll-hint:hover {
+    opacity: 0.72;
+}
+
+.top-video-wrap.is-ended .top-video-scroll-hint:focus-visible {
+    outline: 2px solid #465E77;
+    outline-offset: 4px;
+    border-radius: 6px;
+}
+
+.top-video-scroll-hint svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;      /* 点击统一落在外层 button 上 */
+}
+
+@keyframes topVideoHintBob {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(6px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .top-video-scroll-hint {
+        animation: none;
+    }
 }
