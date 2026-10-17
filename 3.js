@@ -381,7 +381,8 @@
             slot.appendChild(overlay);
         }
 
-        /* hover 显示的名字：没有名字的图标（比如图标 5 / 6）就不生成这个 span */
+        /* hover 显示的名字：没有名字的图标（比如图标 5 / 6）就不生成这个 span。
+           ★ 图标 1~4 的名字在 3.css 里被设成【斜体】（那四只就在 text-3 / text-4 / text-5 上）。 */
         let label = null;
         if (cfg.label) {
             label = document.createElement("span");

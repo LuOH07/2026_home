@@ -117,6 +117,7 @@ video.bug-icon {
    · 颜色 = #465E77
    · 平时 opacity: 0；.bug-icon-slot:hover 时淡入，鼠标移开就淡出
    · 位置默认贴在图标正下方；图标贴近屏幕底部时，3.js 会给 slot 加 .is-above 翻到上方
+   · 图标 1~4 的名字用斜体（见下面单独那一条）。
    想改字号 / 位置，只动这一条即可。 */
 .bug-label {
     position: absolute;
@@ -148,6 +149,28 @@ video.bug-icon {
 /* ★ hover 显示 / 移开消失：纯 CSS，不需要 JS 监听鼠标 */
 .bug-icon-slot:hover .bug-label {
     opacity: 1;
+}
+
+/* ============================================================================
+   ★ 图标 1~4 的 hover 名字用【斜体】
+   ----------------------------------------------------------------------------
+   这四只就是挂在 text-3 / text-4 / text-5 上的那几个图标（见 3.js 的 ICONS）：
+     1 = B.subtilis（2.webm，视频图标）
+     2 = E.coli     （3.webm，视频图标）
+     3 = P.putida   （p-putida.avif）
+     4 = E.coli     （e-coli-1.avif）
+   视频图标和图片图标用的是同一个 .bug-label，所以这一条同时管住了两种。
+   · Impact 字库本身没有真正的斜体字重，浏览器会做“合成倾斜”（synthetic oblique）：
+     字形整体往右歪，字号 / 位置 / 颜色都不变；
+   · 想让名字回到正体：删掉这一条即可；
+   · 想给别的图标也加：把它的 .bug-icon-N 加进下面这个列表
+     （现在只有 1~4 号配了 label，5~10 号没有名字，加了也看不到）。
+   ============================================================================ */
+.bug-icon-1 .bug-label,
+.bug-icon-2 .bug-label,
+.bug-icon-3 .bug-label,
+.bug-icon-4 .bug-label {
+    font-style: italic;
 }
 
 /* 四个图标的大小（位置不在这里：见下面说明）。
