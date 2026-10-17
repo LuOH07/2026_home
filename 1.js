@@ -80,6 +80,8 @@ const pinDy = (pageTop, h, top) => anchorY() - h / 2 + pageTop - top;
 
 /* ============================ 1. 滚动 → 进度换算 ============================
    滚轮要滚多远才放完（不影响上面那些“秒”，那两个是正交的）
+   ★ 本节末尾还有“空白段加速”（GAP_SPEED_BOOST / GAP_SPEED_EASE）：
+     没有文字的滑动区间里让滚轮走得更快，文字的位置和动效一概不动。
    ============================================================================ */
 
 /* 滚轮 delta → 进度 的换算系数：越大，同样的滚轮输入页面“播”得越快 */
@@ -112,6 +114,32 @@ const TAIL_SECONDS = 1.5;     /* 最后一个组件消失后，页面还留多�
      以前它被误删过，导致滚轮回调里抛 ReferenceError、整个页面滚不动。
      空数组 = 不减速，行为与没有这个功能时完全一致。 */
 const SLOW_ZONES = [];
+
+/* ---- “空白段加速”：没有文字的滑动区间里，滚轮走得更快 ----------------
+   为什么需要：整页 33 段文字的位置是作者定的，段与段之间必然留出空白行程。
+   开启前实测：滚到页面底部要 2148 格滚轮，其中 1103 格（51%）“画面上一个字都没有”，
+   最长的一段要空滑七八十格。这里让这些空白区间自动加速，遇到文字再恢复原速。
+
+   ★ 只改“滚轮 delta → 进度”的换算，【不动】任何文字的位置、出场点、时长和动效：
+     这些都还是 0.1 / 0.2 / 1.css 里那一套，文字该在哪一屏出现就还在哪一屏出现
+     （layout 打印的 A/H/B/E、冻结触发线、全部一字不变），
+     变的只是“从上一句滑到下一句要滚多少格”。
+
+   GAP_SPEED_BOOST : 空白正中间的速度倍率。1 = 关闭（与没有这个功能时完全一致）。
+                     取 3.0 实测：整页滚轮格数 2148 → 1662，空滑格数 1103 → 726。
+                     想更省力就调大（3.5 约 1603 格），想更接近原速就调小。
+   GAP_SPEED_EASE  : 过渡距离（进度单位 = 页面像素）。离“最近的有字区间”或“冻结触发线”
+                     还有这么远时才开始加速，进入文字前又平滑回到 1 倍 ——
+                     这样文字出现、页面撞上冻结线的那一刻速度都是原速，不会有突然一顿。
+                     调大 = 加速更平缓、空白段收益更小；调小 = 更干脆。
+                     （本页的空档多在 91~522px，取 50 时 100px 以上的空档中段能吃满倍率。）
+
+   ★ 想只在“往下滑”时加速、往上滑保持原速：把 addTarget 里那一行改成
+       const speed = delta > 0 ? zoneSpeedFactor(target) * gapSpeedFactor(target)
+                               : zoneSpeedFactor(target);
+     现在上下对称 —— 不对称会让往回滑的手感忽快忽慢。 */
+const GAP_SPEED_BOOST = 3.0;
+const GAP_SPEED_EASE = 50;
 
 /* ============================ 2. 底图 ============================ */
 
@@ -943,6 +971,28 @@ function zoneSpeedFactor(p) {
     return f;
 }
 
+/* 空白段速度倍率：p 处离“最近的有字地方”越远，倍率越高（最高 GAP_SPEED_BOOST）。
+   “有字的地方” = 任一段【随页面滚动】的文字的 [A, E] 区间，或任一条冻结触发线。
+   ★ 冻结组的 [A, E] 不算（用 it.skipFrozen 排掉）：它们的演出不占页面行程、
+     只在冻结时绘制，把它们算进来会让“刚解冻之后”那一大段空白完全不加成。
+   ★ 触发线也算：于是快接近冻结点时速度已经回到 1 倍，
+     页面不会以 2 倍速冲到线上（锁定位置就不用往回拽了）。 */
+function gapSpeedFactor(p) {
+    if (GAP_SPEED_BOOST <= 1 || items.length === 0) return 1;
+
+    let d = Infinity;                          // 到最近“有字的地方”的距离
+    items.forEach(it => {
+        if (it.skipFrozen) return;             // 冻结组：窗口是虚拟的，不算
+        if (p > it.A && p < it.E) d = 0;       // 正落在某段文字身上 → 原速
+        else d = Math.min(d, p <= it.A ? it.A - p : p - it.E);
+    });
+    frozenZones.forEach(z => { d = Math.min(d, Math.abs(p - z.hit)); });
+
+    if (d === Infinity) return GAP_SPEED_BOOST;
+    const t = clamp(d / Math.max(1e-6, GAP_SPEED_EASE));
+    return 1 + (GAP_SPEED_BOOST - 1) * t;
+}
+
 function addTarget(delta) {
     /* 记录滚轮方向：撞线时用它决定正放还是倒放 */
     if (delta > 0) dirState = 1;
@@ -963,7 +1013,10 @@ function addTarget(delta) {
         return;
     }
 
-    target = clamp(target + delta * zoneSpeedFactor(target), 0, maxProgress());
+    /* 空白段加速：滚轮一格在空白区间里走 GAP_SPEED_BOOST 倍远，有字的地方仍是 1 倍。
+       ★ 顺序上乘在 zoneSpeedFactor（SLOW_ZONES，默认空）之后，两者互不影响。 */
+    const speed = zoneSpeedFactor(target) * gapSpeedFactor(target);
+    target = clamp(target + delta * speed, 0, maxProgress());
     startLoop();
 }
 
