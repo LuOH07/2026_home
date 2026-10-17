@@ -33,7 +33,8 @@ const COMPONENT_TIMING = [];
    写在这里的选择器会被摘出“随页面滚动”的时间轴，改成：
    向下滑到该组第一段的触发线（= 它 CSS top 那一屏）→ 页面锁死，滚轮只推这几句；
    向上滑回那条线 → 倒着放一遍。可以写多组，各自在自己的位置触发、互不影响。
-   ★ 它们的时长仍然取 0.1 那套，不单独设；下面三个旋钮只管“冻结这段怎么演”。 */
+   ★ 它们的时长仍然取 0.1 那套，不单独设；下面几个旋钮只管“冻结这段怎么演”
+     （撞线判定的实现在 1.js 的 updateZoneArms / zoneToStart，不在这两个文件里配）。 */
 const FREEZE_GROUPS = [
     [".text-4", ".text-5", ".text-6"],
     [".text-8", ".text-9"],
@@ -52,9 +53,19 @@ const FREEZE_WHEEL_RATE = 2.2;
 /* 一组的最小时长下限（秒）：淡入+停留+淡出至少占这么久，免得锁定一瞬间就弹开。 */
 const FREEZE_MIN_SECONDS = 0.6;
 
-/* 触发容差（像素）：页面滚到该组 CSS top ±这个值以内才允许开演。
-   太小会被滚轮一步跨过去（永远不触发），太大等于没限制；一帧走 5~15px，取 24 足够稳。 */
+/* 触发容差（像素）：页面滚到该组 CSS top ±这个值以内就算“到线”。
+   ★ 它只是“到了”这条线的判定宽度，不是“必须某一帧正好跨过去”的宽度：
+     上膛状态是【保持】的（见下面的 updateZoneArms），页面停手停在带里也不会漏触发，
+     所以 24 完全够用，不需要调大。
+   ★ 反过来说：以前“漏触发”不是因为这里太小，把它调大反而更糟 ——
+     判定带越宽，页面停手时落进带里的机会越大，那种“上一帧在带外、这一帧进带内”的
+     一帧式跨越判据就更容易彻底失效（详见 updateZoneArms 上面的说明）。 */
 const ARRIVE_TOL = 24;
+
+/* 冲过头容忍（像素）：页面被“外部”一把拽很远时（拖滚动条 / PageDown / Home、End / 刷新），
+   可能一帧就越过触发线几百像素。超过这个距离就不再往回拽页面去补演，
+   只让它保持“上过膛”，等下次从线外滑回来再触发。正常滚轮滑动永远到不了这个值。 */
+const FREEZE_CATCHUP = 480;
 
 /* ---- 0.3 文字停在屏幕哪个高度（两类共用）----
    0.5 = 正中间；0.4 = 从上往下 40%（距底部 60%）。
@@ -155,29 +166,40 @@ const introLen = () => INTRO_SECONDS * playbackRate();
 const pageMaxScroll = () => Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
 
 /* ---- 冻结“一根线”：触发点 + 动效跨度 ----
-   tr : 触发线（进度值）。取冻结区里最早开始淡入的那个文字的 A，
-        也就是页面滚到“它开始淡入”的那一屏 —— 这就是那根线。
-   z1 : 动效跨度终点（最后一个文字完全消失）。触发之后滚轮推进 [tr, z1]，
-        这期间页面锁在那根线上不动；推过 z1 就解冻，页面从这根线继续往下滚。 */
+   tr  : 触发线（页面像素位置）。由该组第一段的 CSS top 决定 ——
+         页面滚到这一屏就上锁，文字正好落在它该在的位置（不用挪）。
+   hit : 同一根线换算成“进度”的值（hit = tr + introLen()），
+         上锁时把 cur / target 一起设成它，页面于是钉在 tr 不动。
+   z1  : 动效跨度终点（组内最后一段完全消失）。触发之后滚轮推 [hit, z1] 这一段，
+         这期间页面锁在 tr 上；推过 z1 就解冻，页面从这根线继续往下滚。
+   armDown / armUp ：撞线判定用的“上膛”状态（见 updateZoneArms 上面的长注释）。 */
 let frozenZones = [];        // 所有冻结组算出来的区间
 let frozenZone = null;       // 当前正在用的那一组（渲染和状态机都看它）
 
-/* 算一组冻结区间：从该组第一段的触发线到最后一组文字消失。
-   ★ 必须在“这一组的时间轴已经定稿”之后调用：
-     触发线只看 top（不受位移影响），但 z1 取的是组内最后一段的 E，
-     如果后面还有别的组要重串时间轴，那一次重串不会再动这一组，所以是安全的。 */
+/* 算一组冻结区间：触发线（CSS top 那一屏）+ 组内各段串起来的包络。
+   ★ 顺序很重要：先按时间轴顺序把这一组的元素收齐，再用第一段定触发线，
+     然后把整组的 A/H/B/E 【重新串到触发线上】。
+   ★ 为什么要重串（本文件最容易踩的坑）：
+     items 里的 A/E 是“整页时间轴 + AUTO_FIT 压缩”的产物。AUTO_FIT 为了让
+     33 个组件在页面滚到底之前全部演完，会把到达点前移（本页 33 个全被前移），
+     冻结组的 A/E 因此可能跑到触发线【前面很远】。
+     这时上锁那一刻 p = hit 已经落在该组的 E 之后 → 页面确实停住了，
+     但一个字都不显示（这就是“滑过检出位置却没有文字跳出来”的直接原因）。
+     重串之后组内的 A/H/B/E 与 CSS top 严格对齐，锁定即开演，与压缩无关。 */
 function buildOneZone(group) {
     if (!group || group.length === 0 || items.length === 0) return null;
 
-    let first = null;
-    let last = null;
+    /* ---- 把这一组命中的元素按时间轴顺序收齐（同一个 top 的几段就是这个先后） ---- */
+    const members = [];
     group.forEach(sel => {
-        const it = items.find(i => matches(i.el, sel));
-        if (!it) return;
-        if (!first || it.A < first.A) first = it;
-        if (!last || it.E > last.E) last = it;
+        items.forEach(it => {
+            if (matches(it.el, sel) && members.indexOf(it) < 0) members.push(it);
+        });
     });
-    if (!first || !last) return null;
+    if (members.length === 0) return null;
+    members.sort((a, b) => (a.A - b.A) || (a.top - b.top));
+
+    const first = members[0];
 
     /* ---- 锁定位置跟着 CSS 的 top 走，并且和“钉在锚线上”的渲染方式对齐 ----
        渲染时元素中心被钉在锚线上（见 pinDy），所以触发线也取“元素中心到达锚线”那一屏：
@@ -193,42 +215,55 @@ function buildOneZone(group) {
     const tr = clamp(top + h / 2 - anchorY(), 0, pageMaxScroll());
     const hit = tr + L;
 
-    /* 让整段至少占 FREEZE_MIN_SECONDS 的真实秒数，免得锁一瞬间就弹开 */
-    const z1 = Math.max(last.E, hit + FREEZE_MIN_SECONDS * playbackRate());
-    return { hit, tr, z1, group };
-}
-
-/* 把选择器命中的元素收集起来（供时间轴摘除 / 渲染判断用） */
-function buildFrozenZones() {
-    frozenZones = [];
-    FREEZE_GROUPS.forEach(group => {
-        const z = buildOneZone(group);
-        if (!z) return;
-        frozenZones.push(z);
-        group.forEach(sel => {
-            items.forEach(it => { if (matches(it.el, sel)) it.freezeZone = z; });
-        });
+    /* ---- 把这组的包络重串到 hit 上 ----
+       A = hit → 淡入 → 停留 → 淡出 = E → 加一点间隔 → 下一段的 A ……
+       时长仍然取 0.1 那套（timingOf），所以这里不引入任何新的“秒数”。 */
+    const rate = playbackRate();
+    let cursor = hit;
+    members.forEach((it, i) => {
+        const t = timingOf(it.el);
+        if (i > 0) cursor += GAP_SECONDS * rate;
+        it.A = cursor;
+        it.H = it.A + t.fadeIn * rate;
+        it.B = it.H + t.hold * rate;
+        it.E = it.B + t.fadeOut * rate;
+        cursor = it.E;
     });
-    frozenZones.sort((a, b) => a.hit - b.hit);
-    frozenZone = frozenZones[0] || null;
+    const last = members[members.length - 1];
+
+    /* 让整段至少占 FREEZE_MIN_SECONDS 的真实秒数，免得锁一瞬间就弹开 */
+    const z1 = Math.max(last.E, hit + FREEZE_MIN_SECONDS * rate);
+
+    return {
+        hit, tr, z1, group, members,
+        /* 撞线判定的上膛状态：建区时先关掉，由 syncZoneArmsNow() 按页面此刻位置初始化 */
+        armDown: false,
+        armUp: false
+    };
 }
 
 /* 冻结组之后的时间轴重排。
-   目标（用户要求）：
-     · 冻结组【自己】按触发线摆好（它就在 CSS 位置上开演）；
-     · 除冻结组以外的【所有】文字都回到作者在 1.css 里写的静态位置 ——
-       也就是 text-1 那种“滚到自己 CSS 位置时正落在 40% 锚线”的普通出场方式；
-       允许个别文字在时间上重叠（用户明确说没关系）。
-   ★ 所以这里不再做“整体前移/后移”的推算：
-     任何推算都会引入 组内 span 与页面行程之间的差，越推越乱。
-     直接把 A 定成静态位置、再按 top0 顺序串一遍即可，简单且可预期。
-   ★ 冻结组用 top0（原始静态位置）判断先后：it.top 会被这里改写。 */
+   目标：
+     · 冻结组【自己】按触发线摆好（包络已经由 buildOneZone 重串到 hit 上，这里不动它们）；
+     · 除冻结组以外的【所有】文字都回到作者在 1.css 里写的静态位置，也就是普通的
+       “滚到自己 CSS 位置就出场”；允许个别文字在时间上重叠。
+   ★ 这里不做“整体前移/后移”的推算：任何推算都会引入组内跨度与页面行程之间的差，越推越乱。
+   ★ 唯一例外：如果某一段按静态位置排下来，结束点（E）会超过页面能滚到的最远进度，
+     那它就永远演不完、会一直停在画面上。这种段（本页只有最后一段 text-31）往前收一点，
+     正好在滚到底时结束。 */
 function relaxNonFrozenToAuthored(skippedEls) {
-    /* 冻结组：保持 buildOneZone 里串好的 A（它们本来就在正确的一屏） */
-    /* 非冻结：A 直接回到作者写的位置 */
+    /* 页面最远端对应的进度：任何一段的 E 超过它，就等于“永远演不完、停在画面上不消失”。 */
+    const reach = progressLimit();
+
     items.forEach(it => {
-        if (skippedEls.has(it.el)) return;
-        const shift = it.top0 - it.A;
+        if (skippedEls.has(it.el)) return;      // 冻结组：保持 buildOneZone 里串好的包络
+
+        /* 非冻结：A 直接回到作者写的位置；
+           只有“这一段会被顶出页面末端”的那一两段才往前收，正好在滚到底时结束。 */
+        const span = it.E - it.A;
+        const targetA = Math.max(0, Math.min(it.top0, reach - span));
+        const shift = targetA - it.A;
+
         it.A += shift;
         it.H += shift;
         it.B += shift;
@@ -296,35 +331,92 @@ let frozenAt = 0;
    所以往前就是 4→5→6，往回就是 6→5→4。 */
 let freezePos = 0;
 
-/* 这一轮冻结的方向：+1 = 正放（下滑进来，4→5→6）、-1 = 倒放（上滑进来，6→5→4）。
-   用来决定“滑到哪一端算放完”，避免两个端点判断互相打架。 */
-let freezeDirIn = 1;
-
 /* 倒放是否已经“上膛”：把滚轮从往下改成往上的那一刻才置位，
    放完一次就清掉 —— 这样一路往上滑不会在触发线附近反复重播（6>5>4 无限循环）。 */
 let wantReverse = false;
 
 /* 滚轮往哪边推：+1 = 往下、-1 = 往上、0 = 还没动。
-   撞线时用它判断该正放还是倒放；一旦方向变了就重新允许触发下一轮。 */
+   ★ 撞线时用它决定正放还是倒放；解冻时也用它决定“往哪一端算放完”：
+     正放时改成往上滑、或倒放时改成往下滑，都会顺着新方向走到另一端就收尾，
+     于是滚轮中途掉头也不会卡在冻结状态里出不来。 */
 let dirState = 0;
 let lastDir = 0;
 
-/* 这一趟（一次连续的下滑或上滑）里已经放过的冻结组。
-   ★ 解冻时进度会“结清”本组跨度，靠这个集合挡住同一趟里重复触发。
-     换滚动方向时清空，于是换成往上滑时可以再倒放一遍。 */
-let firedZones = new Set();
+/* ==========================================================================
+   撞线判定：为什么不再用“上一帧 vs 这一帧”的跨越判定
+   --------------------------------------------------------------------------
+   老做法是比 prevPageY（上一帧读到的 scrollY）和这一帧的 scrollY：
+       crossedDown = prevPageY < tr - ARRIVE_TOL && pageY >= tr - ARRIVE_TOL
+   它有两个会漏掉触发的硬伤，都是“滑过检出位置却没有文字跳出来”的原因：
 
-/* 上一帧的页面滚动位置。
-   ★ 冻结组的“跨线”判定要用它：比较上一帧与这一帧的位置，
-     才能知道页面是不是越过了某一组的触发线（见 updateFreeze）。
-     用“落在窗口里”判定会在一帧滚动很大时整段跳过触发线，那一组就永远不触发。 */
-let prevPageY = 0;
+   ① 页面停进容差带里就永久失效。
+      页面是靠 cur 追 target 才动的，滚轮一停手就停在任意位置。
+      只要那一停正好落在 (tr-ARRIVE_TOL, tr] 这条带里，
+      下一帧的“上一帧位置”就已经在带内了，跨越条件再也不会成立 ——
+      这一组要等用户【往上滑回带外再滑下来】才会重新触发，正常下滑永远错过它。
+      而滚轮一格只走几像素，停进这条带里的机会相当高。
 
-/* 播放结束后，进度会被拨回触发线上（见 tick 里减去“动效跨度”那段）。
-   如果不加这个标记，下一帧 prevCur 正好等于 hit，会立刻又被判定为“撞线”而无脑重播 ——
-   表现就是“播完之后页面卡住不动、反复重播”。
-   标记在“用户往回滚到触发线以上”时清零，于是往回再往下滑可以正常重播一次。 */
-let freezeDone = false;
+   ② 判的组和页面所在的位置对不上。
+      老代码用 zoneForProgress(target) 挑“这一帧判哪一组”。target 是滚轮提前量，
+      领先真实页面位置几十到几百像素，于是页面正在过第一组的线时，
+      挑出来的却是后面某一组 —— 第一组根本没人判它，一组都过不去还会越滚越偏。
+
+   现在的做法：每帧按【页面真实位置】给每一组刷新一次“上膛”状态，再逐组判定 ——
+     armDown : 页面到过线的【上方】（< tr - ARRIVE_TOL）→ 往下滑到线时正放；
+     armUp   : 页面到过线的【下方】（> tr + ARRIVE_TOL）→ 往上滑到线时倒放。
+   ★ 上膛是【保持】的：到过线外就一直有效，页面停在带里、一帧跳很远都不影响；
+     开演时清零 → 同一趟里不会原地重播；往上滑回线外会重新上膛 → 可以再演一遍。
+   ★ 判定用 window.scrollY（页面此刻的真实位置），不用 target。
+   ========================================================================== */
+
+/* 每帧刷新上膛状态：只在“到过线外”时置位，不会自己掉；清零只发生在开演时 */
+function updateZoneArms(pageY) {
+    frozenZones.forEach(z => {
+        if (pageY < z.tr - ARRIVE_TOL) z.armDown = true;
+        if (pageY > z.tr + ARRIVE_TOL) z.armUp = true;
+    });
+}
+
+/* 按“页面此刻停在哪”重建上膛状态（初始化 / resize 用）：
+   停在半路刷新时只装上还没经过的那几组，已经过去的那几组不会被重新触发。 */
+function syncZoneArmsNow() {
+    const pageY = clamp(window.scrollY, 0, pageMaxScroll());
+    frozenZones.forEach(z => {
+        z.armDown = pageY < z.tr - ARRIVE_TOL;
+        z.armUp = pageY > z.tr + ARRIVE_TOL;
+    });
+}
+
+/* 这一帧有没有该开演的组：有就返回 { zone, dir }（dir = +1 正放 / -1 倒放）。
+   ★ 逐组判定，不再只挑一组：页面走到哪一组的线，那一组就一定被看到。 */
+function zoneToStart(pageY) {
+    if (!freezeArmed || frozenZones.length === 0) return null;
+
+    /* 正放（往下滑）：取最靠前的“已上膛 + 页面已到线”的一组 */
+    if (dirState > 0) {
+        for (let i = 0; i < frozenZones.length; i++) {
+            const z = frozenZones[i];
+            if (!z.armDown) continue;
+            if (pageY < z.tr - ARRIVE_TOL) continue;        // 还没到线
+            if (pageY > z.tr + FREEZE_CATCHUP) continue;    // 被外部一把拽过去了，不往回拽
+            return { zone: z, dir: 1 };
+        }
+    }
+
+    /* 倒放（往上滑）：每“换一次方向”只放一遍（wantReverse 在方向变化时置位、用掉即清），
+       否则一路往上滑会在触发线附近无限重播。 */
+    if (wantReverse && dirState < 0) {
+        for (let i = frozenZones.length - 1; i >= 0; i--) {
+            const z = frozenZones[i];
+            if (!z.armUp) continue;
+            if (pageY > z.tr + ARRIVE_TOL) continue;        // 还没回到线
+            if (pageY < z.tr - FREEZE_CATCHUP) continue;
+            return { zone: z, dir: -1 };
+        }
+    }
+
+    return null;
+}
 
 /* 滚轮 / 触摸真正收到输入的信号：允许下一次撞线时上锁 */
 function armFreeze() {
@@ -335,133 +427,99 @@ function armFreeze() {
 const freezeLatched = () => freezeActive && inFrozenZone();
 
 /* 重置“驱动输入”状态（初始化 / resize 用：这些都不是滚轮驱动）
-   ★ 这里绝不能碰 freezeActive / freezeDone：
+   ★ 这里绝不能碰 freezeActive：
      初始化的 window load 事件会晚到，正好在播放中途打进来，
-     要是把它们清掉，正在播的那一段会被掐断、页面当场跳到 z1 对应的位置。
-     freezeActive 只由 tick 自己按播放进度收尾；freezeDone 只在用户往回滚过触发线时清。 */
+     要是把它清掉，正在播的那一段会被掐断、页面当场跳到 z1 对应的位置。
+     freezeActive 只由 updateFreeze 按播放进度收尾。 */
 function resetFreeze() {
     freezeArmed = false;
     frozenAt = 0;
-    /* 跨线判定的基准也跟着归位，免得上一次留下的旧值造成误触发 */
-    prevPageY = clamp(window.scrollY, 0, pageMaxScroll());
+    /* 上膛状态按页面此刻位置重算，免得上一次留下的旧值造成误触发 */
+    syncZoneArmsNow();
+}
+
+/* 解冻后进度回到触发线；但如果这条线上还压着别的普通文字（它的窗口跨过这条线，
+   冻结期间被收了起来），就把进度直接推过它们 —— 不跳过的话解冻后会闪一下。
+   ★ 正常情况下一段都不会命中（每组的线都落在两段之间），所以这里返回的就是 z.hit。 */
+function resumeProgressAfter(z) {
+    let p = z.hit;
+    items.forEach(it => {
+        if (it.freezeZone) return;          // 冻结组自己的时间轴不占页面行程
+        if (it.A < z.hit && it.E > z.hit) p = Math.max(p, it.E);
+    });
+    return clamp(p, 0, maxProgress());
 }
 
 /* ---- 每帧定阶段：普通滚动 / 冻结播放 ----
    返回 true = 这一帧页面钉死在触发线上，冻结区的文字由滚轮驱动。
    ★ 这里只负责“开始 / 结束”，推进由滚轮（addTarget）和 tick 一起完成。 */
-function updateFreeze(prevCur) {
-    /* 当前进度附近的那一组冻结区间（可以有多组：text-4/5/6 一组、text-8/9 一组）。
-       一组放完继续往前走，就会轮到下一组 —— 所以每帧按进度重新定位。 */
-    const z = freezeActive && frozenZone ? frozenZone : zoneForProgress(target);
+function updateFreeze() {
+    /* 页面此刻的真实位置：撞线判定只看它，不看 target（滚轮提前量） */
+    const pageY = clamp(window.scrollY, 0, pageMaxScroll());
 
-    /* ★ 换到另一组时要把 freezeDone 清掉：
-       freezeDone 是“这一组已经放过了，别在原地重播”的标记，
-       它只对本组有效。第一组放完置了 true，如果不随组切换清掉，
-       第二组就会因为 !freezeDone 不成立而永远触发不了。 */
-    if (z !== frozenZone) {
-        frozenZone = z;
-        freezeDone = false;
-    }
-    frozenZone = z;
+    /* 先刷新上膛状态：这一帧是“往下滑到线”还是“往上滑回线”都要用 */
+    updateZoneArms(pageY);
 
-    if (!z) {
-        freezeActive = false;
-        return false;
-    }
-
-    /* ---- 倒放：每“换一次方向”只放一遍 ----
-       只按位置判断的话，一路往上滑会在触发线附近不断重新满足条件 → 无限循环
-       （位置判据总能再次越过）。所以改成事件式：
-         把滚轮从“往下”改成“往上”的那一刻，允许一次倒放（wantReverse = true），
-         放完就把它清掉（同时 freezeDone = true 挡住位置判据）。
-       在这之后继续往上滑不会再放；要再倒放一遍，必须先往下滑一次换回方向。
-       ★ 方向一变就清空 firedZones：换方向等于“重新来一趟”，
-         于是往上滑时每一组都能倒放一次。 */
+    /* 滚轮方向变了 = 重新来一趟：只有“改成往上滑”这一下才允许倒放 */
     if (dirState !== lastDir) {
         lastDir = dirState;
-        freezeDone = false;
-        wantReverse = (dirState < 0);   // 只有“改成往上滑”这一下才允许倒放
-        firedZones.clear();
+        wantReverse = (dirState < 0);
     }
 
-    /* ★ 不再用“滚回触发线之前”来复位 firedZones：
-       解冻后进度就压在触发线上，那条判据每帧都成立，
-       会把刚放过的组立刻复位、于是原地反复重播。
-       复位只交给“换滚动方向”（上面那段）：换方向 = 重新来一趟，
-       于是往上滑时每一组都能倒放一次，同方向则每组只放一遍。 */
-    /* 正在播放 */
+    /* ---- 正在播放：只看滚轮往哪一端推 ----
+       往下滑推到 z1 → 这一组放完；往上滑退回 hit → 这一组倒放完。
+       ★ 解冻位置一律回到触发线：冻结那几段文字的演出【不消耗页面行程】，
+         所以页面必须还停在冻结时那一屏（frozenAt），不欠账、不跳转。
+       ★ 倒回 hit 才解冻的，说明这一组其实没演过 → 重新上膛，往下滑还能再看一次；
+         正放到 z1 的不再上膛（同一趟里不重播，要重播得先往上滑回线外）。 */
     if (freezeActive) {
-        /* 解冻：页面就停在它冻结时所在的位置（frozenAt），
-           cur / target 也回到那里 —— 不欠账、不跳转，就从原位置继续。
-           ★ 冻结那几段文字是【独立于页面滚动】自己走完的：
-             它们的演出不消耗页面行程，所以解冻后页面位置必须还是 frozenAt。
-             后续文字都放在作者写的静态位置上（见 relaxNonFrozenToAuthored），
-             所以页面一继续滚，它们就按 text-1 那种方式在各自位置淡入淡出。 */
-        if (freezeDirIn > 0) {
-            if (freezePos >= z.z1 - 1e-6) {
-                freezeActive = false;
-                freezeDone = true;
-                firedZones.add(z);
-                cur = clamp(frozenAt, 0, pageMaxScroll());
-                target = cur;
-                return false;
-            }
-        } else {
-            if (freezePos <= z.hit + 1e-6) {
-                freezeActive = false;
-                freezeDone = true;
-                wantReverse = false;
-                firedZones.add(z);
-                cur = clamp(frozenAt, 0, pageMaxScroll());
-                target = cur;
-                return false;
-            }
+        const z = frozenZone;
+        if (!z) {
+            freezeActive = false;
+            return false;
+        }
+
+        const rewound = freezePos <= z.hit + 1e-6;
+        const played = freezePos >= z.z1 - 1e-6;
+        const done = dirState < 0 ? rewound : played;
+
+        if (done) {
+            freezeActive = false;
+            cur = target = rewound ? clamp(z.hit, 0, maxProgress()) : resumeProgressAfter(z);
+            if (rewound) z.armDown = true;
+            return false;
         }
         return true;
     }
 
-    /* ---- 撞线进入：页面【跨过】这一组 CSS 的 top 那根线时才开演 ----
-       ★ 判据必须用【跨越】，不能用“落在一个窗口里”：
-         窗口判定（z.tr ± ARRIVE_TOL）在一帧滚动很大时会整段跳过去 ——
-         前一帧还在窗口上方、后一帧已经在窗口下方，条件从头到尾没成立过，
-         这一组就永远不触发。组数一多、页面越滚越快就越容易漏。
-         跨越判定只看“上一帧在线上方、这一帧到了或越过线”，
-         不管一帧滚 1px 还是 500px 都必定命中一次。
-       ★ 也不能用 target（滚轮提前量）：它领先 pageY 多少完全取决于滚动速度，
-         会出现“滚得快触发、滚得慢不触发”的怪毛病。
-       ★ 正放（往下滑）：pageY 从 z.tr 下方跨上来 → 正放一次。
-       ★ 倒放（往上滑）：pageY 从 z.tr 上方跨下去 → 倒放一次。
-       ★ 两者都由 firedZones 兜底（同一趟里每组只放一遍）和 freezeArmed（必须是滚轮 / 触摸驱动）。 */
-    const pageY = clamp(window.scrollY, 0, pageMaxScroll());
-    const crossedDown = dirState > 0 && !firedZones.has(z)
-                        && prevPageY < z.tr - ARRIVE_TOL && pageY >= z.tr - ARRIVE_TOL;
-    const crossedUp = wantReverse && dirState < 0 && !firedZones.has(z)
-                      && prevPageY > z.tr + ARRIVE_TOL && pageY <= z.tr + ARRIVE_TOL;
-
-    if (freezeArmed && !freezeDone && (crossedDown || crossedUp)) {
+    /* ---- 撞线进入：逐组判定，页面走到哪一组的线，那一组就开演 ---- */
+    const pick = zoneToStart(pageY);
+    if (pick) {
+        const z = pick.zone;
+        frozenZone = z;
         /* ★ 锁定位置 = 这一组 CSS top 对应的那一屏（z.tr）。
-           跨越判定保证了页面此刻就在 z.tr 附近（最多差一帧的滚动量），
-           所以对齐到 z.tr 只有几十像素的位移，看不出来；
+           上膛判据保证了页面此刻就在 z.tr 附近（最多差一帧的滚动量），
+           所以对齐到 z.tr 只有几像素的位移，看不出来；
            但换来的好处是：这一组一定在【CSS 指定的位置】开演、文字精确落在 40% 锚线上。
            ★ cur / target 一起设成 z.hit：进度与页面位置保持一致，
              冻结期间 pageTopFor 会把它钉在 frozenAt 上。
-           ★ 动画进度按方向取起点：
+           ★ 播放头按方向取起点：
              正放从触发线开始（组内第一段刚要淡入）；
              倒放从区段结尾开始，保证是从最后一段往回演。 */
         frozenAt = freezePoint(z);
-        cur = z.hit;
-        target = cur;
+        cur = target = z.hit;
         freezeActive = true;
-        freezeDirIn = crossedDown ? 1 : -1;
-        freezePos = crossedDown ? z.hit : z.z1;
-        wantReverse = false;    // 用掉这一次
-        prevPageY = pageY;
+        freezePos = pick.dir > 0 ? z.hit : z.z1;
+        z.armDown = false;                        // 上膛用掉了：要再演一次得先滑回线外
+        z.armUp = false;
+        if (pick.dir < 0) wantReverse = false;    // 这一次倒放用掉了
         startLoop();
         return true;
     }
 
-    /* 记下这一帧的页面位置，供下一帧做跨越判定 */
-    prevPageY = pageY;
+    /* 没在冻结：把 frozenZone 挂在“进度当前所在的那一组”，
+       供 render（body.frozen-scroll）和滚动事件里那条兜底判断用。 */
+    frozenZone = zoneForProgress(cur);
     return false;
 }
 
@@ -670,6 +728,10 @@ function layout() {
     frozenZones.sort((a, b) => a.hit - b.hit);
     frozenZone = frozenZones[0] || null;
 
+    /* 上膛状态按“页面此刻停在哪”初始化：
+       刷新 / 从链接进来停在半路时，只装上还没经过的那几组。 */
+    syncZoneArmsNow();
+
     /* 把所有非冻结文字放回作者写的静态位置（冻结组自己不动） */
     relaxNonFrozenToAuthored(skippedEls);
 
@@ -691,16 +753,19 @@ function layout() {
         el.style.zIndex = String(idx + 1);
     });
 
-    const endP = items.length ? items[items.length - 1].E : 0;
+    const endP = items.reduce((m, it) => (it.skipFrozen ? m : Math.max(m, it.E)), 0);
     console.info(
         `[home] 组件 ${items.length} 个 | 播放速度 ${WHEEL_SPEED} → ${(WHEEL_SPEED * fitScale).toFixed(4)}` +
         `（自适应 ×${fitScale.toFixed(3)}，滚轮需多滚 ${(1 / fitScale).toFixed(2)} 倍）| ` +
         `时间轴 ${Math.round(endP)} / 可用 ${Math.round(limit)} | 整页约 ${rate > 0 ? (limit / rate).toFixed(0) : "∞"}s | ` +
         `到达点前移 ${pulledCount} 个 | ` +
-        (frozenZone
-            ? `冻结触发线 top 对应 ${Math.round(frozenZone.tr)}px` +
-              `（CSS top→进度 ${Math.round(frozenZone.hit)}），动效结束 ${Math.round(frozenZone.z1)}`
-            : `冻结区 无`)
+        (frozenZones.length === 0
+            ? `冻结区 无`
+            : `冻结区 ${frozenZones.length} 组｜` +
+              frozenZones
+                  .map((z, k) => `#${k} 线 ${Math.round(z.tr)}px` +
+                      `（进度 ${Math.round(z.hit)}→${Math.round(z.z1)}，跨 ${Math.round(z.z1 - z.hit)}）`)
+                  .join(` ｜ `))
     );
 }
 
@@ -714,6 +779,18 @@ function render() {
 
     items.forEach(it => {
         const { el, h, top, A, H, B, E } = it;
+
+        /* ---- 冻结期间这一组独占画面 ----
+           所有文字都钉在同一条锚线上（见 pinDy），所以别的文字只要还在自己的窗口里，
+           就会和正在演的这一组叠在一起（字压字）。冻结时先把它们收起来；
+           被收起来的段落会在解冻时一并跳过（见 resumeProgressAfter），
+           免得解冻之后又闪一下。 */
+        if (freezeActive && it.freezeZone !== frozenZone) {
+            el.style.visibility = "hidden";
+            el.style.opacity = "";
+            el.style.transform = "none";
+            return;
+        }
 
         /* ---- 每组冻结文字只在“轮到它”的时候绘制 ----
            动画时钟分三种情况：
@@ -801,22 +878,19 @@ function tick(now) {
     const dt = Math.min(50, now - lastTime || 16.67);
     lastTime = now;
 
-    /* 先记录这一帧开始时的进度（= 上一帧实际停在的页面位置），冻结阶段用它判断 */
-    const prevCur = cur;
-
     /* 先定这一帧的阶段：普通滚动（滚轮驱动），还是冻结播放（滚轮推动文字） */
-    updateFreeze(prevCur);
+    updateFreeze();
 
     if (freezeActive) {
         /* ---- 冻结播放：页面一步不走，进度也不推进 ----
            ★ 冻结这几段文字和页面滚动【完全解耦】：
-             cur 停在冻结时的位置（页面因此钉在 frozenAt 一点不动），
+             cur 停在触发线上（页面因此钉在 frozenAt 一点不动），
              文字进度走 freezePos，由滚轮直接驱动（见 addTarget）。
              滚轮停手文字就停在当前状态（该停留的停留）。
-           ★ 这一趟“欠下”的行程（span）不解冻时还在，而是在解冻那一刻
-             一次性记到 cur 上（见 updateFreeze 的出口）：
-             页面于是从 frozenAt 直接接到 frozenAt + span，
-             后续文字的出场点本来就是按 (hit + span) 排的，正好对齐、不留空档。 */
+           ★ 这一组演完【不消耗页面行程】：解冻时 cur / target 只是回到触发线
+             （见 updateFreeze 的出口），页面还是原来那一屏，不会跳、也不欠账。
+             后续文字都按作者写的静态位置出场（见 relaxNonFrozenToAuthored），
+             所以继续滚就是普通的出场方式。 */
     } else {
         const k = 1 - Math.pow(1 - SMOOTHING, dt / 16.67);
         cur += (target - cur) * k;
@@ -879,7 +953,7 @@ function addTarget(delta) {
        往上滑 → freezePos 往回退（text-6 → 5 → 4 倒着放）
        滚轮停手它就停住，所以“停留”那段是靠继续滑才走完的，完全绑在鼠标上。
        ★ cur / target 在这里【一点都不动】：
-         页面因此钉在 frozenAt；欠下的行程等解冻时一次性记上（见 updateFreeze 出口）。
+         页面因此钉在 frozenAt 上，解冻后也从这一屏继续（不欠账、不跳转）。
          如果这里还累加 target，解冻那一帧页面会朝着远处的 target 猛冲。
        FREEZE_WHEEL_RATE：滚轮 → 文字进度的倍率（见文件头部）。
        ★ 正放和倒放用同一个倍率 —— 两边的手感必须一致。 */
