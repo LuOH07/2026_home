@@ -164,7 +164,7 @@
         {
             cls: "bug-icon-10",
             host: ".text-10",
-            src: "./title.mp4",
+            src: "./editing.webm",
             name: "Title",
             pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-10 决定 */
             autoplay: false,                /* ★ 亮起来才播（见 createIconVideo / mediaLive） */
