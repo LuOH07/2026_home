@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    /* ======================= 1. 十个图标（图片 / 视频链接、出场点在这里改） =======================
+    /* ======================= 1. 十个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11，2 号已删） =======================
        ★ src 可以是一张【图片】，也可以是一段【视频】：
          写成 .webm / .mp4 / .ogv 结尾时，下面第 2 节会自动改用 <video> 建节点。
          （以前一律用 <img> 建节点 —— <img> 只认图片，把 .webm 塞进 img.src
@@ -32,15 +32,6 @@
             start: { from: ".text-3", mark: "A" }
         },
         {
-            cls: "bug-icon-2",
-            host: ".text-4",
-            src: "./3.webm",
-            name: "Escherichia coli",
-            label: "E.coli",
-            /* text-3【完全淡出】之后才开始淡入；时长仍然和图标 1 一样（见下面 resolveWindow） */
-            start: { from: ".text-3", mark: "E" }
-        },
-        {
             cls: "bug-icon-3",
             host: ".text-5",
             src: "https://static.igem.wiki/teams/6059/wiki/home/p-putida.avif",
@@ -55,8 +46,8 @@
             src: "https://static.igem.wiki/teams/6059/wiki/home/e-coli-1.avif",
             name: "Escherichia coli (2)",
             label: "E.coli",
-            /* ★ 和图标 2 完全一样：同一个 from、同一个 mark
-               → 出场时刻 / 淡入时长 / 淡出时机 都和图标 2 一致，只有初始落点不同 */
+            /* text-3【完全淡出】之后才开始淡入（mark: E），时长仍然和图标 1 一样
+               （以前它和图标 2 同时出场，现在 2 号已删，这一段只剩它） */
             start: { from: ".text-3", mark: "E" }
         },
 
@@ -64,7 +55,7 @@
            ★ 位置在 3.css 的 .bug-icon-5 / .bug-icon-6 里改（left / bottom）
            ★ 它们【只活到 text-2 淡出为止】：fadeOut 写的是 ".text-2"，
              text-2 开始淡出时它们跟着暗下去，text-2 完全消失时它们也正好没了。
-             （图标 1~4 没有写 fadeOut，所以仍然跟着默认的 .text-6 一起消失。） */
+             （图标 1 / 3 / 4 没有写 fadeOut，所以仍然跟着默认的 .text-6 一起消失。） */
         {
             cls: "bug-icon-5",
             host: ".text-1",
@@ -135,7 +126,7 @@
         /* ---- 图标 9（tnpb-1.avif）—— text-7 淡入时出现，跟 text-7 一起消失 ----
            ★ 位置 / 大小在 3.css 的 .bug-icon-9 里改：
              现在是【屏幕竖直中心、水平 30%】（那里的 left / top 指的是盒子中点），
-             并且是画框里最底层的一只（飘来飘去的图标 1~4 压在它上面）。
+             并且是画框里最底层的一只（飘来飘去的图标 1 / 3 / 4 压在它上面）。
            ★ 图层：它在 .bug-icons 这个画框里，画框本身是 z-index 3，
              文字是 1~33（按出场顺序递增），所以它【一定在文字下面】。 */
         {
@@ -171,12 +162,33 @@
             loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
             start: { from: ".text-10", mark: "A" },   /* 跟着 text-10 的淡入区间出现 */
             fadeOut: ".text-10"                        /* 跟着 text-10 的淡出区间一起消失 */
+        },
+
+        /* ---- 图标 11（answer.webm）—— 跟 text-11 同步淡入 / 淡出 ----
+           ★ 素材用【相对路径】./answer.webm（和 index.html 放在同一个目录）。
+           ★ 只播一次、播完就【定格在最后一帧】（和图标 10 一个用法：
+             autoplay: false 让它等这只图标亮起来才播，loop: false 让它不从头再来）。
+           ★ 图层：它待在 .bug-icons 这个 z-index: 3 的画框里，而 text-11 的 z-index
+             比 3 高（1.js 按出场顺序写的内联值），所以它【天然叠在文字下面】——
+             不需要、也不要给它单独写 z-index；它也没有 hover 名字，
+             3.css 里另有 pointer-events: none，不会挡住文字的选中 / 悬停。
+           ★ 位置 / 大小在 3.css 的 .bug-icon-11 里调（left / top / --icon-height）。 */
+        {
+            cls: "bug-icon-11",
+            host: ".text-11",
+            src: "./answer.webm",                    /* ★ 相对路径：和 index.html 同目录 */
+            name: "Answer",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-11 决定 */
+            autoplay: false,                /* ★ 亮起来才播（不然进页面就播完了） */
+            loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
+            start: { from: ".text-11", mark: "A" },   /* ★ text-11【淡入】时跟着淡入，时长同它 */
+            fadeOut: ".text-11"                        /* ★ text-11【淡出】时跟着消失 */
         }
     ];
 
     /* 没写 fadeOut 的图标统一在它的淡出区间里一起消失（默认 .text-6）；
        写了 fadeOut 的各自认自己的宿主：图标 5 / 6 / 7 跟 .text-2、
-       图标 8 跟 .text-9、图标 9 跟 .text-7、图标 10 跟 .text-10 */
+       图标 8 跟 .text-9、图标 9 跟 .text-7、图标 10 跟 .text-10、图标 11 跟 .text-11 */
     const FADE_OUT_HOST = ".text-6";
 
     /* ======================= 飘动（图标“出现在页面里”的那段时间在飘） =======================
@@ -188,9 +200,9 @@
            沿分离轴把速度分量按反射交换（等质量弹性碰撞），并把重叠推开，绝不卡在一起。
        ★ 运动区域由下面的 DRIFT.area 决定，现在是【左侧 0%~60%】：
          判定用的是【图片边缘】，所以图标的外沿最多到 60% 那条线，不会越过去。
-       ★ 【初始位置是随机的】：图标 1~4 每次刷新都在运动区域里随机落点
+       ★ 【初始位置是随机的】：图标 1 / 3 / 4 每次刷新都在运动区域里随机落点
           （DRIFT.randomStart，见下面 pickStart），并且尽量互不重叠；
-          想恢复以前那四个写死的位置，把 randomStart 改成 false 即可。
+          想恢复以前那三个写死的位置，把 randomStart 改成 false 即可。
        ★ 只在【这个图标可见的时候】才动：还没轮到 / 已经淡出时位置冻住不写 DOM，
          等它再亮起来接着往前飞。
        ★ 单位都是【视口百分比】，速度是“每秒走百分之几”：
@@ -209,7 +221,7 @@
         /* ---- 初始落点：随机 ----
            true  = 每次刷新都在【运动区域 area 里】随机挑一个落点，
                    并且尽量不和别的图标重叠（见下面 pickStart）；
-           false = 用下面 seed 里写死的那四个固定落点（想复现老样子就切成 false）。
+           false = 用下面 seed 里写死的那三个固定落点（只有 1 / 3 / 4 号会用到，想复现老样子就切成 false）。
            ★ 随机落点一定会被夹进 area，所以图标的初始位置永远在运动范围内。 */
         randomStart: true,
         startTries: 240,     /* 随机试几次：取第一个“完全不重叠”的，试不到就用重叠最少的那个 */
@@ -223,7 +235,6 @@
            left / top = 图标【左上角】的视口百分比，dir = 初始方向（单位向量）。 */
         seed: [
             { left: 16, top: 30, dir: [0.85, 0.53] },
-            { left: 30, top: 60, dir: [-0.72, 0.69] },
             { left: 44, top: 45, dir: [0.60, -0.80] },
             { left: 36, top: 3,  dir: [-0.78, 0.63] }
         ]
@@ -236,7 +247,7 @@
     const rand = (a, b) => a + Math.random() * (b - a);
     const len = d => Math.sqrt(d.x * d.x + d.y * d.y);
 
-    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 六个“图标位” =======================
+    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十个“图标位” =======================
        每个图标是一个 .bug-icon-slot（定位用的盒子），里面放：
          · <img class="bug-icon">   —— 图片本身
          · <span class="bug-label">  —— hover 时才显示的名字（配了 label 才生成）
@@ -256,7 +267,7 @@
        ★ 唯一的例外是 text-3：3.css 里给它写了 z-index: 4 !important，
          所以【所有图标和它们的视频】都压在 text-3 下面 —— 画框整体只有一层
          z-index: 3，4 就足够压住里面全部图标 / 视频（2.js 的背景视频最高也只到 3）。
-       ★ 图标 1~4 各自独立定位、各自沿自己的方向飞（见下面飘动引擎）；
+       ★ 图标 1 / 3 / 4 各自独立定位、各自沿自己的方向飞（见下面飘动引擎）；
          图标 5 / 6 是 pin 的：不参与飘动，位置完全由 3.css 里那两条决定。 */
     const row = document.createElement("div");
     row.className = "bug-icons";
@@ -382,7 +393,7 @@
         }
 
         /* hover 显示的名字：没有名字的图标（比如图标 5 / 6）就不生成这个 span。
-           ★ 图标 1~4 的名字在 3.css 里被设成【斜体】（那四只就在 text-3 / text-4 / text-5 上）。 */
+           ★ 图标 1 / 3 / 4 的名字在 3.css 里被设成【斜体】（那三只就在 text-3 / text-4 / text-5 上）。 */
         let label = null;
         if (cfg.label) {
             label = document.createElement("span");
@@ -453,7 +464,7 @@
     /* 先把【会飘动的】那几个图标的初始落点和初始方向定好（视口百分比），
        免得第一帧之前它们全都堆在画框左上角闪一下。
        ★ 落点是【随机】的（resetDrift → pickStart），每次刷新都不一样；
-         这里立刻写进内联样式，所以 3.css 里 .bug-icon-1~4 的 left / top
+         这里立刻写进内联样式，所以 3.css 里 .bug-icon-1 / -3 / -4 的 left / top
          只是脚本还没跑起来时的兜底，正常不会看到。
        ★ pin 的图标不写内联位置：它们的位置由 3.css 的 .bug-icon-5 / -6 决定，
          写了内联样式反而会盖住 CSS，位置就改不动了。 */
@@ -552,11 +563,11 @@
             return (typeof v === "number" ? v : 0) + shift;
         };
 
-        /* 淡入起点：图标 1 = text-3 的 A（时间不变）、图标 2 = text-3 的 E、图标 3 = text-4 的 H */
+        /* 淡入起点：图标 1 = text-3 的 A（时间不变）、图标 4 = text-3 的 E（图标 2 已删）、图标 3 = text-4 的 H */
         const a = at("start", "A");
 
         /* 淡入终点：显式写了 end 就用它，否则默认“从起点往后淡入 host 的淡入时长”，
-           于是图标 2 / 3 / 4 的淡入时长和图标 1 完全一样 —— 出场时间都不变。 */
+           于是图标 3 / 4 的淡入时长和图标 1 完全一样 —— 出场时间都不变。 */
         const span = Math.max(1e-6, (host.H - host.A) * (cfg.fadeScale || 1));
         let b = cfg.end ? at("end", "H") : a + span;
         if (b <= a + 1e-6) b = a + span;
@@ -667,7 +678,7 @@
     }
 
     /* ---- 随机初始落点：在运动区域里随便挑一个位置 ----
-       挑的时候会尽量避开【已经在场的其它图标】，免得一开场四个叠成一团：
+       挑的时候会尽量避开【已经在场的其它图标】，免得一开场三个叠成一团：
          · 最多试 DRIFT.startTries 次，第一个“和谁都不重叠”的落点直接采用；
          · 全都重叠（区域太窄 / 图太大）就用“重叠最少”的那个 ——
            它一开局就会按碰撞互相弹开，不会叠死在原地；
@@ -1094,7 +1105,7 @@
         driftRaf = requestAnimationFrame(driftTick);
     }
 
-    /* ======================= 4. 每帧算四个图标的透明度 ======================= */
+    /* ======================= 4. 每帧算图标的透明度 ======================= */
     function update() {
         const h = HOME();
         /* 1.js 还没定稿时间轴（底图没加载完 / items 还没建）：什么都不做 */
@@ -1287,7 +1298,7 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到八个图标（含各自的飘动状态 n.drift）；
+       __bugIcons.nodes 能看到全部图标（现在 10 只，含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效
        （比如 DRIFT.on = false 关掉飘动，DRIFT.randomDir = true 让初始方向也随机）。 */
