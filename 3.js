@@ -56,7 +56,20 @@
        end  ：淡入什么时候结束（可选）。
               写了：从 start 到 end 之间淡入，于是“出场时间不变”＝淡入时长都一样；
               不写：从 start 往后淡入 host.H - host.A 那么长（和图标 1 的时长一致）。
+       pin  ：true = 【不飘动】。位置完全交给 3.css 里对应的 .bug-icon-N 决定
+              （left / right / top / bottom 随便写），于是它钉在屏幕上，
+              页面怎么滚都保持相对屏幕位置不变 —— 图标 5 / 6 就是这种。
+              不写（或 false）= 参与飘动 / 碰撞（图标 1~4 是这种）。
+       fadeOut：这个图标【跟着哪一段文字的淡出一起消失】。
+              不写 = 默认 FADE_OUT_HOST（.text-6），也就是图标 1~4 的行为；
+              写了 = 换成那一段（例如 ".text-2"）：那段文字开始淡出时图标跟着暗，
+              那段文字完全消失时图标也正好没了 —— 图标 5 / 6 就是这种。
+              往回滚动时自动反向恢复（和 1.js 的时间轴完全对称）。
        ========================================================================== */
+    /* 图标 7（箭头）的淡入时长倍数：
+       ico6 要等它【渐入完全结束】之后才出现，所以两处都引用这一个数，只改这里 */
+    const ARROW_FADE_SCALE = 1.8;
+
     const ICONS = [
         {
             cls: "bug-icon-1",
@@ -94,10 +107,57 @@
             /* ★ 和图标 2 完全一样：同一个 from、同一个 mark
                → 出场时刻 / 淡入时长 / 淡出时机 都和图标 2 一致，只有初始落点不同 */
             start: { from: ".text-3", mark: "E" }
+        },
+
+        /* ---- 下面两只【不飘动】，钉在屏幕上（pin: true）----
+           ★ 位置在 3.css 的 .bug-icon-5 / .bug-icon-6 里改（left / bottom）
+           ★ 它们【只活到 text-2 淡出为止】：fadeOut 写的是 ".text-2"，
+             text-2 开始淡出时它们跟着暗下去，text-2 完全消失时它们也正好没了。
+             （图标 1~4 没有写 fadeOut，所以仍然跟着默认的 .text-6 一起消失。） */
+        {
+            cls: "bug-icon-5",
+            host: ".text-1",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/crispr.avif",
+            name: "CRISPR",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 决定 */
+            fadeOut: ".text-2",             /* ★ text-2 淡出时一起消失 */
+            /* text-1【一出现】就跟着出现 */
+            start: { from: ".text-1", mark: "A" }
+        },
+        {
+            cls: "bug-icon-6",
+            host: ".text-1",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/tnpb.avif",
+            name: "TnpB",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 决定 */
+            fadeOut: ".text-2",             /* ★ text-2 淡出时一起消失 */
+            /* ★ 等图标 7（箭头）【渐入完全结束】之后才出现 ——
+               顺序变成：text-1 消失 → 箭头淡入 → ico6 淡入 */
+            start: { from: ".text-1", mark: "E", shift: item => (item.H - item.A) * ARROW_FADE_SCALE }
+        },
+        {
+            cls: "bug-icon-7",
+            host: ".text-1",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/arrow.avif",
+            name: "Arrow",
+            pin: true,                      /* ★ 不飘动：位置默认由下面的 between 自动算 */
+            fadeOut: ".text-2",             /* ★ 和图标 5 / 6 一起消失 */
+            /* ★ text-1【完全消失】之后立刻出现（比 ico6 早）：
+               ico6 要等这一段的渐入彻底走完才开始淡入（见 ico6 的 shift）。 */
+            start: { from: ".text-1", mark: "E" },
+            /* ★ 淡入时【左半边先出现、右半边后出现】：
+               用一条从左往右扫开的柔性遮罩，实现见下面的 paintReveal()。 */
+            reveal: { feather: 0.42 },
+            /* ★ 淡入时长 = 自己那条默认时长 × 这个倍数（ico6 等的就是这一段）：
+               调大 = 渐入更慢，ico6 的出场也会跟着一起往后推 */
+            fadeScale: ARROW_FADE_SCALE,
+            /* ★ 位置：默认对准图标 5 / 6 两只图标的【正中间】（见 placeBetween）；
+               想手动钉死就删掉这一行，然后改 3.css 的 .bug-icon-7。 */
+            between: [".bug-icon-5", ".bug-icon-6"]
         }
     ];
 
-    /* 四个图标统一在它的淡出区间里一起消失（“最后 text-6 淡出的时候它们一起淡出”） */
+    /* 所有图标统一在它的淡出区间里一起消失（“最后 text-6 淡出的时候它们一起淡出”） */
     const FADE_OUT_HOST = ".text-6";
 
     /* ======================= 飘动（图标“出现在页面里”的那段时间在飘） =======================
@@ -140,10 +200,10 @@
     const rand = (a, b) => a + Math.random() * (b - a);
     const len = d => Math.sqrt(d.x * d.x + d.y * d.y);
 
-    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 四个“图标位” =======================
+    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 六个“图标位” =======================
        每个图标是一个 .bug-icon-slot（定位用的盒子），里面放：
-         · <img class="bug-icon ...">  —— 图片本身
-         · <span class="bug-label">     —— hover 时才显示的名字（字体 / 颜色在 3.css）
+         · <img class="bug-icon">   —— 图片本身
+         · <span class="bug-label">  —— hover 时才显示的名字（配了 label 才生成）
        位置 / 大小写在 3.css，这里只负责把节点挂上去、把链接塞进 src。
        为什么要有 slot 这一层：
          · 飘动引擎把 left / top 写在 slot 上（量尺寸也量 slot），
@@ -151,20 +211,21 @@
          · hover 用纯 CSS（.bug-icon-slot:hover .bug-label），不需要监听鼠标，
            鼠标移开就自动消失，也不会和每帧写样式的飘动打架。
        ★ 容器是 position: fixed、铺满整个视口、pointer-events: none：
-         它就是一个“台球桌”，页面怎么滚都不动，所以飘动的位置＝屏幕上的位置；
+         它就是一个“台球桌”，页面怎么滚都不动，所以位置＝屏幕上的位置；
          只有【图标亮着的时候】slot 才恢复 pointer-events（见 update()），
          这样暗着的图标不会挡住底下文字的鼠标 / 悬停。
        ★ 图层夹在【背景】和【文字】之间（见 3.css 的 z-index）：
          2.js 的底图 / 视频是 0~2，1.js 给文字写的是 1~33（按出场顺序递增），
          这里取 3：盖得住底图和那些视频，和靠后的文字是有前有后的。
-       ★ 四个图标不再排成一行：各自独立定位、各自沿自己的方向飞（见下面飘动引擎）。 */
+       ★ 图标 1~4 各自独立定位、各自沿自己的方向飞（见下面飘动引擎）；
+         图标 5 / 6 是 pin 的：不参与飘动，位置完全由 3.css 里那两条决定。 */
     const row = document.createElement("div");
     row.className = "bug-icons";
     row.setAttribute("aria-hidden", "true");     /* 纯装饰，读屏器跳过 */
 
     const nodes = ICONS.map(cfg => {
         const slot = document.createElement("div");
-        slot.className = "bug-icon-slot " + cfg.cls;   /* cfg.cls 里写着 --icon-height 和兜底 left/top */
+        slot.className = "bug-icon-slot " + cfg.cls + (cfg.pin ? " is-pinned" : "");
 
         const img = document.createElement("img");
         img.className = "bug-icon";
@@ -175,17 +236,29 @@
         img.addEventListener("error", () => {
             console.error("[home] 图标加载失败，请检查链接：", cfg.name, cfg.src);
         });
-
-        /* hover 显示的名字：纯装饰，不参与鼠标事件（否则鼠标一碰 label 就会闪） */
-        const label = document.createElement("span");
-        label.className = "bug-label";
-        label.textContent = cfg.label || "";
-
         slot.appendChild(img);
-        slot.appendChild(label);
+
+        /* hover 显示的名字：没有名字的图标（比如图标 5 / 6）就不生成这个 span */
+        let label = null;
+        if (cfg.label) {
+            label = document.createElement("span");
+            label.className = "bug-label";
+            label.textContent = cfg.label;
+            slot.appendChild(label);
+        }
+
         row.appendChild(slot);
 
-        return { cfg, el: img, slot, label, drift: null, lastX: null, lastY: null };
+        return {
+            cfg,
+            el: img,
+            slot,
+            label,
+            pinned: !!cfg.pin,      /* true = 钉在屏幕上，不飘动 */
+            drift: null,
+            lastX: null,
+            lastY: null
+        };
     });
 
     function mount() {
@@ -197,9 +270,12 @@
     mount();
     if (!row.isConnected) document.addEventListener("DOMContentLoaded", mount, { once: true });
 
-    /* 先把四个图标的初始落点和初始方向定好（视口百分比），
-       免得第一帧之前它们全都堆在画框左上角闪一下 */
+    /* 先把【会飘动的】那几个图标的初始落点和初始方向定好（视口百分比），
+       免得第一帧之前它们全都堆在画框左上角闪一下。
+       ★ pin 的图标不写内联位置：它们的位置由 3.css 的 .bug-icon-5 / -6 决定，
+         写了内联样式反而会盖住 CSS，位置就改不动了。 */
     nodes.forEach(n => {
+        if (n.pinned) return;
         resetDrift(n);
         n.slot.style.left = n.drift.pos.x + "%";
         n.slot.style.top = n.drift.pos.y + "%";
@@ -258,7 +334,11 @@
             const spec = cfg[side];
             const key = (spec && spec.mark) || fallback;
             const v = mark[key];
-            return (typeof v === "number" ? v : 0) + ((spec && spec.shift) || 0);
+            let shift = (spec && spec.shift) || 0;
+            /* shift 也可以写成函数：拿到 fromItem 现算偏移量，
+               这样“接在图标 6 淡入结束之后”就不用把时长抄成常数 */
+            if (typeof shift === "function") shift = shift(fromItem) || 0;
+            return (typeof v === "number" ? v : 0) + shift;
         };
 
         /* 淡入起点：图标 1 = text-3 的 A（时间不变）、图标 2 = text-3 的 E、图标 3 = text-4 的 H */
@@ -266,57 +346,63 @@
 
         /* 淡入终点：显式写了 end 就用它，否则默认“从起点往后淡入 host 的淡入时长”，
            于是图标 2 / 3 / 4 的淡入时长和图标 1 完全一样 —— 出场时间都不变。 */
-        const span = Math.max(1e-6, host.H - host.A);
+        const span = Math.max(1e-6, (host.H - host.A) * (cfg.fadeScale || 1));
         let b = cfg.end ? at("end", "H") : a + span;
         if (b <= a + 1e-6) b = a + span;
 
         return { a, b, clock, fromItem };
     }
 
-    /* ---- text-6 的淡出走到哪了：0 = 还没淡出（图标全亮），1 = 已经全淡出 ----
-       ★ 不能只看 cur：
-         冻结组播完的那一帧，1.js 会先解冻、并把 cur 拨回触发线（见 updateFreeze 的出口），
-         那一瞬间 cur 反而小于 text-6 的 B，用 cur 算会得出“还没淡出”，
-         于是已经淡出的图标会当场复活。
-       ★ 所以认 freezePos 停在哪一端（1.js 播到头时会把它正好停在两端之一）：
-         正放结束 → freezePos 停在 z1（= 组内最后一个 E ≈ text-6 的 E）→ 已淡出；
-         倒放结束 → freezePos 倒回 hit（≈ text-4 的 A，远小于 text-6 的 E）→ 还没淡出，
-         于是四个图标跟着倒放一起亮回来。
-       ★ freezePos 只在“某一组播到那一端”时才会落在那个值上，
-         所以它天然能区分“这一组还没轮到”和“这一组刚刚播完”。 */
-    let outDone = false;
+    /* ---- 淡出进度：0 = 还没淡出（图标全亮），1 = 已经全淡出 ----
+       每个图标可以认【自己】的淡出宿主（ICONS 里的 fadeOut，默认 FADE_OUT_HOST =
+       .text-6），所以这里给每个宿主各存一份“已经淡出完”的标记（以前的单个
+       outDone 变量在两段文字各自淡出时会互相覆盖）。 */
+    const outStates = new Map();          /* 选择器 → { done } */
+    function outStateOf(sel) {
+        let s = outStates.get(sel);
+        if (!s) { s = { done: false }; outStates.set(sel, s); }
+        return s;
+    }
 
-    function fadeOutT(outItem) {
+    /* ★ 不能只看 cur：
+         冻结组播完的那一帧，1.js 会先解冻、并把 cur 拨回触发线（见 updateFreeze 的出口），
+         那一瞬间 cur 反而小于那一段的 B，用 cur 算会得出“还没淡出”，
+         于是已经淡出的图标会当场复活。
+       ★ 所以对冻结组里的宿主，认 freezePos 停在哪一端（1.js 播到头时会把它正好停在两端之一）：
+         正放结束 → freezePos 停在 z1（= 组内最后一个 E）→ 已淡出；
+         倒放结束 → freezePos 倒回 hit → 还没淡出，于是图标跟着倒放一起亮回来。
+       ★ 不在冻结组里的宿主（比如 text-2）没有这个麻烦，直接跟着 cur 走就行。 */
+    function fadeOutT(outItem, st) {
         const h = HOME();
         const z = outItem.freezeZone;
 
-        /* 兜底：万一这一页没用冻结组（比如改掉了 1.js 的 FREEZE_GROUPS），
-           就退回“跟着 text-6 自己的淡出区间走”，用当前时钟当进度。 */
+        /* 兜底：这一段的宿主不在冻结组里（比如 text-2），
+           就跟着它自己的淡出区间走，用当前时钟当进度。 */
         if (!z) {
             const p = clockOf(outItem);
             return clamp01((p - outItem.B) / Math.max(1e-6, outItem.E - outItem.B));
         }
 
         /* 正在播这一组（正放 / 倒放都走这里）：淡出进度直接由 freezePos 算，
-           所以上滑倒放时四个图标也会对称地一起亮回来。 */
+           所以上滑倒放时图标也会对称地一起亮回来。 */
         if (h.freezeActive && h.frozenZone === z) {
             const t = clamp01((h.freezePos - outItem.B) / Math.max(1e-6, outItem.E - outItem.B));
-            outDone = t >= 1;
+            st.done = t >= 1;
             return t;
         }
 
         /* 不在这一组里：freezePos 停在这一组的尾端，或页面早就滚过去了 → 已经淡出 */
         if (h.freezePos >= outItem.E - 1e-6 || h.cur > z.z1) {
-            outDone = true;
+            st.done = true;
             return 1;
         }
         /* freezePos 还在这一组的起点（没轮到 / 倒放回来了）→ 交给各自的宿主文字决定 */
         if (h.freezePos <= z.hit + 1e-6 || h.cur < z.hit) {
-            outDone = false;
+            st.done = false;
             return 0;
         }
         /* 理论上到不了这里；真到了就保持上一帧的结论，绝不因为 cur 被拨回而复活 */
-        return outDone ? 1 : 0;
+        return st.done ? 1 : 0;
     }
 
     /* ======================= 飘动引擎（台球 / 光反射） =======================
@@ -467,6 +553,61 @@
         n.slot.classList.toggle("is-live", v);
     }
 
+    /* ---- 图标 7 的淡入：左半边先出现、右半边后出现 ----
+       q = 这个图标自己的淡入进度（0 = 刚轮到，1 = 完全看清），由 update() 每帧算好传进来。
+       做法是一条【柔性遮罩】从左往右扫开：
+         · r（easeOut(q)）从 0 走到 1 ＝ 遮罩“实心区”的右边缘从最左边一路扫到最右边；
+         · 实心区后面再留 feather 宽的一段渐变过渡，扫过去的地方不会是一条硬边。
+       所以同一时刻总是【左边先亮、右半边还压着】，看上去就是从左边“长”出来。
+       ★ 整体淡入（opacity）仍然由 slot 负责、曲线和图标 5 / 6 完全一样；
+          q 走满 1 之后遮罩直接摘掉（mask: none），后面的渲染不再受影响。 */
+    function paintReveal(n, q) {
+        const el = n.el;
+        if (!el) return;
+        if (q >= 1) {
+            if (n.maskState !== "none") {
+                n.maskState = "none";
+                el.style.webkitMaskImage = "none";
+                el.style.maskImage = "none";
+            }
+            return;
+        }
+        const feather = (n.cfg.reveal && n.cfg.reveal.feather) || 0.42;
+        const r = easeOut(clamp01(q));
+        const cut = Math.min(100, (r + feather) * 100);
+        const m = "linear-gradient(90deg, #000 0%, #000 " + (r * 100).toFixed(2) +
+            "%, transparent " + cut.toFixed(2) + "%, transparent 100%)";
+        if (m !== n.maskState) {
+            n.maskState = m;
+            el.style.webkitMaskImage = m;      /* 老 Chrome / Safari 认前缀版 */
+            el.style.maskImage = m;
+        }
+    }
+
+    /* ---- 图标 7 的默认位置：图标 5 与图标 6 的正中间 ----
+       5 / 6 是钉住的、left / bottom 写在 3.css 里，宽度还随图片比例变，
+       所以用它们【真实渲染出来的盒子】量中点，比在 CSS 里猜百分比可靠。
+       ★ 图还没加载完（盒子是 0）时直接跳过，等下一帧再量。
+       ★ 想手动钉死箭头：删掉 ICONS 里那一行的 between，然后改 3.css 的 .bug-icon-7。 */
+    function placeBetween(n) {
+        const pair = n.cfg.between;
+        if (!pair) return;
+        const a = nodes.find(x => x.cfg.cls === pair[0]);
+        const b = nodes.find(x => x.cfg.cls === pair[1]);
+        if (!a || !b) return;
+        const ra = a.slot.getBoundingClientRect();
+        const rb = b.slot.getBoundingClientRect();
+        if (!ra.width || !ra.height || !rb.width || !rb.height) return;
+        const cx = (ra.left + ra.width / 2 + rb.left + rb.width / 2) / 2;
+        const cy = (ra.top + ra.height / 2 + rb.top + rb.height / 2) / 2;
+        if (Math.abs(cx - n.lastCx) < 0.5 && Math.abs(cy - n.lastCy) < 0.5) return;
+        n.lastCx = cx;
+        n.lastCy = cy;
+        n.slot.style.left = cx.toFixed(1) + "px";     /* 盒子中点对准两只图标的中点 */
+        n.slot.style.top = cy.toFixed(1) + "px";
+        n.slot.style.bottom = "auto";
+    }
+
     /* 写 DOM（只有真的变了才写，省得每帧都动样式）。
        ★ 位置写在 slot 上；顺带判断名字该放在图标【下面】还是【上面】：
          图标贴着屏幕底部时放下面会被切掉，那就翻到上面去（纯 CSS 类切换）。 */
@@ -591,7 +732,6 @@
             return;
         }
 
-        const outT = fadeOutT(outItem);      /* 0 = 还没淡出，1 = 已经全淡出 */
         let anyVisible = false;
 
         /* ---- 特例：页面停在冻结组【中间】，而这一组一次都没播过 ----
@@ -619,6 +759,11 @@
                 driftVisible(n, false);
                 return;
             }
+
+            /* 这个图标跟哪一段文字一起淡出：默认 .text-6，可用 ICONS 里的 fadeOut 覆盖 */
+            const fadeSel = n.cfg.fadeOut || FADE_OUT_HOST;
+            const fadeItem = (fadeSel === FADE_OUT_HOST) ? outItem : (findItem(fadeSel) || outItem);
+            const outT = fadeOutT(fadeItem, outStateOf(fadeSel));   /* 0 = 还没淡出，1 = 全淡出 */
 
             const p = win.clock;
             let op = 0;
@@ -649,13 +794,24 @@
             /* 页面停在冻结组中间、而这一组一次都没播过：整行不显示（见上面 stranded 说明） */
             if (stranded) op = 0;
 
+            /* ★ 图标 7：淡入时【左半边先出现、右半边后出现】 */
+            if (n.cfg.reveal) {
+                paintReveal(n, p <= win.a ? 0 : clamp01((p - win.a) / Math.max(1e-6, win.b - win.a)));
+            }
+
+            /* ★ 图标 7：位置对准图标 5 / 6 的中点（见 ICONS 里的 between） */
+            if (n.cfg.between) placeBetween(n);
+
             /* ---- 飘动 ----
                “出现在页面里”的那段时间 = 从淡入开始到随 text-6 淡出为止。
                ★ 这里只记“亮没亮”（op > 0.02），【不】在这里挪位置：
                  位置的推进只交给 driftTick()，它按真实时间走，
                  这样 1.js 多调几次 render() 也不会让图标多飞几步。 */
             const live = op > 0.02;
-            driftVisible(n, live);
+
+            /* ★ pin 的图标（5 / 6）不参与飘动 / 碰撞：它们的左右位置写在 3.css 里，
+               这里只负责透明度，所以完全不碰 n.drift、也不写内联 left / top。 */
+            if (!n.pinned) driftVisible(n, live);
 
             /* 只有亮着的图标才接受鼠标 hover（暗着的图标不能挡住底下文字） */
             hoverable(n, live);
@@ -728,14 +884,14 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到四个 <img>（含各自的飘动状态 n.drift）；
-       __bugIcons.outDone 看“是否已随 text-6 淡出”；
+       __bugIcons.nodes 能看到七个图标（含各自的飘动状态 n.drift）；
+       __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.DRIFT 是飘动范围 / 速度，改完下一帧就生效（比如 DRIFT.on = false 关掉飘动）。 */
     window.__bugIcons = {
         update,
         nodes,
         row,
         DRIFT,
-        get outDone() { return outDone; }
+        get outDone() { return outStateOf(FADE_OUT_HOST).done; }
     };
 })();
