@@ -1,71 +1,22 @@
-/* ==========================================================================
-   3.js —— .text-3 / .text-4 / .text-5 下方那三个宿主图标
-   --------------------------------------------------------------------------
-   要做的事（出场顺序，一个比一个晚）：
-     · 图标 1（b-subtilis）：text-3 一淡入就跟着淡入 —— 出场时间不变；
-     · 图标 2（e-coli）    ：text-3【淡出结束】之后才开始淡入；
-     · 图标 3（p-putida）  ：text-4【淡入结束】之后才开始淡入；
-     · 四个图标各自的淡入时长都是同一条曲线、同一个长度；
-     · 这四个图标【不在各自宿主淡出时消失】，而是等 text-6 开始淡出时一起淡出
-       （text-6 完全消失时，它们也正好全没了）；
-     · 图标亮着（＝出现在页面里）的那段时间，各自在【屏幕左侧 0%~60% 这块区域】里飘：
-       沿当前直线匀速前进，图片边缘碰到这块区域的边界或另一个图标的边缘，
-       就按光反射（镜面反射）弹回 —— 见下面 DRIFT 那一段（改 area 就能换活动范围）；
-     · 图层夹在【背景】和【文字】之间（见 3.css 的 z-index）：
-       盖得住底图和背景视频，和靠后的文字是有前有后的。
-   分工（按需求）：
-     · 3.js  ＝ 图片链接（src）+ 淡入 / 淡出 + 飘动（直线前进 / 反弹）；
-     · 3.css ＝ 大小 / 图层 / 兜底落点（一个铺满视口的固定画框）。
-   ★ 想再调出场次序，只改下面 ICONS 里的 start / end 两个字段（见那里的注释）；
-     想调飘动速度 / 初始方向，只改下面 DRIFT 那一段。
-
-   怎么和 1.js 对上（不要去改 1.js）：
-     1.js 每画一帧都会调用它自己的全局 render()，3.js 把 window.render 包一层：
-     文字画完立刻跟着画图标，用的还是同一帧的 cur / freezePos，
-     所以图标和文字严丝合缝，也不用自己开定时器。
-     1.js 把整条时间轴挂在 window.__home 上（items / cur / freezePos / freezeActive /
-     frozenZone …），下面所有状态都从那里读，3.js 不复制 1.js 的任何算法。
-   ========================================================================== */
 (function () {
     "use strict";
 
-    /* ======================= 1. 四个图标（图片链接 / 出场点在这里改） =======================
-       cls  ：3.css 里对应的样式钩子（要单独调某个图标的大小就改那里）
-       host ：图标“属于”哪一段文字 —— 找不到它时这个图标就整个不显示；
-              它同时也是淡出包络的判断依据
-       src  ：图片链接
-       name ：仅用于控制台报错信息
-       label：鼠标 hover 到图标上时显示的名字（移开就消失）；
-              字体 / 颜色写在 3.css 的 .bug-label 里（正文字体 + #465E77）
-       start：这个图标【什么时候开始淡入】—— 写“认哪一段文字的哪个时刻”：
-                from : 用哪一段文字当时钟（用它的淡入区间 [A, H] 算曲线）
-                mark : "A" = 这段文字刚开始淡入（出场时间不变的那个选项）
-                       "H" = 这段文字淡入结束（完全看清了）
-                       "E" = 这段文字完全消失（淡出结束）
-                shift: 在 mark 之后再往后推多少（一般 0）
-              —— 图标 1 写 ".text-3" + "A" 就等于原来的行为：text-3 一淡入它就淡入；
-                 图标 2 / 4 写 ".text-3" + "E"：等 text-3 完全淡出之后它才出现；
-                 图标 3 写 ".text-4" + "H"：等 text-4 完全淡入之后它才出现。
-              ★ 图标 3 认的 text-4 属于冻结组（1.js 的 FREEZE_GROUPS），
-                它的进度由滚轮驱动的 freezePos 给出，下面 resolveWindow() 会自动认对时钟，
-                所以“text-4 淡入结束”这一刻是准的，不需要改 1.js。
-              ★ 图标 4 和图标 2 的 start 完全一样（同一个 from + 同一个 mark），
-                所以它们的出场时刻分毫不差；淡入时长也一样（同一条曲线、同一个长度）；
-                淡出也都在 text-6 那一段里一起消失 —— 也就是“动效完全一样”，
-                只是初始落点 / 飘动速度不同，所以看起来是两只各飘各的。
-       end  ：淡入什么时候结束（可选）。
-              写了：从 start 到 end 之间淡入，于是“出场时间不变”＝淡入时长都一样；
-              不写：从 start 往后淡入 host.H - host.A 那么长（和图标 1 的时长一致）。
-       pin  ：true = 【不飘动】。位置完全交给 3.css 里对应的 .bug-icon-N 决定
-              （left / right / top / bottom 随便写），于是它钉在屏幕上，
-              页面怎么滚都保持相对屏幕位置不变 —— 图标 5 / 6 就是这种。
-              不写（或 false）= 参与飘动 / 碰撞（图标 1~4 是这种）。
-       fadeOut：这个图标【跟着哪一段文字的淡出一起消失】。
-              不写 = 默认 FADE_OUT_HOST（.text-6），也就是图标 1~4 的行为；
-              写了 = 换成那一段（例如 ".text-2"）：那段文字开始淡出时图标跟着暗，
-              那段文字完全消失时图标也正好没了 —— 图标 5 / 6 就是这种。
-              往回滚动时自动反向恢复（和 1.js 的时间轴完全对称）。
-       ========================================================================== */
+    /* ======================= 1. 十个图标（图片 / 视频链接、出场点在这里改） =======================
+       ★ src 可以是一张【图片】，也可以是一段【视频】：
+         写成 .webm / .mp4 / .ogv 结尾时，下面第 2 节会自动改用 <video> 建节点。
+         （以前一律用 <img> 建节点 —— <img> 只认图片，把 .webm 塞进 img.src
+           浏览器解不出来，会直接报 error，这就是“换成 webm 就加载不出来”的原因。）
+       ★ 视频想要自动播放，必须 muted + playsinline + autoplay 三件套，
+         这些都已经在 createIconVideo() 里设好了。
+       ★ 不想让它一进页面就播（长素材 / 一次性播放），在那一条里写 autoplay: false：
+         等这只图标亮起来才播（见 createIconVideo / mediaLive）；
+         再配 loop: false 就是“只播一次、播完停在最后一帧”—— 图标 10 的 title.mp4 就这样。
+       ★ 另有一种【叠加视频】的写法：某一条里写 video: { src: "..." }，
+          就会在这个图标（原本那张静态图）的位置上再插一段视频
+          （现在只有图标 8 这么用 —— text-8 淡入结束后播一次，播完回到那张静态图）。
+          它不自动播、不循环，
+          见 createOverlayVideo() / overlayLive()，位置在 3.css 的 .bug-icon-video。
+       ==================================================================================== */
     /* 图标 7（箭头）的淡入时长倍数：
        ico6 要等它【渐入完全结束】之后才出现，所以两处都引用这一个数，只改这里 */
     const ARROW_FADE_SCALE = 1.8;
@@ -74,7 +25,7 @@
         {
             cls: "bug-icon-1",
             host: ".text-3",
-            src: "https://static.igem.wiki/teams/6059/wiki/home/b-subtilis.avif",
+            src: "./2.webm",                 /* ★ 视频素材：自动用 <video muted autoplay loop> 建节点 */
             name: "Bacillus subtilis",
             label: "B.subtilis",
             /* 出场时间不变：text-3 一淡入就跟着淡入，时长 = text-3 的淡入区间 */
@@ -83,7 +34,7 @@
         {
             cls: "bug-icon-2",
             host: ".text-4",
-            src: "https://static.igem.wiki/teams/6059/wiki/home/e-coli.avif",
+            src: "./3.webm",
             name: "Escherichia coli",
             label: "E.coli",
             /* text-3【完全淡出】之后才开始淡入；时长仍然和图标 1 一样（见下面 resolveWindow） */
@@ -166,12 +117,66 @@
                所以“text-8 刚开始淡入”这一刻是准的。 */
             start: { from: ".text-8", mark: "A" },
             /* ★ text-9 淡出时一起消失；往上滑倒放时也会对称地亮回来 */
-            fadeOut: ".text-9"
+            fadeOut: ".text-9",
+
+            /* ★★ 新增：text-8【淡入完全结束】之后，在同一个位置插入一段视频 ★★
+               · src 写【相对路径】：./CTAC.webm（和 index.html 放在同一个目录）；
+               · 只播一次（不循环）；播完就把视频收起来、露出原来那张静态图 ——
+                 也就是“定格在现在的图片上”；
+               · 播的这 2.1 秒里，下面那张静态图会先收起来：
+                 两段素材的长宽比不一样（ctac.avif 是 4000×770、CTAC.webm 是 2460×686），
+                 同时显示会看到两个大小不同的同一个图案；
+               · 位置 / 大小在 3.css 的 .bug-icon-8 .bug-icon-video 里调
+                 （默认和静态图【同中心、同高度】；只想挪一点就改 --video-dx / --video-dy）；
+               · 想让视频停在自己的最后一帧、播完不回到静态图：在这里加一行 hold: true。 */
+            video: { src: "./CTAC.webm" }
+        },
+
+        /* ---- 图标 9（tnpb-1.avif）—— text-7 淡入时出现，跟 text-7 一起消失 ----
+           ★ 位置 / 大小在 3.css 的 .bug-icon-9 里改：
+             现在是【屏幕竖直中心、水平 30%】（那里的 left / top 指的是盒子中点），
+             并且是画框里最底层的一只（飘来飘去的图标 1~4 压在它上面）。
+           ★ 图层：它在 .bug-icons 这个画框里，画框本身是 z-index 3，
+             文字是 1~33（按出场顺序递增），所以它【一定在文字下面】。 */
+        {
+            cls: "bug-icon-9",
+            host: ".text-7",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/tnpb-1.avif",
+            name: "TnpB",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-9 决定 */
+            /* ★ 跟着 text-7 的【淡入区间】一起淡入（它的 A → H） */
+            start: { from: ".text-7", mark: "A" },
+            /* ★ 跟着 text-7 的【淡出区间】一起消失（它的 B → E），
+               往上滑倒放时会对称地跟着亮回来 */
+            fadeOut: ".text-7"
+        },
+
+        /* ---- 图标 10（title.mp4）—— text-10 淡入时出现，跟 text-10 一起消失 ----
+           ★ 它【本身就是一个视频】（src 写成 .mp4，下面第 2 节会自动用 <video> 建节点），
+             不是“图片上盖视频”那种。
+           ★ 三个关键开关：
+               · autoplay: false —— 不要一进页面就播（那点时间早就放完了）；
+                 等这只图标随 text-10 亮起来，才由 mediaLive() 开始播；
+               · loop: false     —— 只播一次，播完就停在最后一帧，不从头再来；
+               · fadeOut        —— 跟 text-10 的淡出区间一起消失。
+             所以整段看起来就是：text-10 淡入 → 视频跟着出现并放一遍 → 定格在最后一帧。
+           ★ 位置 / 大小在 3.css 的 .bug-icon-10 里（默认在文字下方、屏幕竖直 65% 处）。 */
+        {
+            cls: "bug-icon-10",
+            host: ".text-10",
+            src: "./title.mp4",
+            name: "Title",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-10 决定 */
+            autoplay: false,                /* ★ 亮起来才播（见 createIconVideo / mediaLive） */
+            loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
+            start: { from: ".text-10", mark: "A" },   /* 跟着 text-10 的淡入区间出现 */
+            fadeOut: ".text-10"                        /* 跟着 text-10 的淡出区间一起消失 */
         }
     ];
 
     /* 没写 fadeOut 的图标统一在它的淡出区间里一起消失（默认 .text-6）；
-       写了 fadeOut 的各自认自己的宿主：图标 5 / 6 / 7 跟 .text-2，图标 8 跟 .text-9 */
+       写了 fadeOut 的各自认自己的宿主：图标 5 / 6 / 7 跟 .text-2、
+       图标 8 跟 .text-9、图标 9 跟 .text-7、图标 10 跟 .text-10 */
     const FADE_OUT_HOST = ".text-6";
 
     /* ======================= 飘动（图标“出现在页面里”的那段时间在飘） =======================
@@ -183,6 +188,9 @@
            沿分离轴把速度分量按反射交换（等质量弹性碰撞），并把重叠推开，绝不卡在一起。
        ★ 运动区域由下面的 DRIFT.area 决定，现在是【左侧 0%~60%】：
          判定用的是【图片边缘】，所以图标的外沿最多到 60% 那条线，不会越过去。
+       ★ 【初始位置是随机的】：图标 1~4 每次刷新都在运动区域里随机落点
+          （DRIFT.randomStart，见下面 pickStart），并且尽量互不重叠；
+          想恢复以前那四个写死的位置，把 randomStart 改成 false 即可。
        ★ 只在【这个图标可见的时候】才动：还没轮到 / 已经淡出时位置冻住不写 DOM，
          等它再亮起来接着往前飞。
        ★ 单位都是【视口百分比】，速度是“每秒走百分之几”：
@@ -197,9 +205,22 @@
         speed: 11,           /* 基准速度：每秒走过视口宽/高的百分之几（想快就调大） */
         speedJitter: 0.4,    /* 速度随机浮动范围：±40%（每个图标速度不一样才好看） */
         minSpeed: 2,         /* 速度下限，防止极端情况下越弹越慢、最后停住 */
-        /* 四个图标各自的初始落点（视口百分比）与初始方向（单位向量）。
-           ★ 落点要挑得互不重叠（图标约 16.7% 宽 × 33.3% 高），
-             而且必须落在 area 里 —— resetDrift() 会把超出的落点自动夹回来。 */
+
+        /* ---- 初始落点：随机 ----
+           true  = 每次刷新都在【运动区域 area 里】随机挑一个落点，
+                   并且尽量不和别的图标重叠（见下面 pickStart）；
+           false = 用下面 seed 里写死的那四个固定落点（想复现老样子就切成 false）。
+           ★ 随机落点一定会被夹进 area，所以图标的初始位置永远在运动范围内。 */
+        randomStart: true,
+        startTries: 240,     /* 随机试几次：取第一个“完全不重叠”的，试不到就用重叠最少的那个 */
+        startGap: 1.5,       /* 两个图标的初始落点之间至少留多宽的空隙（视口百分比，0 = 贴着也行） */
+        /* ---- 初始方向 ----
+           false = 用 seed.dir 里写好的固定方向（默认，老样子）；
+           true  = 每个图标随机一个角度，每次刷新飞向都不一样。 */
+        randomDir: false,
+        /* ★ 只有在 randomStart = false 时才用这里的固定落点；
+           randomStart = true（默认）时它只是“区域比图还窄”那种极端情况的兜底。
+           left / top = 图标【左上角】的视口百分比，dir = 初始方向（单位向量）。 */
         seed: [
             { left: 16, top: 30, dir: [0.85, 0.53] },
             { left: 30, top: 60, dir: [-0.72, 0.69] },
@@ -211,6 +232,7 @@
     /* 和 1.js 的 render() 用同一条缓动（easeOut cubic），所以图标和文字是一起“亮”起来的 */
     const easeOut = t => 1 - Math.pow(1 - t, 3);
     const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
+    const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
     const rand = (a, b) => a + Math.random() * (b - a);
     const len = d => Math.sqrt(d.x * d.x + d.y * d.y);
 
@@ -237,20 +259,124 @@
     row.className = "bug-icons";
     row.setAttribute("aria-hidden", "true");     /* 纯装饰，读屏器跳过 */
 
-    const nodes = ICONS.map(cfg => {
-        const slot = document.createElement("div");
-        slot.className = "bug-icon-slot " + cfg.cls + (cfg.pin ? " is-pinned" : "");
+    /* ---- 图标素材：图片用 <img>，视频用 <video> ----
+       ★ 为什么不能一律用 <img>：<img> 只会去“解码一张图”，把 .webm / .mp4
+         写进 img.src，浏览器既不会解码也不会画第一帧，只会立刻触发 error
+         （控制台那句“图标加载失败，请检查链接”就是这么来的）。
+       ★ 视频要自动播放，必须【静音 + playsinline + autoplay】同时成立：
+         少一个（尤其没静音、或者 iOS 没 playsinline）浏览器就会拦下来，
+         元素一直是空白的 —— 那看起来也像“加载不出来”。
+       ★ 两个节点都挂同一个 .bug-icon 类，所以 3.css 里的大小 / 层级规则不用分两套。 */
+    const VIDEO_EXT = /\.(webm|mp4|m4v|ogv|ogg|mov)(?:[?#]|$)/i;
+    const isVideoSrc = src => VIDEO_EXT.test(String(src || ""));
 
+    function iconErrorHandler(cfg) {
+        return () => {
+            console.error("[home] 图标加载失败，请检查链接：", cfg.name, cfg.src);
+        };
+    }
+
+    function createIconImage(cfg) {
         const img = document.createElement("img");
         img.className = "bug-icon";
         img.src = cfg.src;
         img.alt = cfg.label || "";                     /* 名字也放 alt，读屏 / 图片挂了时也认得 */
         img.decoding = "async";
         img.draggable = false;
-        img.addEventListener("error", () => {
-            console.error("[home] 图标加载失败，请检查链接：", cfg.name, cfg.src);
-        });
-        slot.appendChild(img);
+        img.addEventListener("error", iconErrorHandler(cfg));
+        return img;
+    }
+
+    function createIconVideo(cfg) {
+        const v = document.createElement("video");
+        v.className = "bug-icon";
+        /* ★ 默认是“一进页面就自动播”（图标 1 / 2 那种循环素材）；
+             在 ICONS 那一条里写 autoplay: false，就变成“等它亮起来再播” ——
+             图标 10 的 title.mp4 就是这么用的（它一进页面就播的话，等滚到 text-10
+             早就放完了，只会看到一个不动的最后一帧）。 */
+        const autoStart = cfg.autoplay !== false;
+        /* ★ muted / autoplay 要在 src 之前设好，浏览器才会把它当“允许静音自动播放”的素材 */
+        v.muted = true;
+        v.defaultMuted = true;
+        v.autoplay = autoStart;
+        v.loop = cfg.loop !== false;                   /* 想只播一次就在 ICONS 那一条里写 loop: false */
+        v.playsInline = true;
+        v.setAttribute("muted", "");
+        if (autoStart) v.setAttribute("autoplay", "");
+        if (v.loop) v.setAttribute("loop", "");
+        v.setAttribute("playsinline", "");
+        v.setAttribute("webkit-playsinline", "");      /* 老 iOS 认这个前缀 */
+        v.setAttribute("preload", "auto");
+        v.setAttribute("disablepictureinpicture", "");
+        /* ★ 千万别写 setAttribute("controls", ...)：只要这个属性出现（哪怕值是 "false"）
+             浏览器就会画出一条原生控制条。要关掉就保持它不存在。 */
+        v.controls = false;
+        v.src = cfg.src;
+        v.addEventListener("error", iconErrorHandler(cfg));
+
+        /* autoplay: false 的那种不在这里踢它，等 update() 里 mediaLive() 发话 */
+        if (!autoStart) return v;
+
+        /* 个别浏览器（省电模式 / 节点刚插进 DOM）会把第一次 play() 拒掉，能播了再补一次 */
+        const kick = () => {
+            const p = v.play();
+            if (p && typeof p.catch === "function") p.catch(() => {});
+        };
+        v.addEventListener("loadeddata", kick, { once: true });
+        v.addEventListener("canplay", kick, { once: true });
+        kick();
+        return v;
+    }
+
+    /* ---- 叠在某个图标上的“一次性视频”（现在只有图标 8 用，见 ICONS 里 ico8 的 video）----
+       ★ 和 createIconVideo() 的区别就三点：
+          1) 【不自动播】：什么时候开始由 update() 按时间轴决定 ——
+             等 text-8 的淡入完全走完（p 走过 win.b）才 play()；
+          2) 【不循环】：只播一次，播完怎么收尾见 overlayLive()（默认收起来、
+             露出原来那张静态图 = 定格在现在的图片上；写 hold: true 才停在自己的最后一帧）；
+          3) preload 用 metadata：先只拉个头（宽高 / 时长），
+             大头等真正开始播的时候再下，不会在首屏跟主图 / 背景视频抢带宽。
+       ★ 静音 + playsinline 仍然必须：不然浏览器会拦掉那次 play()。
+       ★ 位置 / 大小全部交给 3.css 的 .bug-icon-8 .bug-icon-video，
+         这里只负责把节点建出来、把 src 塞进去。 */
+    function createOverlayVideo(cfg, spec) {
+        const v = document.createElement("video");
+        v.className = "bug-icon bug-icon-video";     /* 仍然挂 .bug-icon：高度等基础样式共用 */
+        v.muted = true;
+        v.defaultMuted = true;
+        v.autoplay = false;                          /* ★ 关键：不是自动播，等时间轴发话 */
+        v.loop = false;                              /* ★ 关键：只播一次，播完定格 */
+        v.playsInline = true;
+        v.setAttribute("muted", "");
+        v.setAttribute("playsinline", "");
+        v.setAttribute("webkit-playsinline", "");    /* 老 iOS 认这个前缀 */
+        v.setAttribute("preload", "metadata");
+        v.setAttribute("disablepictureinpicture", "");
+        /* ★ 同样绝对不能出现 controls 属性（哪怕是 "false"），否则会画出一条控制条 */
+        v.controls = false;
+        v.src = spec.src;
+        v.addEventListener("error", iconErrorHandler({ name: cfg.name + "（视频）", src: spec.src }));
+        return v;
+    }
+
+    const nodes = ICONS.map(cfg => {
+        const slot = document.createElement("div");
+        slot.className = "bug-icon-slot " + cfg.cls + (cfg.pin ? " is-pinned" : "");
+
+        const isVideo = isVideoSrc(cfg.src);
+        const el = isVideo ? createIconVideo(cfg) : createIconImage(cfg);
+        slot.appendChild(el);
+
+        /* ★ 图标 8：那个“淡入之后才插入的视频” ——
+           建好就放在【同一个 slot】里、盖在静态图上面，
+           位置 / 大小完全由 3.css 的 .bug-icon-8 .bug-icon-video 决定；
+           现在它是藏着的（CSS 里 opacity: 0），什么时候播由 update() 按时间轴说了算
+           （见下面的 overlayLive）。 */
+        let overlay = null;
+        if (cfg.video && cfg.video.src) {
+            overlay = createOverlayVideo(cfg, cfg.video);
+            slot.appendChild(overlay);
+        }
 
         /* hover 显示的名字：没有名字的图标（比如图标 5 / 6）就不生成这个 span */
         let label = null;
@@ -265,14 +391,50 @@
 
         return {
             cfg,
-            el: img,
+            el,                     /* <img> 或 <video>，取决于 cfg.src */
+            isVideo,                /* true = 这个图标是视频（见 createIconVideo） */
             slot,
             label,
             pinned: !!cfg.pin,      /* true = 钉在屏幕上，不飘动 */
+            playing: false,         /* 视频图标：现在是不是在解码播放（见 mediaLive） */
+            overlay,                /* 叠在图标上的“一次性视频”（现在只有图标 8 有，见 ICONS 的 video） */
+            overlayOn: false,       /* 这段视频现在是不是处在“该显示 / 该播”的状态（见 overlayLive） */
+            overlayTries: 0,        /* play() 被拒的次数：连续失败就放弃，不再每帧重试 */
+            overlayBroken: false,   /* true = 这段视频加载 / 解码不出来（文件路径不对等），彻底不管它 */
             drift: null,
             lastX: null,
             lastY: null
         };
+    });
+
+    /* ★ 叠加视频自己出错（文件没放对 / 浏览器不支持这种编码 / 网络断了）→ 记一笔：
+       之后 overlayLive() 就再也不去 play() 它了（错误信息由 createOverlayVideo 里
+       挂的 iconErrorHandler 打给控制台），静态图照旧显示在原位，页面不会因此坏掉。 */
+    nodes.forEach(n => {
+        if (!n.overlay) return;
+        n.overlay.addEventListener("error", () => {
+            n.overlayBroken = true;
+            n.overlay.style.opacity = "0";
+        });
+
+        /* ★ 可选：ICONS 里写 video: { src: "...", hold: true }，
+             播完就让视频停在自己的最后一帧、不回到静态图。
+             默认（不写 hold）是下面这一支：收起视频、露出原来那张静态图。 */
+        if (n.cfg.video && !n.cfg.video.hold) {
+            n.overlay.addEventListener("ended", () => {
+                /* ★ 只播一次，播完【定格在现在这张静态图上】：
+                   收起视频、把静态图放回来（CSS 的 .is-overlay-video 一摘就恢复）。 */
+                n.overlay.style.opacity = "0";
+                n.slot.classList.remove("is-overlay-video");
+            });
+        }
+
+        /* ★ 视频真的开始出画面了，才把下面那张静态图藏起来：
+           数据还没到时视频是透明的，前面露出来的仍然是静态图，不会空一片。
+           （两段素材长宽比不同，静态图一直亮着会看到两个大小不同的图案。） */
+        n.overlay.addEventListener("playing", () => {
+            if (n.overlayOn) n.slot.classList.add("is-overlay-video");
+        });
     });
 
     function mount() {
@@ -286,6 +448,9 @@
 
     /* 先把【会飘动的】那几个图标的初始落点和初始方向定好（视口百分比），
        免得第一帧之前它们全都堆在画框左上角闪一下。
+       ★ 落点是【随机】的（resetDrift → pickStart），每次刷新都不一样；
+         这里立刻写进内联样式，所以 3.css 里 .bug-icon-1~4 的 left / top
+         只是脚本还没跑起来时的兜底，正常不会看到。
        ★ pin 的图标不写内联位置：它们的位置由 3.css 的 .bug-icon-5 / -6 决定，
          写了内联样式反而会盖住 CSS，位置就改不动了。 */
     nodes.forEach(n => {
@@ -293,6 +458,34 @@
         resetDrift(n);
         n.slot.style.left = n.drift.pos.x + "%";
         n.slot.style.top = n.drift.pos.y + "%";
+    });
+
+    /* 素材加载完成时补一次“按真实尺寸摆位置”：
+       刚进页面时素材还没下载完，driftHalfSize() 只能返回兜底尺寸，随机落点是按
+       那个尺寸挑的，可能有一块会露在运动区域外面。素材一就绪就在这里修正：
+         · 还没亮起来（最常见）→ 按真实尺寸重新随机一个落点，用户看不到任何跳动；
+         · 已经亮着（素材很慢才加载完）→ 只更新尺寸并夹回运动区域，不重挑落点。
+       ★ 图片的“就绪”事件是 load；<video> 从来不触发 load，要听 loadedmetadata
+         （拿到宽高 / 时长的那一刻）。听错事件，视频图标的尺寸就永远停在兜底值上。
+       ★ 拿不到真实尺寸、或者已经量过（drift.measured）时，这里什么都不做。 */
+    nodes.forEach(n => {
+        if (n.pinned || !n.el) return;
+        n.el.addEventListener(n.isVideo ? "loadedmetadata" : "load", () => {
+            if (!n.drift || n.drift.measured) return;
+            const size = driftHalfSize(n);
+            if (!size.measured) return;
+            n.drift.half = size;
+            n.drift.measured = true;
+            if (n.drift.vis) {
+                const R = startRange(size);
+                n.drift.pos.x = clamp(n.drift.pos.x, R.minX, R.maxX);
+                n.drift.pos.y = clamp(n.drift.pos.y, R.minY, R.maxY);
+            } else {
+                n.drift.pos = pickStart(n, size);
+            }
+            n.lastX = n.lastY = null;
+            driftPaint(n);
+        });
     });
 
     /* ======================= 3. 从 1.js 的时间轴里读状态 ======================= */
@@ -435,7 +628,10 @@
     /* 现在这个图标在屏幕上占多大（半宽 / 半高，视口百分比）。
        ★ 量的是 slot（图片就贴在它里面，尺寸一致）：用 getBoundingClientRect 而不是 offsetWidth，
          因为图片高度写在 CSS 的 --icon-height 上、width 是 auto（按图片自身比例），
-         offset* 在这一页拿不到可靠的值。 */
+         offset* 在这一页拿不到可靠的值。
+       ★ measured = 这次量到的是不是【图片真实渲染出来的尺寸】：
+         图片还没加载完时拿不到宽高，这里退回兜底尺寸，随机落点就得等
+         第一次亮起来、拿到真实尺寸时再挑一遍（见 driftVisible）。 */
     function driftHalfSize(n) {
         const box = n.slot || n.el;
         const r = (box && typeof box.getBoundingClientRect === "function")
@@ -443,12 +639,71 @@
             : null;
         const iw = window.innerWidth || 1;
         const ih = window.innerHeight || 1;
+        /* ★ 视频在 loadedmetadata 之前，浏览器会先按默认的 300×150 撑出一个盒子，
+             那个尺寸不是真尺寸（宽高比都可能反），不能当成“量到了”。 */
+        const ready = !n.isVideo || !!(n.el && n.el.videoWidth);
+        const measured = !!(r && r.width && r.height) && ready;
         let w = r && r.width ? r.width : 240;
         let h = r && r.height ? r.height : 300;
         /* 极端情况保护：图不能比屏幕还大（否则永远在撞墙、抖个不停） */
         w = Math.min(w, iw * 0.9);
         h = Math.min(h, ih * 0.9);
-        return { hw: (w / iw) * 50, hh: (h / ih) * 50 };
+        return { hw: (w / iw) * 50, hh: (h / ih) * 50, measured };
+    }
+
+    /* 运动区域里，图标左上角允许取的范围（已经减掉图标自身的宽高，判定按图片边缘） */
+    function startRange(size) {
+        const A = DRIFT.area || { left: 0, right: 100, top: 0, bottom: 100 };
+        return {
+            minX: A.left,
+            maxX: Math.max(A.left, A.right - 2 * size.hw),
+            minY: A.top,
+            maxY: Math.max(A.top, A.bottom - 2 * size.hh)
+        };
+    }
+
+    /* ---- 随机初始落点：在运动区域里随便挑一个位置 ----
+       挑的时候会尽量避开【已经在场的其它图标】，免得一开场四个叠成一团：
+         · 最多试 DRIFT.startTries 次，第一个“和谁都不重叠”的落点直接采用；
+         · 全都重叠（区域太窄 / 图太大）就用“重叠最少”的那个 ——
+           它一开局就会按碰撞互相弹开，不会叠死在原地；
+         · startGap 是额外要求的最小间距（视口百分比），0 = 贴着也算不重叠。
+       ★ 不管挑到哪个，落点一定在 area 里，所以初始位置永远在运动范围内。 */
+    function pickStart(n, size) {
+        const R = startRange(size);
+        const gap = Math.max(0, DRIFT.startGap || 0);
+        const others = nodes.filter(o => o !== n && o.drift && !o.pinned);
+        const tries = Math.max(1, DRIFT.startTries || 1);
+
+        /* score = 0 表示和谁都不重叠；越小越“分得开” */
+        let best = null;
+        let bestScore = Infinity;
+
+        for (let k = 0; k < tries; k++) {
+            const x = rand(R.minX, R.maxX);
+            const y = rand(R.minY, R.maxY);
+            let score = 0;
+            for (let j = 0; j < others.length; j++) {
+                const d = others[j].drift;
+                /* 两个盒子在 x / y 方向上的重叠量（都 ≤ 0 = 分开了） */
+                const ox = (d.half.hw + size.hw + gap) - Math.abs((d.pos.x + d.half.hw) - (x + size.hw));
+                const oy = (d.half.hh + size.hh + gap) - Math.abs((d.pos.y + d.half.hh) - (y + size.hh));
+                if (ox > 0 && oy > 0) score += Math.min(ox, oy);
+            }
+            if (score <= 0) return { x, y };              /* 完全分开了，直接用 */
+            if (score < bestScore) { bestScore = score; best = { x, y }; }
+        }
+        return best || { x: rand(R.minX, R.maxX), y: rand(R.minY, R.maxY) };
+    }
+
+    /* 决定一个图标的初始落点：
+       randomStart = true（默认）→ 在运动区域里随机挑（见 pickStart）；
+       randomStart = false       → 用 seed 里写死的 left / top（老样子，可复现）。
+       两条路都会夹进运动区域，所以以后改 DRIFT.area 也不会让图标一开始就在区域外面。 */
+    function startPos(n, size, s) {
+        if (DRIFT.randomStart) return pickStart(n, size);
+        const R = startRange(size);
+        return { x: clamp(s.left, R.minX, R.maxX), y: clamp(s.top, R.minY, R.maxY) };
     }
 
     function resetDrift(n) {
@@ -456,21 +711,22 @@
         const s = (DRIFT.seed && DRIFT.seed[i]) || { left: 30, top: 50, dir: [1, 0] };
         const size = driftHalfSize(n);
         const sp = DRIFT.speed * rand(1 - DRIFT.speedJitter, 1 + DRIFT.speedJitter);
-        const dir = { x: (s.dir && s.dir[0]) || 1, y: (s.dir && s.dir[1]) || 0 };
-        const L = len(dir) || 1;
 
-        /* 初始落点先夹进运动区域：以后改 DRIFT.area 也不会让图标一开始就在区域外面 */
-        const A = DRIFT.area || { left: 0, right: 100, top: 0, bottom: 100 };
-        const maxX = Math.max(A.left, A.right - 2 * size.hw);
-        const maxY = Math.max(A.top, A.bottom - 2 * size.hh);
+        /* 初始方向：默认沿用 seed.dir（老样子）；DRIFT.randomDir = true 时随机一个角度 */
+        let dx = (s.dir && s.dir[0]) || 1;
+        let dy = (s.dir && s.dir[1]) || 0;
+        if (DRIFT.randomDir) {
+            const ang = Math.random() * Math.PI * 2;
+            dx = Math.cos(ang);
+            dy = Math.sin(ang);
+        }
+        const L = len({ x: dx, y: dy }) || 1;
 
         n.drift = {
-            pos: {
-                x: Math.min(maxX, Math.max(A.left, s.left)),
-                y: Math.min(maxY, Math.max(A.top, s.top))
-            },
-            vel: { x: dir.x / L * sp, y: dir.y / L * sp },
+            pos: startPos(n, size, s),                    /* ★ 随机落点：在运动范围内，尽量不重叠 */
+            vel: { x: dx / L * sp, y: dy / L * sp },
             half: size,
+            measured: !!size.measured,
             vis: false
         };
         n.lastX = n.lastY = null;
@@ -547,11 +803,25 @@
     }
 
     /* 只记“这个图标现在亮着吗”（由 update() 每帧调用）：
-       每次重新亮起来的时候，把尺寸重量一遍（窗口大小 / 图片加载完成都可能让它变） */
+       每次重新亮起来的时候，把尺寸重量一遍（窗口大小 / 图片加载完成都可能让它变）。
+       ★ 第一次拿到【图片真实尺寸】时还要重挑一次初始落点：
+         页面刚加载时图片还没下载完，resetDrift() 只能按兜底尺寸随机落点，
+         那个落点按真实尺寸算可能有一块露在运动区域外面；
+         重挑发生在图标刚亮起、几乎还看不见的那一帧，所以看不出跳动。 */
     function driftVisible(n, visible) {
         if (!n.drift) resetDrift(n);
         const v = !!visible;
-        if (v && !n.drift.vis) n.drift.half = driftHalfSize(n);
+        if (v && !n.drift.vis) {
+            const size = driftHalfSize(n);
+            const fresh = DRIFT.randomStart && size.measured && !n.drift.measured;
+            n.drift.half = size;
+            n.drift.measured = !!size.measured;
+            if (fresh) {
+                n.drift.pos = pickStart(n, size);    /* 按真实尺寸重新随机一个落点 */
+                n.lastX = n.lastY = null;
+                driftPaint(n);                      /* 立刻写一次，别闪一下老位置 */
+            }
+        }
         n.drift.vis = v;
     }
 
@@ -565,6 +835,94 @@
         if (v === n.hoverOn) return;
         n.hoverOn = v;
         n.slot.classList.toggle("is-live", v);
+    }
+
+    /* 视频图标：只在【真正看得见】的时候才解码播放 ——
+       图标大部分时间是全透明的（opacity 0 并不会让视频停止解码），
+       一个看不见的视频一直在解码纯粹是白烧 CPU / 电量。
+       ★ pause() 不会丢播放进度，下次亮起来会接着播。
+       ★ 例外是“一次性视频”（ICONS 里写了 autoplay: false 的那种，比如 ico10 的 title.mp4）：
+         它不进页面就播，而是等这只图标亮起来（text-10 淡入）才播；而且
+         【不会因为看不见就暂停】——
+         这类素材比较长（title.mp4 有 13 秒），一暗下去就暂停的话，
+         人往下滚两屏它就再也走不到结尾，“定格在最后一帧”也就永远不会发生；
+         反正只播一次，让它自己安静走完最省事。 */
+    function mediaLive(n, on) {
+        if (!n.el || !n.isVideo) return;
+        const v = !!on;
+        if (v === n.playing) return;
+        n.playing = v;
+
+        /* ---- 一次性视频（autoplay: false）---- */
+        if (n.cfg.autoplay === false) {
+            if (!v) return;                          /* ★ 暗下去也不暂停：让它自己走完 */
+            /* 已经播完（正定格在最后一帧）→ 再亮起来时从头再演一遍；
+               还没播完（中途滚走了）→ 接着播，不倒退。 */
+            if (n.el.ended) {
+                try { n.el.currentTime = 0; } catch (err) { /* metadata 还没到，忽略 */ }
+            }
+            const p1 = n.el.play();
+            if (p1 && typeof p1.catch === "function") p1.catch(() => {});
+            return;
+        }
+
+        if (v) {
+            const p = n.el.play();                    /* 被浏览器拒掉也无所谓，下帧还会再试 */
+            if (p && typeof p.catch === "function") p.catch(() => {});
+        } else {
+            n.el.pause();
+        }
+    }
+
+    /* ---- 图标 8 的“淡入之后插入的那段视频”（ICONS 里的 video）----
+       由 update() 每帧调，两个入参：
+         ready = 时间轴已经走过 text-8 的【淡入终点】（win.b）—— 也就是“文字完全亮起来了”；
+         live  = 这一刻图标本身是亮的（透明度 > 0）。
+       ★ 两者都成立 → 播一次（循环是关掉的）；播完的收尾见上面挂的 ended 监听：
+         默认收起视频、露出原来那张静态图 = “定格在现在的图片上”。
+       ★ 不成立（还没到点 / 往回滚到淡入之前 / 整只图标随 text-9 淡掉了）→
+         暂停、倒回第一帧、藏起来、把静态图放回来；下次再滚到这儿会重新演一遍。
+       ★ 只在【状态变化的那一帧】写 DOM：平时 want 和上一帧一样就直接返回，
+         不会每帧都去 play() / pause()（那样会把视频反复打断）。 */
+    function overlayLive(n, ready, live) {
+        const v = n.overlay;
+        if (!v || n.overlayBroken) return;
+
+        const want = !!(ready && live);
+        if (want === n.overlayOn) return;        /* 状态没变：正在播 / 已经播完 都别动它 */
+        n.overlayOn = want;
+
+        if (want) {
+            /* ★ 先亮出来，再开始播；数据还没到时视频本身是透明的，
+                 露出来的仍然是下面那张静态图（静态图由 .is-overlay-video 淡出，
+                 等 'playing' 真的出画了才藏）。 */
+            v.style.opacity = "1";
+            const p = v.play();
+            if (p && typeof p.catch === "function") {
+                /* 被浏览器拦掉 / 数据还没到 → 下一帧再看情况重试；
+                   连着失败很多次（文件丢了、编码不支持）就彻底放弃 ——
+                   静态图本来就在原位显示，页面不会因为这段视频坏掉。 */
+                p.catch(() => {
+                    n.overlayTries += 1;
+                    if (n.overlayTries >= 30) {
+                        n.overlayBroken = true;
+                        v.style.opacity = "0";
+                        n.slot.classList.remove("is-overlay-video");
+                    } else {
+                        n.overlayOn = false;
+                    }
+                });
+            }
+        } else {
+            v.style.opacity = "0";
+            n.slot.classList.remove("is-overlay-video");   /* 静态图放回来 */
+            try {
+                v.pause();
+                if (v.currentTime > 0) v.currentTime = 0;   /* 复位到第一帧，下次从头演 */
+            } catch (err) {
+                /* metadata 还没到位时改 currentTime 会抛，忽略即可 */
+            }
+        }
     }
 
     /* ---- 图标 7 的淡入：左半边先出现、右半边后出现 ----
@@ -762,6 +1120,8 @@
             if (!host) {
                 n.slot.style.opacity = "0";
                 hoverable(n, false);
+                mediaLive(n, false);
+                overlayLive(n, false, false);       /* 叠加视频（图标 8）也一起停下来 */
                 driftVisible(n, false);
                 return;
             }
@@ -770,6 +1130,8 @@
             if (!win) {
                 n.slot.style.opacity = "0";
                 hoverable(n, false);
+                mediaLive(n, false);
+                overlayLive(n, false, false);       /* 叠加视频（图标 8）也一起停下来 */
                 driftVisible(n, false);
                 return;
             }
@@ -830,12 +1192,21 @@
             /* ★ 图标 7：位置对准图标 5 / 6 的中点（见 ICONS 里的 between） */
             if (n.cfg.between) placeBetween(n);
 
+            /* ★ 图标 8：那段视频等 text-8【淡入完全走完】（p 走过 win.b —— 淡入窗口的终点）
+               才开始播，只播一次；播完就收起视频、回到静态图（见 overlayLive + 上面挂的
+               ended 监听）。图标一暗掉 / 往回滚到淡入之前，它就复位成第一帧藏起来。 */
+            if (n.overlay) overlayLive(n, p >= win.b - 1e-6, op > 0.001);
+
             /* ---- 飘动 ----
                “出现在页面里”的那段时间 = 从淡入开始到随 text-6 淡出为止。
                ★ 这里只记“亮没亮”（op > 0.02），【不】在这里挪位置：
                  位置的推进只交给 driftTick()，它按真实时间走，
                  这样 1.js 多调几次 render() 也不会让图标多飞几步。 */
             const live = op > 0.02;
+
+            /* ★ 视频图标（ICONS 里 src 写成 .webm / .mp4 的那几个）：
+               只在这只图标亮着的时候解码播放，暗下去就暂停，省 CPU / 电量。 */
+            mediaLive(n, live);
 
             /* ★ pin 的图标（5 / 6）不参与飘动 / 碰撞：它们的左右位置写在 3.css 里，
                这里只负责透明度，所以完全不碰 n.drift、也不写内联 left / top。 */
@@ -914,7 +1285,8 @@
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
        __bugIcons.nodes 能看到八个图标（含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
-       __bugIcons.DRIFT 是飘动范围 / 速度，改完下一帧就生效（比如 DRIFT.on = false 关掉飘动）。 */
+       __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效
+       （比如 DRIFT.on = false 关掉飘动，DRIFT.randomDir = true 让初始方向也随机）。 */
     window.__bugIcons = {
         update,
         nodes,

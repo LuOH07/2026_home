@@ -1,10 +1,16 @@
 /* ==========================================================================
-   3.css —— 六个图标的大小与位置
+   3.css —— 十个图标的大小与位置
              1 b-subtilis / 2 e-coli / 3 p-putida / 4 e-coli-1（会飘动）
-             5 crispr     / 6 tnpb                    （钉在屏幕上，不飘动）
+             5 crispr / 6 tnpb / 7 arrow / 8 ctac / 9 tnpb-1 / 10 title
+                                      （钉在屏幕上，不飘动）
    --------------------------------------------------------------------------
-   · 图标节点、图片链接（src）、淡入 / 淡出、飘动全部在 3.js 里；
+   · 图标节点、素材链接（src，图片或视频）、淡入 / 淡出、飘动全部在 3.js 里；
      这个文件只管【多大、在哪一层、钉住的在哪】，以及给飘动一个兜底位置。
+   · 图标 8 上面还叠着一段视频（3.js 里 ico8 的 video: { src: "./CTAC.webm" }）：
+     text-8 淡入结束后播一次，播完回到这张静态图（= 定格）。它的位置 / 大小在本文件
+     .bug-icon-8 .bug-icon-video 那一条里调（默认和静态图同中心、同高度）。
+   · 图标 10 本身就是一段视频（./title.mp4）：随 text-10 出现、只播一次、停在最后一帧，
+     位置 / 大小在本文件 .bug-icon-10 那一条里调。
    · .bug-icons 是一个 position: fixed、铺满整个视口的“台球桌”，本身不可见、
      也不接收鼠标事件；页面怎么滚它都不动，所以位置＝屏幕上的位置。
    · 图标 1~4 【不再是排成一行】的：各自绝对定位，
@@ -12,7 +18,8 @@
      运动是“沿直线匀速前进，图片边缘碰到活动范围边界或另一个图标的边缘就按反射弹回”。
      活动范围现在限定在【屏幕左侧 0%~60%】（竖直 0%~100%），
      改范围去 3.js 的 DRIFT.area（逻辑在 3.js 的飘动引擎里）。
-     下面 .bug-icon-1~4 里的 left / top 只是【第一帧之前的兜底落点】。
+      初始落点【不是固定的】：3.js 每次刷新都在运动区域（DRIFT.area）里随机挑，
+      并且尽量让四个图标互不重叠；下面 .bug-icon-1~4 里的 left / top 只是兜底。
    · 图标 5 / 6 是【钉在屏幕上】的（3.js 里 pin: true）：3.js 完全不写它们的位置，
      它们的 left / bottom 全由本文件下面那两条决定 —— 要挪位置就改那里。
    · 图层：夹在背景和文字之间 ——
@@ -59,15 +66,28 @@
     pointer-events: auto;
 }
 
-/* 图片本身：只负责大小和外观，不再参与定位 / 透明度（那些在 slot 上） */
+/* 图片本身：只负责大小和外观，不再参与定位 / 透明度（那些在 slot 上）。
+   ★ 这条规则对【图片 <img>】和【视频 <video>】同时生效：
+     3.js 会根据 src 的后缀（.webm / .mp4 …）决定建哪一种节点，两者都挂 .bug-icon。 */
 .bug-icon {
     display: block;
     height: var(--icon-height, 300px);  /* 继承 .bug-icons 的 --icon-height，也可被单条覆盖 */
-    width: auto;
+    width: auto;                        /* 图片按自身比例；视频按视频自身比例（metadata 到位后） */
     object-fit: contain;
     pointer-events: none;               /* 鼠标事件由 slot 接（整块矩形都可 hover） */
     user-select: none;
     -webkit-user-drag: none;
+}
+
+/* 视频图标（ICONS 里 src 写成 .webm / .mp4 / .ogv 那些）：
+   把视频的原生痕迹清掉，让它看起来和 avif / png 完全一样 ——
+   不能带控制条、不能有边框、还没解码出第一帧时也不能露黑底。 */
+video.bug-icon {
+    background: transparent;   /* 没有 poster / 解码前：透明，不露黑框 */
+    border: 0;
+    outline: none;
+    display: block;
+    vertical-align: top;
 }
 
 /* ---------------------------- hover 显示的名字 ----------------------------
@@ -108,9 +128,11 @@
     opacity: 1;
 }
 
-/* 四个图标各自的起始落点（分布开，别叠在一起）—— 之后都跟着飘动走。
-   ★ 这里的 left / top 只是【第一帧之前的兜底落点】，真正的位置由 3.js 每帧覆盖；
-     要改初始落点请改 3.js 里的 DRIFT.seed（那边才是权威，这里只是同值兜底）。
+/* 四个图标的大小（位置不在这里：见下面说明）。
+   ★ 初始落点【不是在 CSS 里定的】，也不是写死的：3.js 每次刷新都会在运动区域内
+     随机挑一个落点（DRIFT.randomStart），并且尽量不和别的图标重叠。
+     下面 left / top 只是“3.js 还没跑起来”那一下的兜底，正常看不到这两个值。
+     想改运动范围 / 随机规则，去 3.js 的 DRIFT（area / randomStart / startGap）。
    想让某一个图标单独大一点 / 小一点：在它自己这条里覆盖 --icon-height。 */
 .bug-icon-1 { --icon-height: 300px; left: 16%; top: 30%; }    /* Bacillus subtilis    */
 .bug-icon-2 { --icon-height: 300px; left: 30%; top: 60%; }    /* Escherichia coli     */
@@ -180,6 +202,9 @@
         --icon-height：图标高度（宽度按图片比例自适应）
    现在放在【文字正下方】：文字中心钉在屏幕从上往下 40% 处，取 56% 就落到它下面了；
    想更贴近文字就把 top 调小，想更靠下就调大。
+   ★ 这一只上面还叠着一段视频（./CTAC.webm，3.js 里 ico8 的 video：
+     text-8 淡入结束后播一次，播完回到这张静态图 = 定格），
+     它的位置在下面那一条 .bug-icon-8 .bug-icon-video 里调。
    ============================================================================ */
 .bug-icon-8 {
     --icon-height: 200px;
@@ -190,12 +215,102 @@
     transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
 }
 
+/* ----------------------------------------------------------------------------
+   图标 8 上叠的那段视频（3.js 里 ico8 的 video: { src: "./CTAC.webm" }）
+   ----------------------------------------------------------------------------
+   ★★ 想单独调【视频】的位置，只改下面两个变量 ★★
+        --video-dx ：水平微调（正数往右、负数往左，px 或 % 都行）
+        --video-dy ：竖直微调（正数往下、负数往上）
+      默认都是 0 = 和上面那张静态图【同中心、同高度】。
+   ★ 想让视频比静态图大 / 小一点：改下面的 height
+      （默认继承图标 8 的 --icon-height；宽度按视频自身比例 2460×686 自适应）。
+   ★ 注意：两段素材比例不一样 —— ctac.avif 是 4000×770（更扁），
+      CTAC.webm 是 2460×686。同高度时视频会比静态图窄一圈，
+      所以【播的时候静态图会收起来】、播完再放回来（见下面 .is-overlay-video）。
+      想让图案大小看起来一致，就调 height 或 --video-dx / --video-dy 自己配。
+   ★ 定位原理：父级 .bug-icon-slot 是 position: absolute、尺寸正好是静态图的尺寸，
+      所以 left/top 50% + translate(-50%,-50%) = 圆心对准静态图的圆心。
+   ★ opacity 由 3.js 控制（没轮到 / 已经播完 / 已经复位时都是 0），这里只给个初值。
+   ★ background: transparent 是为了“视频还没解码出第一帧”时透出下面的静态图，
+      不漏出黑框；pointer-events: none 让鼠标照样落到 slot 上（hover 名字照旧）。
+   ---------------------------------------------------------------------------- */
+.bug-icon-8 .bug-icon-video {
+    --video-dx: 0px;
+    --video-dy: 0px;
+
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) translate(var(--video-dx), var(--video-dy));
+    height: 310px;
+    width: auto;
+    max-width: none;
+    z-index: 1;                 /* 盖在下面那张静态图上面 */
+    opacity: 0;                 /* ★ 由 3.js 在“该播了”的那一刻改成 1 */
+    transition: opacity .18s ease;   /* 视频自己淡入淡出，换画面时不会“啪”地跳一下 */
+    background: transparent;
+    border: 0;
+    outline: none;
+    pointer-events: none;       /* 鼠标事件仍然交给 slot */
+}
+
+/* 视频【真的出画面了】的时候，3.js 给 slot 加 .is-overlay-video：
+   把下面那张静态图收起来 —— 两段素材比例不同，同时亮着会看到两个大小不同的同一个图案。
+   ★ 这里【不做过渡】：视频已经出画了才换，直接切过去最干净。 */
+.bug-icon-8.is-overlay-video .bug-icon:not(.bug-icon-video) {
+    opacity: 0;
+}
+
 /* pin 的图标如果有名字（现在没有），名字默认放在图标上方 —— 因为它们本来就贴底 */
 .bug-icon-slot.is-pinned .bug-label {
     top: auto;
     bottom: 100%;
     margin-top: 0;
     margin-bottom: 6px;
+}
+
+/* ============================================================================
+   图标 9（tnpb-1.avif）—— text-7 淡入时出现、跟 text-7 一起消失
+   ============================================================================ */
+.bug-icon-9 {
+    --icon-height: 400px;
+    left: 35%;
+    right: auto;
+    top: 45%;
+    bottom: auto;
+    transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
+    z-index: -1;                        /* 画框内最底层：飘动的图标压在它上面 */
+}
+
+/* 这只没有 hover 名字 → 亮着的时候也别接鼠标，免得挡住下面文字的选中 / 悬停。
+   （.is-live 那条规则是 pointer-events: auto，这里用更高优先级盖掉它） */
+.bug-icon-slot.bug-icon-9.is-live {
+    pointer-events: none;
+}
+
+/* ============================================================================
+   图标 10（title.mp4）—— text-10 淡入时出现、跟 text-10 一起消失
+   ----------------------------------------------------------------------------
+   ★ 位置 / 大小就改下面这几行：
+        left / top   ：视频【盒子中点】距屏幕左边 / 上边的距离
+        --icon-height：视频高度（宽度按比例自适应；title.mp4 是 1280×720 = 16:9）
+   现在是【文字下方】：文字中心钉在屏幕从上往下 40% 处，取 65% 就落到它下面了；
+   想更贴近文字就把 top 调小，想更靠下就调大；左右位置改 left。
+   ★ 它本身是视频图标（3.js 里 src 写成 .mp4 会自动用 <video> 建节点）：
+     只播一次、播完定格在最后一帧。
+   ============================================================================ */
+.bug-icon-10 {
+    --icon-height: 200px;
+    left: 35%;
+    right: auto;
+    top: 65%;
+    bottom: auto;
+    transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
+}
+
+/* 它也没有 hover 名字 → 同样别挡住底下文字的鼠标 */
+.bug-icon-slot.bug-icon-10.is-live {
+    pointer-events: none;
 }
 
 /* 窄屏：画框本来就铺满视口，位置是百分比、自动跟着缩；
@@ -216,5 +331,13 @@
     /* ctac 也跟着收小 */
     .bug-icon-8 {
         --icon-height: 60px;
+    }
+    /* tnpb-1 也跟着收小 */
+    .bug-icon-9 {
+        --icon-height: 110px;
+    }
+    /* title.mp4 也跟着收小 */
+    .bug-icon-10 {
+        --icon-height: 110px;
     }
 }
