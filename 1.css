@@ -12,6 +12,13 @@
     font-style: normal;
     font-display: swap;
 }
+@font-face {
+    font-family: 'impact';
+    src: url('https://static.igem.wiki/teams/6059/wiki/font/impact-2.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
 * {
     margin: 0;
     padding: 0;
@@ -31,10 +38,11 @@ body {
     overflow-x: hidden;
 }
 .text-box {
-    font-family: 'verdana', sans-serif;
-    color: #000000;
+    font-family: 'impact', sans-serif;
+    color: #324561;
     position: absolute;
-    transform-origin: 0 0;      
+    transform-origin: 0 0; 
+    letter-spacing: 1px;     
     will-change: transform, opacity;
     visibility: hidden;         
     pointer-events: none;
@@ -49,13 +57,13 @@ body {
     top: -1%;
     left: 18%;
     max-width: 40%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-2 {
     top: 2%;
     left: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-3 {
     top: 7%;
@@ -67,183 +75,183 @@ body {
     top: 15%;
     left: 12%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-5 {
     top: 15%;
     left: 12%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-6 {
     top: 15%;
     left: 12%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-7 {
     top: 15%;
     left: 15%;
-    max-width: 45%;
-    font-size: 28px;
+    max-width: 60%;
+    font-size: 44px;
 }
 .text-8 {
     top: 25%;
     left: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-9 {
     top: 25%;
     left: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-10 {
     top: 27%;
     left: 15%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-11 {
     top: 31%;
     left: 30%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-12 {
     top: 35%;
     left: 15%;
     max-width: 40%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-13 {
     top: 43%;
     left: 15%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-14 {
     top: 43%;
     left: 15%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 
 .text-15 {
     top: 47%;
     left: 15%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 
 .text-16 {
     top: 47%;
     left: 15%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-17 {
     top: 50%;
     left: 15%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-18 {
     top: 50%;
     left: 15%;
     max-width: 38%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-19 {
     top: 53%;
     right: 25%;
     max-width: 40%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-20 {
     top: 56%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-21 {
     top: 59%;
     right: 10%;
     max-width: 40%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-22 {
     top: 62%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-23 {
     top: 65%;
     right: 10%;
     max-width: 40%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-24 {
     top: 68%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-25 {
     top: 73%;
     right: 20%;
     max-width: 40%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-26 {
     top: 76%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-27 {
     top: 84%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-28 {
     top: 84%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-29 {
     top: 84%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-30 {
     top: 82%;
     right: 25%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-31 {
     top: 85%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-32 {
     top: 91%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 .text-33 {
     top: 91%;
     right: 10%;
     max-width: 45%;
-    font-size: 28px;
+    font-size: 44px;
 }
 /* ==========================================================================
    色块（rect）部分已整体注释掉：index.html 里的 .rect-box 元素、
@@ -359,14 +367,19 @@ body.frozen-scroll .text-6 {
 
 /* ==========================================================================
    页面顶部的视频（由 1.js 第 10 节动态创建）
+   —— 视频文件：页面同目录的 title.mp4（相对路径，见 1.js 的 TOP_VIDEO_SRC）。
    —— 位置：文档最顶端、和页面等宽；1.js 把 2.css 的“引导段”--lead-in 设成视频高度，
       底图（map.png）和所有内容因此一起下移，底图正好从视频下沿接下去，视频不盖住底图；
       底图 / 文字 / 人物视频 / 轨迹点之间的相对位置一点没动。
-   —— 高度由 1.js 按 16:9 写死（这里的 aspect-ratio 只是 JS 生效前的兜底）。
-   —— 整块 pointer-events: none（iframe 会吞滚轮，这一页全靠滚轮驱动），
-      只有播放按钮和 ✕ 是可点的。
-      想让视频带原生控件（暂停 / 音量 / 进度 / 全屏）：把 .top-video-frame 的
-      pointer-events 改成 auto，代价是鼠标停在视频区域时滚轮不再驱动页面。
+   —— 高度由 1.js 按 16:9 写死（title.mp4 是 1280×720，这里的 aspect-ratio 只是 JS 生效前的兜底）。
+   —— 交互（逻辑全在 1.js 第 10 节）：
+      页面加载后自动从头播一遍（title.mp4 没有音轨，1.js 里设了 muted=true，浏览器才放行自动播放）；
+      播完停在最后一帧不动，播放按钮出现，再点就从头重播；
+      自动播放被浏览器拦下时，播放按钮直接显示，点一下开始。
+   —— 整块 pointer-events: none（只有播放按钮单独打开）：
+      视频区域完全不拦滚轮，所以【播放过程中随时可以下滑】，页面照常滚。
+   —— 想让视频带原生控件（暂停 / 音量 / 进度 / 全屏）：把 .top-video-media 的
+      pointer-events 改成 auto；代价是鼠标停在视频区域时滚轮不再驱动页面。
    不想要这个视频：把 1.js 第 10 节整段注释掉，这里留着也不影响。
    ========================================================================== */
 .top-video-wrap {
@@ -374,23 +387,27 @@ body.frozen-scroll .text-6 {
     top: 0;
     left: 0;
     width: 100%;
-    aspect-ratio: 16 / 9;      /* 和视频本身一致（16:9） */
+    aspect-ratio: 16 / 9;      /* 和 title.mp4 一致（1280×720） */
     overflow: hidden;
     background: #000;
     z-index: 0;                /* 压在底图之上、文字 / 人物视频（z-index ≥ 1）之下 */
     pointer-events: none;
 }
 
-.top-video-poster,
-.top-video-frame {
+/* 视频本体：铺满整条横幅，不循环（loop 在 1.js 里显式关掉）。
+   ★ pointer-events: none：视频不吞滚轮，播放中随时可以下滑。 */
+.top-video-media {
     display: block;
     width: 100%;
     height: 100%;
     border: 0;
     object-fit: cover;
+    background: #000;
+    pointer-events: none;
 }
 
-/* 播放按钮：居中一个圆 + 三角形 */
+/* 播放按钮：居中一个圆 + 三角形
+   —— 自动播放 / 手动播放过程中隐藏；页面加载时自动播放被拦、或播放结束定格在最后一帧时显示。 */
 .top-video-play {
     position: absolute;
     left: 50%;
@@ -424,38 +441,8 @@ body.frozen-scroll .text-6 {
     border-color: transparent transparent transparent #ffffff;
 }
 
-/* 播放后右上角的 ✕：撤掉 iframe，回到封面 */
-.top-video-close {
-    position: absolute;
-    right: 14px;
-    top: 14px;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border: 2px solid rgba(255, 255, 255, 0.9);
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.45);
-    color: #ffffff;
-    font-family: sans-serif;
-    font-size: 16px;
-    line-height: 1;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    pointer-events: auto;
-    transition: background 0.2s;
-}
-
-.top-video-close:hover {
-    background: rgba(0, 0, 0, 0.7);
-}
-
-.top-video-wrap.is-playing .top-video-poster,
+/* 播放中（.is-playing 由 1.js 在 play() 后加上）：藏起播放按钮。
+   视频 ended 时 1.js 会摘掉 .is-playing → 按钮重新出现 = 点击重播。 */
 .top-video-wrap.is-playing .top-video-play {
     display: none;
-}
-
-.top-video-wrap.is-playing .top-video-close {
-    display: flex;
 }

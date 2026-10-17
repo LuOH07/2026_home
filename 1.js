@@ -38,7 +38,7 @@ const pinDy = (pageTop, h, top) => anchorY() - h / 2 + pageTop - top;
 
 /* ---- 默认动效时长（秒）---- */
 const FADE_IN_SECONDS = 0.6;   /* 原地淡入时长 */
-const HOLD_SECONDS = 1.5;      /* 钉在竖直视觉中心的停留时长 ← 需求里的 3s */
+const HOLD_SECONDS = 1.5;      /* 钉在竖直视觉中心的停留时长 */
 const FADE_OUT_SECONDS = 0.6;  /* 原地淡出时长 */
 const GAP_SECONDS = 0.4;       /* 相邻组件之间的额外留白（秒）；0 = 上一个消失完下一个立刻淡入 */
 
@@ -1073,36 +1073,52 @@ window.__home = {
     render
 };
 
-/* ============================ 10. 页面顶部的视频（点按钮播放） ============================ */
+/* ============================ 10. 页面顶部的视频（title.mp4：播一遍 → 定格最后一帧 → 点播放键重播） ============================ */
 /* 位置：页面最顶端、和页面等宽；底图（map.png）从视频下沿开始，视频不盖住底图。
    怎么做到“底图接在视频下面”且不错位：
-     用 2.css 现成的“引导段”变量 --lead-in（= 视频高度）把【底图 + 文字 + 图片 +
-     2.js 的人物视频与轨迹点】一起下移一个视频的高度。它本来就是为这件事写的：
-     底图挪 background-position，其余元素挪 margin-top / top，所以谁和谁的相对位置都
-     不变（2.js 读到的轨迹点 y 也会跟着含进这段偏移，坐标参照系仍然一致）。
+      用 2.css 现成的“引导段”变量 --lead-in（= 视频高度）把【底图 + 文字 + 图片 +
+      2.js 的人物视频与轨迹点】一起下移一个视频的高度。它本来就是为这件事写的：
+      底图挪 background-position，其余元素挪 margin-top / top，所以谁和谁的相对位置都
+      不变（2.js 读到的轨迹点 y 也会跟着含进这段偏移，坐标参照系仍然一致）。
    ★ 不要改成给 body 加 margin-top：那不会改 2.js 读到的 offsetTop / 点盒子 top，
-     人物会整体偏掉一个视频高度。
-   ★ 整块 pointer-events: none：iframe 会吞掉它范围内的滚轮事件，而这一页是纯滚轮
-     驱动的（2.css 里 .bg-video-wrap 一直 pointer-events: none 也是这个原因），
-     所以视频绝不能拦住滚轮；只有下面两个按钮是可点的。
-   交互：初始只显示封面 + 播放按钮；点按钮才把 PeerTube 播放器 iframe 挂进来（带
-         autoplay，点一下就能出声）；播放后右上角出现 ✕，点它停播并收回封面。
-   想换成原生控件（暂停 / 音量 / 进度 / 全屏）：把 1.css 里 .top-video-frame 的
-   pointer-events 改成 auto，代价是鼠标停在视频区域时滚轮不再驱动页面。 */
-const TOP_VIDEO_EMBED = "https://video.igem.org/videos/embed/pyn38ovsD5mjS7FP3bDJ4F";
-const TOP_VIDEO_POSTER = "https://video.igem.org/lazy-static/thumbnails/f357e47c-5ea7-41c4-aa82-1916fc70bc8b.jpg";
-/* 点播放之后才加的参数：自动播放、不要控件条、不要标题条（纯当顶部横幅用） */
-const TOP_VIDEO_PARAMS = "?autoplay=1&controls=0&peertubeLink=0&title=0";
+      人物会整体偏掉一个视频高度。
+   ★ 视频和整块容器都是 pointer-events: none（见 1.css）：
+      这一页是纯滚轮驱动的（2.css 里 .bg-video-wrap 一直 pointer-events: none 也是这个原因），
+      所以【播放过程中随时可以下滑】，视频绝不会拦住滚轮；只有播放按钮是可点的。
+   交互：
+      加载：自动从头播放一遍（title.mp4 没有音轨，且已设 muted=true，浏览器才会放行；
+            首帧是白场，不自动播的话顶部会一直空着）；自动播放被拦时退回“显示播放按钮”。
+      播完：ended 里只摘掉 .is-playing，不 seek、不重置、不隐藏 video ——
+            画面就停在最后一帧，播放按钮重新出现；
+      再点：currentTime 归零，从头再播。
+   想换成原生控件（暂停 / 音量 / 进度 / 全屏）：把 1.css 里 .top-video-media 的
+   pointer-events 改成 auto，代价是鼠标停在视频区域时滚轮不再驱动页面。
+   以后换成有音轨的素材、想让声音外放：把下面 topVideo.muted 改成 false（自动播放可能被拦）。 */
+const TOP_VIDEO_SRC = "./title.mp4";
 
 const topVideoWrap = document.createElement("div");
 topVideoWrap.className = "top-video-wrap";
 
-const topVideoPoster = document.createElement("img");
-topVideoPoster.className = "top-video-poster";
-topVideoPoster.src = TOP_VIDEO_POSTER;
-topVideoPoster.alt = "";
-/* 封面拿不到就留黑底，不影响播放按钮 */
-topVideoPoster.addEventListener("error", () => { topVideoPoster.style.display = "none"; });
+const topVideo = document.createElement("video");
+topVideo.className = "top-video-media";
+/* ★ 先静音：Chrome / Safari 只放行“静音素材”的自动播放。
+   title.mp4 本来就没有音轨（ffmpeg 里只有 video + tmcd），所以 muted 不会丢声音；
+   以后换成有音轨的素材、又想自动播放时，把这里改成 false 的代价是可能被浏览器拦。 */
+topVideo.muted = true;
+topVideo.defaultMuted = true;
+topVideo.setAttribute("muted", "");
+topVideo.src = TOP_VIDEO_SRC;
+topVideo.preload = "auto";          /* 预取数据：初始画面直接是第一帧，不用再挂封面图 */
+topVideo.playsInline = true;        /* iOS 上不要一播就强制全屏 */
+topVideo.setAttribute("playsinline", "");
+topVideo.setAttribute("webkit-playsinline", "");
+topVideo.controls = false;          /* 不要原生控件条：它会拦滚轮，这里也只需要“播一遍” */
+topVideo.loop = false;              /* ★ 不循环：播完停在最后一帧 */
+topVideo.setAttribute("disablepictureinpicture", "");
+topVideo.setAttribute("aria-label", "Sting 标题动画");
+topVideo.addEventListener("error", () => {
+    console.error("顶部视频加载失败，请检查文件是否存在：", TOP_VIDEO_SRC);
+});
 
 const topVideoPlay = document.createElement("button");
 topVideoPlay.type = "button";
@@ -1110,18 +1126,11 @@ topVideoPlay.className = "top-video-play";
 topVideoPlay.setAttribute("aria-label", "播放视频");
 topVideoPlay.innerHTML = '<span class="top-video-play-icon"></span>';
 
-const topVideoClose = document.createElement("button");
-topVideoClose.type = "button";
-topVideoClose.className = "top-video-close";
-topVideoClose.setAttribute("aria-label", "停止并收起视频");
-topVideoClose.textContent = "✕";
-
-topVideoWrap.appendChild(topVideoPoster);
+topVideoWrap.appendChild(topVideo);
 topVideoWrap.appendChild(topVideoPlay);
-topVideoWrap.appendChild(topVideoClose);
 document.body.appendChild(topVideoWrap);
 
-/* 视频高度 = 页面宽度 × 9/16（视频是 16:9），并用 2.css 的“引导段”变量 --lead-in
+/* 视频高度 = 页面宽度 × 9/16（title.mp4 是 1280×720），并用 2.css 的“引导段”变量 --lead-in
    把【底图 + 文字 + 图片 + 2.js 的人物视频与轨迹点】一起下移同样的距离 ——
    底图正好从视频下沿接下去，而它们彼此的相对位置和坐标参照系完全不变。
    ★ 必须走 --lead-in，不能给 body 加 margin-top：2.js 把轨迹点的 y 当“文档坐标”用
@@ -1143,33 +1152,51 @@ function sizeTopVideo() {
 
 sizeTopVideo();
 
-let topVideoFrame = null;
-
-/* 点播放：这时才建 iframe（首屏不用加载播放器），带 autoplay 直接开播 */
+/* 手动播放（自动播放被拦时点播放键 / 播完定格后再点重播）：每次都从头完整播一遍。
+   —— 还没播过：currentTime 本来就是 0；
+   —— 播完定格后：ended 时 currentTime == duration，先归零再播。 */
 function playTopVideo() {
-    if (topVideoFrame) return;
+    if (topVideo.ended || (topVideo.duration && topVideo.currentTime >= topVideo.duration - 0.05)) {
+        topVideo.currentTime = 0;
+    }
 
-    topVideoFrame = document.createElement("iframe");
-    topVideoFrame.className = "top-video-frame";
-    topVideoFrame.src = TOP_VIDEO_EMBED + TOP_VIDEO_PARAMS;
-    topVideoFrame.title = "XMU-China: Team Members Introduction (2026)";
-    topVideoFrame.setAttribute("allow", "autoplay; fullscreen; picture-in-picture");
-    topVideoFrame.setAttribute("allowfullscreen", "");
-    topVideoFrame.setAttribute("frameborder", "0");
-    topVideoFrame.setAttribute("sandbox", "allow-same-origin allow-scripts allow-popups");
+    topVideoWrap.classList.add("is-playing");   /* 播放中藏起播放按钮（CSS） */
 
-    topVideoWrap.appendChild(topVideoFrame);
+    const p = topVideo.play();
+    if (p && typeof p.catch === "function") {
+        p.catch(err => {
+            /* 播放被浏览器拦下（极少见：这里是点击手势）：退回“按钮可见”的状态，别让视频卡死 */
+            topVideoWrap.classList.remove("is-playing");
+            console.warn("顶部视频播放失败：", err);
+        });
+    }
+}
+
+/* 页面加载后自动播一遍（标题动画，首帧白场，需要自己动起来）。
+   ★ 视频已设 muted=true（title.mp4 没有音轨），Chrome / Safari / Firefox 才允许自动播放。
+   ★ 万一被拦（低电量模式 / 严格的自动播放策略）：play() reject → 摘掉 .is-playing，
+     播放按钮直接露出来，点一下就能播，不会卡在空白上。 */
+function autoplayTopVideo() {
     topVideoWrap.classList.add("is-playing");
+
+    const p = topVideo.play();
+    if (p && typeof p.catch === "function") {
+        p.catch(err => {
+            topVideoWrap.classList.remove("is-playing");
+            console.warn("顶部视频自动播放被拦下，已退回播放按钮：", err);
+        });
+    }
 }
 
-/* 点 ✕：把 iframe 整个撤掉（视频立刻停），回到封面 + 播放按钮 */
-function stopTopVideo() {
-    if (!topVideoFrame) return;
-
-    topVideoFrame.remove();
-    topVideoFrame = null;
+/* 播完：什么都不做，画面保持最后一帧（不 seek、不清空 src、不隐藏），
+   只把播放按钮放回来 —— 再点就是重播。 */
+topVideo.addEventListener("ended", () => {
     topVideoWrap.classList.remove("is-playing");
-}
+    topVideoPlay.setAttribute("aria-label", "重新播放视频");
+    topVideoPlay.title = "重新播放";
+});
 
 topVideoPlay.addEventListener("click", playTopVideo);
-topVideoClose.addEventListener("click", stopTopVideo);
+
+/* 所有监听都挂好后再自动开播，避免片头刚播完那一下没有 ended 收尾 */
+autoplayTopVideo();

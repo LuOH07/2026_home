@@ -91,7 +91,7 @@ video.bug-icon {
 }
 
 /* ---------------------------- hover 显示的名字 ----------------------------
-   · 字体 = 正文字体（1.css 里 .text-box 用的就是 'verdana', sans-serif）
+   · 字体 = 正文字体（1.css 里 .text-box 用的就是 'impact', sans-serif）
    · 颜色 = #465E77
    · 平时 opacity: 0；.bug-icon-slot:hover 时淡入，鼠标移开就淡出
    · 位置默认贴在图标正下方；图标贴近屏幕底部时，3.js 会给 slot 加 .is-above 翻到上方
@@ -103,7 +103,7 @@ video.bug-icon {
     transform: translateX(-50%);        /* 水平居中在图标中线上 */
     margin-top: 6px;
 
-    font-family: 'verdana', sans-serif; /* ← 正文字体 */
+    font-family: 'impact', sans-serif;  /* ← 正文字体（和 1.css 的 .text-box 一致） */
     font-size: 28px;                    /* 和正文 .text-box 一致 */
     line-height: 1.2;
     color: #465E77;                     /* ← 需求指定的颜色 */
