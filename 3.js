@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    /* ======================= 1. 十三个图标（图片 / 视频链接、出场点在这里改；编号 1、3~14，2 号已删） ======================= */
+    /* ======================= 1. 十七个图标（图片 / 视频链接、出场点在这里改；编号 1、3~18，2 号已删） ======================= */
     /* 图标 7（箭头）的淡入时长倍数：
        ico6 要等它【渐入完全结束】之后才出现，所以两处都引用这一个数，只改这里 */
     const ARROW_FADE_SCALE = 1.8;
@@ -250,13 +250,77 @@
             start: { from: ".text-17", mark: "A" },
             /* ★ 跟着 text-18 的【淡出区间】一起消失（它的 B → E），倒放时对称亮回来 */
             fadeOut: ".text-18"
+        },
+
+        /* ---- 图标 15 / 16 / 17 / 18（understand-1.avif）—— text-21 淡入时【四只一起】出现，
+                跟 text-21 一起淡出 ----
+           ★ 四只是同一张图的四份，各自独立飘动（和图标 1 / 3 / 4 一个玩法）：
+               · 落点【随机】：每次刷新都在自己的运动区域里重新随机，
+                 并且尽量互相错开（见 pickStart），不会一开场四只叠成一团；
+               · 运动方式 = 台球 / 光反射：匀速直线飞，撞到区域边框按反射定律弹回，
+                 互相撞到就按等质量弹性碰撞弹开（就是 ico1 那套 driftStep）。
+           ★ 运动区域（只对这四只生效，写在 area 里）：
+                 top 0~100%、right 0~60%
+                 →  距屏幕右边缘 0%~60%（即 left 40% ~ right 100%），
+                    水平只在屏幕右侧那 60% 里弹、竖直占满整屏。
+                    改范围就改这四条里的 area（不用动全局 DRIFT.area）。
+           ★ 出场 / 退场：
+                 start   = text-21 的淡入起点（A）→ 四只跟着 text-21 一起淡入；
+                 fadeOut = text-21 → 在 text-21 的【淡出区间】（它的 B → E）里一起暗下去，
+                           text-21 完全消失时它们正好也没了。
+           ★ 大小在 3.css 的 .bug-icon-15 ~ -18 里调（--icon-height），
+             想四只不一样大就分别改；位置不用写，脚本每帧自己摆。
+           ★ randomDir: true —— 每只随机一个初始方向，
+             否则四只都会沿用同一个兜底方向、排成一条线往右飞（同一个起点种子）。
+           ★ 它们没有 hover 名字 → 3.css 里另有 pointer-events: none，不挡底下文字。 */
+        {
+            cls: "bug-icon-15",
+            host: ".text-21",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/understand-1.avif",
+            name: "Understand (1)",
+            start: { from: ".text-21", mark: "A" },   /* 跟着 text-21 的淡入区间出现 */
+            fadeOut: ".text-21",                       /* 跟着 text-21 的淡出区间消失 */
+            /* ★ 屏幕右侧 0~60%（距右边缘 0~60%）= left 40% ~ right 100%、top 0~100% */
+            area: { left: 40, right: 100, top: 0, bottom: 100 },
+            randomDir: true                            /* 初始方向随机，四只不会同向 */
+        },
+        {
+            cls: "bug-icon-16",
+            host: ".text-21",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/understand-1.avif",
+            name: "Understand (2)",
+            start: { from: ".text-21", mark: "A" },
+            fadeOut: ".text-21",
+            area: { left: 40, right: 100, top: 0, bottom: 100 },
+            randomDir: true
+        },
+        {
+            cls: "bug-icon-17",
+            host: ".text-21",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/understand-1.avif",
+            name: "Understand (3)",
+            start: { from: ".text-21", mark: "A" },
+            fadeOut: ".text-21",
+            area: { left: 40, right: 100, top: 0, bottom: 100 },
+            randomDir: true
+        },
+        {
+            cls: "bug-icon-18",
+            host: ".text-21",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/understand-1.avif",
+            name: "Understand (4)",
+            start: { from: ".text-21", mark: "A" },
+            fadeOut: ".text-21",
+            area: { left: 40, right: 100, top: 0, bottom: 100 },
+            randomDir: true
         }
     ];
 
     /* 没写 fadeOut 的图标统一在它的淡出区间里一起消失（默认 .text-6）；
        写了 fadeOut 的各自认自己的宿主：图标 5 / 6 / 7 跟 .text-2、
        图标 8 跟 .text-9、图标 9 跟 .text-7、图标 10 跟 .text-10、图标 11 跟 .text-11、
-       图标 12 跟 .text-14、图标 13 跟 .text-16、图标 14 跟 .text-18 */
+       图标 12 跟 .text-14、图标 13 跟 .text-16、图标 14 跟 .text-18、
+       图标 15 / 16 / 17 / 18 跟 .text-21 */
     const FADE_OUT_HOST = ".text-6";
 
     /* ======================= 飘动（图标“出现在页面里”的那段时间在飘） =======================
@@ -266,9 +330,11 @@
            撞左右边框翻 vx，撞上下边框翻 vy，撞角落两个都翻；
          · 撞到另一个图标（按两个盒子的边缘算，不是中心点）→ 两个一起弹开，
            沿分离轴把速度分量按反射交换（等质量弹性碰撞），并把重叠推开，绝不卡在一起。
-       ★ 运动区域由下面的 DRIFT.area 决定，现在是【左侧 0%~60%】：
+       ★ 运动区域默认由下面的 DRIFT.area 决定，现在是【左侧 0%~60%】：
          判定用的是【图片边缘】，所以图标的外沿最多到 60% 那条线，不会越过去。
-       ★ 【初始位置是随机的】：图标 1 / 3 / 4 每次刷新都在运动区域里随机落点
+         ★ 单个图标可以在 ICONS 那一条里写 area 覆盖它（图标 15 ~ 18 就各自写了
+           top 0~100% / right 0~60%，见 areaOf()），互不影响。
+       ★ 【初始位置是随机的】：图标 1 / 3 / 4 / 15 ~ 18 每次刷新都在运动区域里随机落点
           （DRIFT.randomStart，见下面 pickStart），并且尽量互不重叠；
           想恢复以前那三个写死的位置，把 randomStart 改成 false 即可。
        ★ 只在【这个图标可见的时候】才动：还没轮到 / 已经淡出时位置冻住不写 DOM，
@@ -315,7 +381,7 @@
     const rand = (a, b) => a + Math.random() * (b - a);
     const len = d => Math.sqrt(d.x * d.x + d.y * d.y);
 
-    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十三个“图标位” =======================
+    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十七个“图标位” =======================
        每个图标是一个 .bug-icon-slot（定位用的盒子），里面放：
          · <img class="bug-icon">   —— 图片本身
          · <span class="bug-label">  —— hover 时才显示的名字（配了 label 才生成）
@@ -560,7 +626,7 @@
             n.drift.half = size;
             n.drift.measured = true;
             if (n.drift.vis) {
-                const R = startRange(size);
+                const R = startRange(size, n);
                 n.drift.pos.x = clamp(n.drift.pos.x, R.minX, R.maxX);
                 n.drift.pos.y = clamp(n.drift.pos.y, R.minY, R.maxY);
             } else {
@@ -734,9 +800,18 @@
         return { hw: (w / iw) * 50, hh: (h / ih) * 50, measured };
     }
 
+    /* 这一只图标自己的运动区域：
+       ICONS 里写了 area 就用它，没写就用上面 DRIFT.area（全局默认）。
+       有了它，图标 15 ~ 18 可以独立钉在 top 0~100% / right 0~60% 里来回弹，
+       而以后改 DRIFT.area（影响图标 1 / 3 / 4）不会连它们一起挪。 */
+    function areaOf(n) {
+        const own = n && n.cfg && n.cfg.area;
+        return own || DRIFT.area || { left: 0, right: 100, top: 0, bottom: 100 };
+    }
+
     /* 运动区域里，图标左上角允许取的范围（已经减掉图标自身的宽高，判定按图片边缘） */
-    function startRange(size) {
-        const A = DRIFT.area || { left: 0, right: 100, top: 0, bottom: 100 };
+    function startRange(size, n) {
+        const A = areaOf(n);
         return {
             minX: A.left,
             maxX: Math.max(A.left, A.right - 2 * size.hw),
@@ -753,7 +828,7 @@
          · startGap 是额外要求的最小间距（视口百分比），0 = 贴着也算不重叠。
        ★ 不管挑到哪个，落点一定在 area 里，所以初始位置永远在运动范围内。 */
     function pickStart(n, size) {
-        const R = startRange(size);
+        const R = startRange(size, n);
         const gap = Math.max(0, DRIFT.startGap || 0);
         const others = nodes.filter(o => o !== n && o.drift && !o.pinned);
         const tries = Math.max(1, DRIFT.startTries || 1);
@@ -785,7 +860,7 @@
        两条路都会夹进运动区域，所以以后改 DRIFT.area 也不会让图标一开始就在区域外面。 */
     function startPos(n, size, s) {
         if (DRIFT.randomStart) return pickStart(n, size);
-        const R = startRange(size);
+        const R = startRange(size, n);
         return { x: clamp(s.left, R.minX, R.maxX), y: clamp(s.top, R.minY, R.maxY) };
     }
 
@@ -795,10 +870,15 @@
         const size = driftHalfSize(n);
         const sp = DRIFT.speed * rand(1 - DRIFT.speedJitter, 1 + DRIFT.speedJitter);
 
-        /* 初始方向：默认沿用 seed.dir（老样子）；DRIFT.randomDir = true 时随机一个角度 */
+        /* 初始方向：默认沿用 seed.dir（老样子）；随机方向有两种开法 ——
+             · 全局：DRIFT.randomDir = true（影响所有飘动的图标）；
+             · 单个：在 ICONS 那一条里写 randomDir: true（图标 15 ~ 18 就是这么开的，
+               三只同款图标才不会排成一条线往同一个方向飞）。
+           单个写了就以它为准，没写才看全局。 */
         let dx = (s.dir && s.dir[0]) || 1;
         let dy = (s.dir && s.dir[1]) || 0;
-        if (DRIFT.randomDir) {
+        const rd = (n.cfg && n.cfg.randomDir != null) ? n.cfg.randomDir : DRIFT.randomDir;
+        if (rd) {
             const ang = Math.random() * Math.PI * 2;
             dx = Math.cos(ang);
             dy = Math.sin(ang);
@@ -828,14 +908,15 @@
 
     /* 撞运动区域的四条边（用的是图片边缘，所以留出 half 的余量）——纯粹的镜面反射：
        撞左右框翻 vx、撞上下框翻 vy、撞角落两个都翻；速度大小不变。
-       ★ 边界来自 DRIFT.area（默认 left 0%~60%、top 0%~100%），
+       ★ 边界来自 areaOf(n)：图标自己写了 area 就用它（图标 15 ~ 18 就是
+         top 0~100% / right 0~60%），没写就用全局的 DRIFT.area；
          和图片边缘比较，所以图标的【外沿】最多到 right 那条线。 */
     function bounceWalls(n) {
         const d = n.drift;
         const { hw, hh } = d.half;
         if (!d.vis) return;
 
-        const A = DRIFT.area || { left: 0, right: 100, top: 0, bottom: 100 };
+        const A = areaOf(n);
         const minX = A.left;
         const maxX = Math.max(minX, A.right - 2 * hw);      /* 保证 minX ≤ maxX（区域比图还窄时退化） */
         const minY = A.top;
@@ -1366,7 +1447,7 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到全部图标（现在 13 只，含各自的飘动状态 n.drift）；
+       __bugIcons.nodes 能看到全部图标（现在 17 只，含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效
        （比如 DRIFT.on = false 关掉飘动，DRIFT.randomDir = true 让初始方向也随机）。 */
