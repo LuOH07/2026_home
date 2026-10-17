@@ -84,8 +84,13 @@ const ARRIVE_TOL = 24;
 const SLOW_ZONES = [];
 
 /* ============================ 2. 底图 ============================ */
+
+/* 底图地址：量页面高度（body height）和画到 body 上的背景用的都是它，
+   换图只改这一行；页面高度、文字/轨迹点的 % 全都跟着这张图的比例走。 */
+const BG_URL = "https://static.igem.wiki/teams/6059/wiki/home/river.avif";
+
 const bgImg = new Image();
-bgImg.src = "./map.png";
+bgImg.src = BG_URL;
 
 function updateBodyHeight() {
     const displayWidth = document.documentElement.clientWidth;
@@ -997,7 +1002,7 @@ function onResize() {
 
 /* ============================ 9. 初始化 ============================ */
 bgImg.onload = function () {
-    document.body.style.backgroundImage = `url("./map.png")`;
+    document.body.style.backgroundImage = `url("${BG_URL}")`;
     document.body.style.backgroundRepeat = "no-repeat";
     document.body.style.backgroundSize = "100% auto";
     document.body.style.minHeight = "unset";
@@ -1044,7 +1049,9 @@ bgImg.onload = function () {
 };
 
 bgImg.onerror = function () {
-    console.error("map.png 图片加载失败，请检查文件路径");
+    /* 底图拿不到（断网 / 被拦截 / 路径写错）时页面会完全空白：
+       body 高度是 0、文字全是 visibility:hidden —— 至少先在控制台喊一声。 */
+    console.error("底图加载失败，请检查路径：", bgImg.src);
 };
 
 /* 调试用：控制台里 __home.items 可以看到每个组件的时间轴 */
