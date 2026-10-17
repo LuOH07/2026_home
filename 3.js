@@ -154,10 +154,24 @@
             /* ★ 位置：默认对准图标 5 / 6 两只图标的【正中间】（见 placeBetween）；
                想手动钉死就删掉这一行，然后改 3.css 的 .bug-icon-7。 */
             between: [".bug-icon-5", ".bug-icon-6"]
+        },
+        {
+            cls: "bug-icon-8",
+            host: ".text-8",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/ctac.avif",
+            name: "CTAC",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-8 决定 */
+            /* ★ text-8【淡入区间】里跟着一起淡入 ——
+               这两段在冻结组里，时钟会自动切到滚轮驱动的 freezePos（见 resolveWindow），
+               所以“text-8 刚开始淡入”这一刻是准的。 */
+            start: { from: ".text-8", mark: "A" },
+            /* ★ text-9 淡出时一起消失；往上滑倒放时也会对称地亮回来 */
+            fadeOut: ".text-9"
         }
     ];
 
-    /* 所有图标统一在它的淡出区间里一起消失（“最后 text-6 淡出的时候它们一起淡出”） */
+    /* 没写 fadeOut 的图标统一在它的淡出区间里一起消失（默认 .text-6）；
+       写了 fadeOut 的各自认自己的宿主：图标 5 / 6 / 7 跟 .text-2，图标 8 跟 .text-9 */
     const FADE_OUT_HOST = ".text-6";
 
     /* ======================= 飘动（图标“出现在页面里”的那段时间在飘） =======================
@@ -794,6 +808,20 @@
             /* 页面停在冻结组中间、而这一组一次都没播过：整行不显示（见上面 stranded 说明） */
             if (stranded) op = 0;
 
+            /* ★ 冻结组里的图标（图标 3 / 8）：那一段文字还没轮到演、或页面停在组里
+               还没开始播时，1.js 会把冻结文字整个藏起来（item.skipFrozen），
+               图标不能自己单独亮着 —— 判断和 1.js 的 render() 保持一致：
+                 · 正在播这一组 → 照常按 freezePos 算；
+                 · 这一组已经播完（freezePos 停在 z1）→ 放行，交给下面 outT 收尾；
+                 · 其它情况（还没轮到 / 刷新后被浏览器直接恢复到组后面）→ 先藏起来。
+               ★ 这条只对“起点认的是一段冻结文字”的图标生效，图标 1 / 2 / 4 不受影响。 */
+            if (win.fromItem && win.fromItem.skipFrozen) {
+                const fz = win.fromItem.freezeZone;
+                const playing = !!(h.freezeActive && fz && h.frozenZone === fz);
+                const played = !!fz && h.freezePos >= fz.z1 - 1e-6;
+                if (!playing && !played) op = 0;
+            }
+
             /* ★ 图标 7：淡入时【左半边先出现、右半边后出现】 */
             if (n.cfg.reveal) {
                 paintReveal(n, p <= win.a ? 0 : clamp01((p - win.a) / Math.max(1e-6, win.b - win.a)));
@@ -884,7 +912,7 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到七个图标（含各自的飘动状态 n.drift）；
+       __bugIcons.nodes 能看到八个图标（含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.DRIFT 是飘动范围 / 速度，改完下一帧就生效（比如 DRIFT.on = false 关掉飘动）。 */
     window.__bugIcons = {
