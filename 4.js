@@ -519,6 +519,377 @@
     })();
 
     /* ======================================================================
+       text-20：ico15 从上方进入 → 在文字之间弹跳 → 依次敲击 S / T / I / N / G
+                 → 从右侧飞出
+       ----------------------------------------------------------------------
+       需求：
+         · 图标 15（3.js 里那颗“分子”，understand-1.avif）从上方进入这一句；
+         · 在四行文字之间弹跳，依次敲到 S → T → I → N → G 五个大字母；
+         · 被敲中的字母立刻变成 #465E77、关掉荧光（4.css 的 .is-hit）；
+         · ★ 四段文字【逐段出场】：一开始只有第一段；敲中第一段那颗之后才淡入第二段，
+           敲中第二段之后淡入第三段……最后（敲完 G）四段【一起淡出】；
+         · 五个都敲完，图标从右侧飞出屏幕；
+         · ★ 不避让：路线压到不该碰的文字时【直接穿过去】——
+           图标被放在文字图层之上（.sting-layer，z-index 60），压过去也看得见；
+         · text-20 离开屏幕（淡出 / 滚走）→ 全部复位，下次出现重新演一遍。
+
+       ★ 位置谁管：3.js 里图标 15 已改成 pin: true，不再被随机飘动推着走；
+         这里每帧写它的 transform。4.css 把 slot 的 left / top 归零了，
+         所以 transform 里的坐标就是【视口坐标】；3.js 只负责它的淡入淡出。
+
+       ★ 轨迹：每一段都是二次贝塞尔（抛物线）——
+           起点 = 上一颗字母的落点（第一段从 S 正上方、屏幕外开始），
+           终点 = 下一颗字母顶边上方 H/2 + clear 处，
+           控制点在两端连线中点再抬高 dist × arc → 看起来就是“弹起来、落下去”。
+         落点都压在字母顶上，所以五颗都敲得到。
+
+       ★ 穿模是允许的：不再做任何“把图标推出去”的避让计算，
+         路线该从哪儿过就从哪儿过；会不会压到别的字，交给图层顺序解决。
+
+       ★ 撞击的“物理感”：每敲中一颗，图标会被撞得【转一下】——\n         角速度先给一个大值（spinKick）、再按指数衰减（spinTau），\n         转角 = 角速度对 u 的积分；方向每撞一次反过来（spinFlip）。\n         全部是 u 的闭式函数，所以往回滚会原样倒着转回去。\n       ★ 时间轴：跟着滚轮走（见下面的 u），不自己跑；滚回起点会复位。
+
+       ★ 想调节奏 / 幅度：只改下面 CFG 里的几个数。
+       ====================================================================== */
+    /* ======================================================================
+       text-20：ico15 跟着滚轮弹跳 → 依次敲击 S / T / I / N / G → 从右侧飞出
+       ----------------------------------------------------------------------
+       需求：
+         · 不再“自己演一遍”，而是【跟着鼠标滚轮走】：
+             往下滚 → 图标从上方进入、在文字之间弹跳、依次敲 S → T → I → N → G、最后从右侧飞出；
+             往上滚 → 整段原样倒回去（敲过的字母会自己变回黄色）。
+         · 字母默认 #fbe15c（带荧光）；被敲中 → #465E77、关掉荧光（4.css 的 .is-hit）。
+         · 不避让：路线压到别的字就直接穿过去（图标在文字图层之上）；
+         · 这一句的时间不够演完也没关系：动画可以继续演到后面几句文字的位置上
+           （所以图标在这段时间里强制可见，见下面的 .is-sting）。
+
+       ★ 时间轴（滚轮单位，和 1.js / 其他效果完全同一套）：
+           起始点 = 这一句【完全出现】那一刻（item.H）
+           整段占 totalSec 秒的滚动量（rate 把“秒”换成进度）
+           进度 = (home.cur - H) / (totalSec × rate) → u ∈ [0,1]
+         u 的分配（按下面 CFG 的权重）：
+            入场 0.85  →  敲 S 1  →  T 1  →  I 1  →  N 1  →  G 1  →  飞出 0.9
+         全部由 u 算出来，所以停住不动就停住、往回滚就倒着演，没有“自己跑”的时间。
+
+       ★ 位置谁管：3.js 里图标 15 已改成 pin: true，位置完全由这里每帧写 transform；
+         4.css 把 slot 的 left / top 归零，所以 transform 里的坐标就是【视口坐标】。
+
+       ★ 轨迹：每一段都是二次贝塞尔（抛物线）——
+           起点 = 上一颗字母的落点（第一段从 S 正上方、屏幕外开始），
+           终点 = 下一颗字母顶边上方 H/2 + clear 处，
+           控制点在两端连线中点再抬高 dist × arc。
+       ★ 不做避让：路线怎么走就怎么走，压到别的文字就直接穿过去 ——\n          图标被挪到 .sting-layer（文字图层之上），压过去也看得见。
+       ★ 想调节奏 / 幅度：只改下面 CFG 里的几个数；图标个头在 4.css 的 --icon-height。
+       ====================================================================== */
+    (function stingBounce() {
+        var host = document.querySelector(HOST20);
+        var slot = host && document.querySelector(".bug-icon-slot.bug-icon-15");
+        var icon = slot && slot.querySelector(".bug-icon");
+        if (!host || !slot || !icon) return;
+
+        var letters = Array.prototype.slice.call(host.querySelectorAll(".t20-big"));
+        var linesEls = Array.prototype.slice.call(host.querySelectorAll(".t20-line"));   /* 四行文字：逐段淡入用 */
+        if (letters.length < 2) return;
+
+        /* ★ 把这一颗图标挪到一个【文字上面】的独立图层里：
+           .bug-icons 原本是 z-index: 3（在文字下面），现在按需求要压过文字，
+           所以给它单独建一层 .sting-layer（position: fixed + 很高的 z-index）。
+           ★ 它还是原来那个 slot 元素，3.js 的淡入淡出 / 尺寸全都照旧。 */
+        var layer = document.createElement("div");
+        layer.className = "sting-layer";
+        layer.setAttribute("aria-hidden", "true");
+        (document.body || document.documentElement).appendChild(layer);
+        layer.appendChild(slot);
+
+        /* ---- 可调旋钮 ---- */
+        var CFG = {
+            totalSec: 2.6,       /* 整段动画 = 多少秒的滚动量（越大越“慢”；还会自动压缩到淡出之前） */
+            enterW: 0.85,        /* 入场段占的比重 */
+            legW: 1,             /* 每敲一颗字母占的比重 */
+            exitW: 0.9,          /* 飞出段占的比重 */
+            arc: 0.34,           /* 弧顶比两端连线再高多少（× 两点距离） */
+            clear: 4,            /* 落点离字母顶边留多少 px */
+            pad: 13,             /* 碰撞盒在文字外面再放大多少 px（含压扁时鼓出来的量） */
+            squash: 0.22,        /* 敲中一下压扁多少（0 = 不压） */
+            squashU: 0.035,      /* 压扁在 u 上持续多长 */
+            spinKick: 1100,      /* ★ 撞一下给多少“角速度”（度 / 每个 u），0 = 不转 */
+            spinTau: 0.18,       /* ★ 角速度衰减的长度（u）：越大转得越久（每个撞击约转 1100×0.18 ≈ 200°） */
+            spinFlip: true,      /* ★ 每次撞击方向相反（像真的弹一下就换个转向） */
+            lineFadeU: 0.055,    /* ★ 每段文字淡入用多长（u）：越小越“啪”地出现 */
+            lineDelay: 0.012     /* ★ 敲中之后隔多久开始淡入下一段 */
+        };
+
+        var W = 0, Hh = 90;                    /* 图标宽 / 高 */
+        var legCount = letters.length - 1;                     /* S→T→I→N→G = 4 段 */
+        var totalW = CFG.enterW + CFG.legW * legCount + CFG.exitW;
+        var active = false;                    /* 现在是不是“在演” */
+
+        function unit(w) { return w / totalW; } /* 权重 → u */
+
+        function measure() {
+            W = icon.offsetWidth || 108;
+            Hh = icon.offsetHeight || 90;
+        }
+        measure();
+
+        var seenW = W, seenH = Hh;
+        function refreshSize() {
+            if (icon.offsetWidth !== seenW || icon.offsetHeight !== seenH) {
+                seenW = icon.offsetWidth;
+                seenH = icon.offsetHeight;
+                measure();
+            }
+        }
+
+        /* 窗口变了：文字位置 / 字号都可能变 —— 冻结的那份屏幕坐标、量出来的基线都作废 */
+        window.addEventListener("resize", function () {
+            geom = null;
+            baseOffs = null;
+            metrics.fs = 0;
+            setTimeout(measure, 60);
+        });
+
+        /* ---- 每颗字母的字形墨迹度量（字号不变就不重量）----
+           .t20-big 是 line-height: 0 的 inline-block：它的 rect 高度是 0，
+           所以这里用 canvas 量“基线以上多高 / 以下多深 / 左右墨迹边”，
+           再和“真正的基线”拼成字形盒子（基线怎么来的见下面 measureBaselines）。 */
+        var metrics = { fs: 0, list: [] };
+
+        function letterMetrics() {
+            var fs = parseFloat(getComputedStyle(letters[0]).fontSize) || 88;
+            if (Math.abs(fs - metrics.fs) < 0.01 && metrics.list.length === letters.length) return metrics.list;
+
+            var ctx = document.createElement("canvas").getContext("2d");
+            var list = [];
+            for (var i = 0; i < letters.length; i++) {
+                var el = letters[i];
+                var cs = getComputedStyle(el);
+                ctx.font = cs.fontSize + " " + cs.fontFamily;
+                var m = ctx.measureText(el.textContent || "");
+                var fsz = parseFloat(cs.fontSize) || 88;
+                list.push({
+                    asc: m.actualBoundingBoxAscent || (fsz * 0.72),
+                    des: m.actualBoundingBoxDescent || 0,
+                    inkL: m.actualBoundingBoxLeft ? -m.actualBoundingBoxLeft : 0,
+                    inkR: m.actualBoundingBoxRight || (fsz * 0.5)
+                });
+            }
+            metrics = { fs: fs, list: list };
+            return list;
+        }
+
+        /* ---- 每颗字母的基线相对 rect.top 的偏移 ----
+           .t20-big 的 rect.top 既不是字形顶也不是基线；临时插一个 0×0、
+           vertical-align: baseline 的探针，它的 top 就是基线，量完立刻删掉。 */
+        var baseOffs = null;
+
+        function measureBaselines() {
+            var out = [];
+            for (var i = 0; i < letters.length; i++) {
+                var el = letters[i];
+                var probe = document.createElement("span");
+                probe.setAttribute("aria-hidden", "true");
+                probe.style.cssText = "display:inline-block;width:0;height:0;overflow:hidden;" +
+                                      "margin:0;padding:0;border:0;vertical-align:baseline;";
+                el.parentNode.insertBefore(probe, el.nextSibling);
+                var base = probe.getBoundingClientRect().top;
+                probe.parentNode.removeChild(probe);
+                out.push(base - el.getBoundingClientRect().top);
+            }
+            return out;
+        }
+
+        /* 五颗字母当前的【字形盒子】（视口坐标） */
+        function boxes() {
+            var mt = letterMetrics();
+            if (!baseOffs || baseOffs.length !== letters.length) baseOffs = measureBaselines();
+            var out = [];
+            for (var i = 0; i < letters.length; i++) {
+                var r = letters[i].getBoundingClientRect();
+                var m = mt[i];
+                var base = r.top + baseOffs[i];
+                var l = r.left + m.inkL;
+                var rr = r.left + m.inkR;
+                out.push({ l: l, r: rr, t: base - m.asc, b: base + m.des, cx: (l + rr) / 2 });
+            }
+            return out;
+        }
+
+        /* ★ 四段文字的出场：跟着敲击走 ——
+           第 1 段一开始就在；敲中第 L-1 颗之后，第 L 段才淡入（L = 1..3）。
+           最后一起淡出：敲完 G、飞出段的 35% 之后开始，到 u=1 全部淡完。
+           全部由 u 算，所以往回滚会逆着“收”回去。 */
+        function paintLines(u) {
+            var e0 = unit(CFG.enterW);
+            var legW = unit(CFG.legW);
+            var exitW = unit(CFG.exitW);
+            var legsEnd = e0 + legW * legCount;
+
+            var outStart = legsEnd + exitW * 0.35;          /* 最后一起淡出的起点 */
+            var out = 1;
+            if (u > 1) out = 0;
+            else if (u > outStart) out = 1 - (u - outStart) / Math.max(1e-6, 1 - outStart);
+            if (out < 0) out = 0;
+
+            for (var L = 0; L < linesEls.length; L++) {
+                var op = 1;
+                if (L > 0) {
+                    var start = e0 + legW * (L - 1) + CFG.lineDelay;   /* 上一颗被敲中之后 */
+                    op = (u - start) / CFG.lineFadeU;
+                    if (op < 0) op = 0;
+                    if (op > 1) op = 1;
+                }
+                linesEls[L].style.opacity = (op * out).toFixed(3);
+            }
+        }
+        function contactOf(box) {
+            return { x: box.cx, y: box.t - Hh / 2 - CFG.clear };
+        }
+
+        function putIcon(x, y, squashY, angle) {
+            var sy = squashY == null ? 1 : squashY;
+            var sx = 1 + (1 - sy) * 0.6;
+            var rot = angle ? " rotate(" + angle.toFixed(2) + "deg)" : "";
+            slot.style.transform =
+                "translate(" + (x - W / 2).toFixed(1) + "px," + (y - Hh / 2).toFixed(1) + "px)" +
+                " scale(" + sx.toFixed(3) + "," + sy.toFixed(3) + ")" + rot;
+        }
+
+        function parkIcon() {
+            slot.style.transform = "translate(-9999px,-9999px)";
+        }
+
+        function setActive(on) {
+            if (on === active) return;
+            active = on;
+            slot.classList.toggle("is-sting", on);   /* 演出期间强制可见（3.js 的淡入淡出只管它自己） */
+            if (!on) parkIcon();
+        }
+
+        /* 二次贝塞尔：t=0 → a，t=1 → b，弧顶由 a/b 中点再抬高 dist × arc。
+           apex = 弧顶至少要升到哪条水平线（-Infinity = 不限制）：
+           控制点按 2×apex − 中点算，这样 t=0.5 的弧顶正好落在 apex 上。 */
+        function bezPoint(a, b, t, apex) {
+            var dx = b.x - a.x, dy = b.y - a.y;
+            var rise = Math.max(40, Math.sqrt(dx * dx + dy * dy) * CFG.arc);
+            var mx = (a.x + b.x) / 2;
+            var midY = (a.y + b.y) / 2;
+            var my = midY - rise;
+            if (isFinite(apex)) my = Math.min(my, 2 * apex - midY);
+            var v = 1 - t;
+            return {
+                x: v * v * a.x + 2 * v * t * mx + t * t * b.x,
+                y: v * v * a.y + 2 * v * t * my + t * t * b.y
+            };
+        }
+
+        var lastCur = null;
+        var geom = null;      /* 演出开始时抓的一份【屏幕坐标】文字盒子（之后不跟页面滚） */
+        var geomAt = 0;       /* 第一次抓几何的时间：开头 0.6 秒内允许重抓，等字体 / 布局稳定 */
+
+        function frame() {
+            requestAnimationFrame(frame);
+            refreshSize();
+
+            var home = window.__home;
+            var it = home && itemOf(host);
+            if (!home || !it || !(home.rate > 0)) { setActive(false); return; }
+
+            if (home.cur === lastCur) return;        /* 滚轮没动：这一帧不重算 */
+            lastCur = home.cur;
+
+            /* 整段占多少进度：默认 totalSec 秒，但一定在【开始淡出（B）之前】收尾 ——
+               这样图标会在这一句淡出去之前就飞出画面。 */
+            var span = Math.min(CFG.totalSec * home.rate, Math.max(1, (it.B - it.H) * 0.98));
+            var u = (home.cur - it.H) / span;        /* 0 = 还没开始，1 = 演完 */
+
+            /* 四段文字逐段出场（敲中一段才淡入下一段），最后一起淡出 */
+            paintLines(u > 1 ? 1 : (u > 0 ? u : 0));
+
+            if (!(u > 0)) {                          /* 还没开始 / 往回滚过了头：复位 */
+                setActive(false);
+                geom = null;
+                for (var i = 0; i < letters.length; i++) letters[i].classList.remove("is-hit");
+                return;
+            }
+            if (u > 1) u = 1;
+
+            setActive(true);
+
+            /* ★ 演出开始时把文字的位置【按屏幕坐标抓一次】，之后一直用这一份：
+               图标只跟着滚轮在屏幕上走，不跟着底图 / 页面一起滚（相对屏幕固定）。 */
+            if (!geom) { geomAt = performance.now(); }
+            if (performance.now() - geomAt < 600) geom = { bs: boxes() };   /* 开头重抓几帧，等布局稳定 */
+            var bs = geom.bs;
+
+            var e0 = unit(CFG.enterW);
+            var legW = unit(CFG.legW);
+            var exitW = unit(CFG.exitW);
+            var legsEnd = e0 + legW * legCount;
+
+            /* 敲击状态：入场落地（u = e0）就敲中 S，之后每过一段多敲中一颗；
+               往回滚会自动取消（字回到 #fbe15c）。 */
+            for (var j = 0; j < letters.length; j++) {
+                letters[j].classList.toggle("is-hit", u >= e0 + legW * j);
+            }
+
+            /* 压扁：刚敲中的一小段 u 里压一下、很快弹回 */
+            var sq = 1;
+            for (var k = 0; k < letters.length; k++) {
+                var d = u - (e0 + legW * k);
+                if (d >= 0 && d < CFG.squashU) {
+                    var q = d / CFG.squashU;
+                    sq = Math.min(sq, 1 - CFG.squash * (1 - q) * (1 - q));
+                }
+            }
+
+            /* ★ 撞击带来的旋转（物理感）：每敲中一颗，就像被撞了一下——
+               角速度先给一个大值、再按指数衰减，转角 = 角速度对 u 的积分。
+               全部是 u 的闭式函数，所以往回滚会原样倒着转回去。
+                 这一次的转角 = ±spinKick × spinTau × (1 − e^(−(u−命中点)/spinTau)) */
+            var angle = 0;
+            if (CFG.spinKick) {
+                for (var s = 0; s < letters.length; s++) {
+                    var du = u - (e0 + legW * s);
+                    if (du > 0) {
+                        var dir = (CFG.spinFlip && (s % 2)) ? -1 : 1;
+                        angle += dir * CFG.spinKick * CFG.spinTau * (1 - Math.exp(-du / CFG.spinTau));
+                    }
+                }
+            }
+
+            var cx, cy;
+            if (u < e0) {
+                /* 入场：从 S 正上方、屏幕外落到 S 的落点 */
+                var a0 = { x: bs[0].cx, y: -Hh - 30 };
+                var p0 = bezPoint(a0, contactOf(bs[0]), u / e0);
+                cx = p0.x; cy = p0.y;
+            } else if (u < legsEnd) {
+                /* 第 leg 段：从第 leg 颗字母的落点弹到第 leg+1 颗（k = 0 → S 落地后 → T） */
+                var leg = Math.floor((u - e0) / legW);
+                if (leg >= legCount) leg = legCount - 1;
+                if (leg < 0) leg = 0;
+                var t = ((u - e0) - leg * legW) / legW;
+                var fromC = contactOf(bs[leg]);
+                var toC = contactOf(bs[leg + 1]);
+                var p1 = bezPoint(fromC, toC, t);
+                cx = p1.x; cy = p1.y;
+            } else {
+                /* 敲完 G：从右侧飞出屏幕 */
+                var t2 = Math.min(1, (u - legsEnd) / exitW);
+                var fromG = contactOf(bs[letters.length - 1]);
+                var ease = t2 * t2;
+                cx = fromG.x + (window.innerWidth + W - fromG.x) * ease;
+                cy = fromG.y - 140 * ease;
+            }
+
+            putIcon(cx, cy, sq, angle);   /* 不做避让：路线压到不该碰的字就直接穿过去（图标在文字图层之上） */
+        }
+
+        parkIcon();
+        requestAnimationFrame(frame);
+    })();
+
+    /* ======================================================================
        text-3：harder 的“撑开” + “Familiar Host”的 TNT 爆炸（纯滚轮驱动，能随滚轮倒放）
        ----------------------------------------------------------------------
        时间轴（和 1.js 同一套进度单位，秒 = 进度 / window.__home.rate）：
@@ -988,17 +1359,18 @@
 
        时间轴（和 1.js 同一套进度单位，秒 = 进度 / window.__home.rate）：
           A ──淡入── H ──────── 停留 ──────── B ──淡出── E
-          └ 图标 10 的视频开始播                    └ 这句淡出（gene 跟着一起淡）
+                        └ ★ 淡入一结束，gene 的出场就完全交给滚轮
+                                                       └ 这句淡出（gene 跟着一起淡）
 
-       起点 = A + 视频时长 × rate
-          · 3.js 里图标 10 是 “text-9 一开始淡入就播”（start: { from: ".text-9", mark: "A" }），
-            所以“播完第一遍”落在进度 A + 时长 上；时长每帧从那个 <video> 上读
-            （读不到就退回 GENE9_VIDEO_SEC），所以换了素材也不用改这里。
-          · ★ 为什么用进度算、而不是听视频的 ended 事件：
+       起点 = H（整句淡入完全结束那一刻）
+          · 也就是说：这一句一“完全出现”，滚轮再往下滑一点，gene 就立刻开始飞进来 ——
+            【不再去等图标 10 那段视频（editing.webm）播完】，也不读它的时长。
+            那段视频还在播也照样飞，两者互不干扰（它是 3.js 的图标，gene 是这里的元素）。
+          · ★ 为什么绑在进度上、而不是听视频的 ended 事件：
             这一段要能随滚轮【倒放】。ended 是真实时间的一次性事件，往回滚它不会复位，
             整段就再也放不了了（和 BEGINNING / TNT 同样的取舍：时间归 1.js 的进度）。
-          · 代价：如果滚得比视频播得还快，飞入会“提前”开始 —— 这是滚轮驱动的必然结果；
-            想让它永远等真实播放结束，就只能放弃可倒放。
+          · 落地要多久由 GENE9_FLY_SEC 定（默认 3.2 秒），并且会自动压进
+            “H → 开始淡出（B）” 这段时间里，所以这句停留多长都不会飞不完。
 
        落地：视频是 “where” 那个 <span> 的绝对定位子元素（4.css 的 .text-9 .gene9-wrap），
          所以“正上方”这件事由 CSS 保证（left: 50% + 负 margin 居中、bottom: 100% + gap），
@@ -1012,8 +1384,8 @@
          而不是贴着落点转（以前是贴着落点转的，这次按要求挪到半路空中）。
          旋钮：
            GENE9_FROM_VW / GENE9_FROM_VH  进入点（右 / 上，都是相对落点的距离）
-           GENE9_LOOP_AT                  回环在哪：0 = 刚进来就绕，1 = 贴着落点绕（默认 0.62 = 半路偏下）
-           GENE9_LOOP_DUR                 绕一圈占整段行程的比例（默认 0.18）
+           GENE9_LOOP_AT                  回环在哪：0 = 刚进来就绕，1 = 贴着落点绕（默认 0.55 = 半路偏下）
+           GENE9_LOOP_DUR                 绕一圈占整段行程的比例（默认 0.30 = 一圈约 0.96 秒，越大越慢）
            GENE9_LOOP_R_VH                回环半径（回环总高 = 2×它；用 vh 折成 px，保证是正圆）
            GENE9_SPINS                    绕几圈（1 = 一个回环；2 = 连转两圈）
          把 GENE9_LOOP_R_VH 调成 0 = 退回“纯斜线俯冲”，没有回环。
@@ -1032,18 +1404,17 @@
        ====================================================================== */
 
     var GENE9_SRC       = "./gene.webm";   /* ← 要飞进来的视频（相对 index.html 的路径） */
-    var GENE9_FLY_SEC   = 2.2;             /* ← 飞入 + 回环 + 落位总共用多少秒（越小越快） */
+    var GENE9_FLY_SEC   = 3.2;             /* ← 飞入 + 回环 + 落位总共用多少秒（越小越快；调大 = 整体变慢） */
     var GENE9_SPINS     = 1;               /* ← 回环绕几圈：1 = 一个完整的大回环，2 = 连绕两圈 */
-    var GENE9_LOOP_R_VH = 7;               /* ← 回环半径（vh；回环总高 = 2×这个数，0 = 不要回环） */
-    var GENE9_LOOP_AT   = 0.62;            /* ← 回环在半路的哪个位置：0 = 刚进来就绕，1 = 贴着落点绕 */
-    var GENE9_LOOP_DUR  = 0.18;            /* ← 绕一圈占整段行程的比例（0.18 = 近两成时间在绕圈） */
+    var GENE9_LOOP_R_VH = 6;               /* ← 回环半径（vh；回环总高 = 2×这个数，0 = 不要回环） */
+    var GENE9_LOOP_AT   = 0.55;            /* ← 回环在半路的哪个位置：0 = 刚进来就绕，1 = 贴着落点绕 */
+    var GENE9_LOOP_DUR  = 0.30;            /* ← 绕一圈占整段行程的比例（越大 = 绕得越慢；0.30 ≈ 0.96 秒一圈） */
     var GENE9_FROM_VW   = 42;              /* ← 进入点离落点【往右】多远（vw；0 = 正上方） */
-    var GENE9_FROM_VH   = 46;              /* ← 进入点离落点【往上】多高（vh） */
+    var GENE9_FROM_VH   = 40;              /* ← 进入点离落点【往上】多高（vh） */
     var GENE9_GROW      = 0.82;            /* ← 起步时多大（1 = 一路上都是原大小；0.82 = 由小飞到大） */
     var GENE9_FADE_U    = 0.32;            /* ← 行程的前百分之多少里完成淡入（0→1） */
     var GENE9_MIN_FLY   = 0.5;             /* ← 万一窗口太短，飞入也至少保留这么多秒 */
-    var GENE9_FIT       = 0.8;             /* ← 飞入最多占“从起点到开始淡出”这段时间的多少 */
-    var GENE9_VIDEO_SEC = 3.852;           /* ← 读不到 text-9 视频时长时的兜底（editing.webm ≈ 3.85 秒） */
+    var GENE9_FIT       = 0.8;             /* ← 飞入最多占“从 H 到开始淡出”这段时间的多少 */
     var GENE9_NAME      = "gene";          /* ← hover 时显示的名字 */
 
     var gene9Host = document.querySelector(".text-9");
@@ -1099,18 +1470,9 @@
     }
 
     if (gene9 && gene9Host) {
-        /* text-9 自己的那段视频（3.js 的图标 10）：只用它来量“播完一遍要多久” */
-        var gene9SourceVideo = document.querySelector(".bug-icon-10 video");
-
         var gene9Last = null;       /* 上一帧的页面进度：页面没动就不重算 */
         var gene9Painted = null;    /* 上一帧写进去的 u；null = 还没写过 */
         var gene9Playing = false;   /* 现在是不是在播（用来只在必要的时候 play / pause） */
-
-        /* 这段视频的时长（秒）：优先问真实的 <video>，拿不到就用兜底常数 */
-        function gene9VideoSec() {
-            var d = gene9SourceVideo && gene9SourceVideo.duration;
-            return (isFinite(d) && d > 0) ? d : GENE9_VIDEO_SEC;
-        }
 
         function gene9Play(on) {
             if (gene9.__broken) return;               /* 素材加载失败就别再 play() 了 */
@@ -1224,13 +1586,13 @@
             if (!it || !(rate > 0)) { gene9Paint(0); return; }
 
             var p = home.cur;
-            if (p <= it.A || p >= it.E) { gene9Paint(0); return; }   /* 窗口外：收起来 */
+            if (p <= it.H || p >= it.E) { gene9Paint(0); return; }   /* 淡入还没走完 / 已经淡出：藏着 */
 
-            /* ① 起点：这一句的视频播完第一遍那一刻 */
-            var startP = it.A + gene9VideoSec() * rate;
-            if (startP >= it.B) { gene9Paint(0); return; }  /* 这句太短，等不到就干脆不飞 */
+            /* ① 起点 = H（整句淡入完全结束那一刻）：不再等 editing.webm 播完，
+                 也不再读它的时长 —— 淡入一结束，滚轮就直接推动 gene 的出场。 */
+            var startP = it.H;
 
-            /* ② 飞多久：默认 GENE9_FLY_SEC 秒，但必须在“开始淡出”之前落地 */
+            /* ② 飞多久：默认 GENE9_FLY_SEC 秒，并且自动压进「H → 开始淡出（B）」这段里 */
             var avail = (it.B - startP) / rate;
             var flySec = Math.min(GENE9_FLY_SEC, Math.max(GENE9_MIN_FLY, avail * GENE9_FIT));
 
@@ -1240,7 +1602,7 @@
         }
 
         window.addEventListener("resize", function () {
-            gene9Last = null;          /* 下一帧按新的 A / B / 时长重算一次 */
+            gene9Last = null;          /* 下一帧按新的 H / B 重算一次 */
         });
 
         requestAnimationFrame(frameGene9);

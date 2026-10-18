@@ -417,8 +417,8 @@
 }
 
 /* ==================== text-9：飞进来的 gene.webm（半路空中回环 → 落在 “where” 正上方）====================
-   需求：这一句自己的视频（3.js 的图标 10：editing.webm）播完第一遍之后，
-        另一段视频 gene.webm 从屏幕顶边的右侧飞进来、同时淡入，
+   需求：这一句（text-9）淡入结束之后（不等图标 10 的 editing.webm 播完），
+        gene.webm 从屏幕顶边的右侧飞进来、同时淡入，
         在【半路空中】像过山车那样绕一个完整的圈，然后稳稳落在 “where” 这个词的正上方，
         之后一直循环播放；鼠标悬停在它上面会淡出名字 “gene”（颜色 / 字体跟随正文）；
         整段像别的效果一样由滚轮驱动（往上滚会原样倒放），
@@ -657,17 +657,18 @@
     /* ★ 略微的黄色荧光（#fbe15c），只给这几个放大的字母：
          --t20-glow-color  荧光颜色（默认 #fbe15c）
          --t20-glow-size   光晕多大（em，跟着这个字母的字号缩放）
-         --t20-glow-alpha  亮度 / 浓度（0 = 关掉，1 = 最亮；“略微”就保持在 0.4 上下）
+         --t20-glow-alpha  亮度 / 浓度（0 = 关掉，1 = 最亮；“略微”就保持在 0.5 上下）
        三层叠加：贴着字形的一圈 → 中圈 → 外圈（越外越淡），
        看上去是“字形在发光”，而不是描了一圈边。
        ★ 只画在字形【外面】，不占布局：不撑行高、不推挤前后字母、不影响那四个位置旋钮。
        ★ 改了字号 / 颜色也会自动跟着变（em 相对这个字母自己的字号）。
        如果不支持 color-mix 的老浏览器，会退到下面第一行那条淡黄光晕。 */
     --t20-glow-color: #fbe15c;
-    --t20-glow-size: 0.10em;
-    --t20-glow-alpha: 0.45;
+    --t20-glow-size: 0.12em;
+    --t20-glow-alpha: 0.55;
 
     display: inline-block;        /* 单独成盒，但仍留在这一行里，不打断句子 */
+    color: #fbe15c;               /* ★ 默认字色（被 ico15 敲中后变 #465E77，见下面 .is-hit） */
     font-size: calc(var(--t20-big-size) * var(--t20-big-scale, 1));
     line-height: 0;               /* ★ 不参与行高：四行的位置不会被推歪（原因见上面） */
     vertical-align: baseline;     /* ★ 和前后 44px 的字坐在同一条基线上 */
@@ -682,6 +683,42 @@
         0 0 calc(var(--t20-glow-size) * 0.35) color-mix(in srgb, var(--t20-glow-color) calc(var(--t20-glow-alpha) * 100%), transparent),
         0 0 calc(var(--t20-glow-size) * 1)    color-mix(in srgb, var(--t20-glow-color) calc(var(--t20-glow-alpha) * 62%), transparent),
         0 0 calc(var(--t20-glow-size) * 2.4)  color-mix(in srgb, var(--t20-glow-color) calc(var(--t20-glow-alpha) * 30%), transparent);
+}
+
+/* 被 ico15 敲中之后：字色变 #465E77，荧光关掉（敲击顺序见 4.js 的 stingBounce） */
+.text-20 .t20-big.is-hit {
+    color: #465E77;
+    text-shadow: none;
+}
+
+/* ico15 的专用图层：4.js 会把这一颗图标从 .bug-icons（z-index: 3）里搬到这里，
+   让它在【文字图层之上】（文字的内联 z-index 最高到 20，这里给 60，怎么都压得住）。
+   ★ 只挪这一颗，其他图标的图层关系不受影响。 */
+.sting-layer {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 60;
+}
+
+/* 演出期间（4.js 加的 .is-sting）强制可见：这一段跟着滚轮走，
+   可能演到这一句淡出之后、压到后面几句文字上。 */
+.bug-icon-slot.bug-icon-15.is-sting {
+    opacity: 1 !important;
+}
+
+/* ico15 的“舞台”：位置完全由 4.js 每帧写 transform，
+   所以把 slot 自己的 left / top 归零 —— 这样 transform 里的坐标就是视口坐标，
+   算“撞到哪个字母”时不用再减掉偏移。 */
+.bug-icon-slot.bug-icon-15 {
+    left: 0;
+    top: 0;
+    transform-origin: 50% 50%;
+    --icon-height: 90px;        /* ← 这颗弹跳图标的个头（60px 的 1.5 倍） */
 }
 
 /* 五个字母各自的大小 + 和前后字母的间距 —— 只改这几块里的数字

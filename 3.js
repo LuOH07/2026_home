@@ -273,38 +273,25 @@
             toggle: { end: 1.55, label: "Kill Switch" }
         },
 
-        /* ---- 图标 15 / 16 / 17 / 18（understand-1.avif）—— text-21 淡入时【四只一起】出现，
-                跟 text-21 一起淡出 ----
-           ★ 四只是同一张图的四份，各自独立飘动（和图标 1 / 3 / 4 一个玩法）：
-               · 落点【随机】：每次刷新都在自己的运动区域里重新随机，
-                 并且尽量互相错开（见 pickStart），不会一开场四只叠成一团；
-               · 运动方式 = 台球 / 光反射：匀速直线飞，撞到区域边框按反射定律弹回，
-                 互相撞到就按等质量弹性碰撞弹开（就是 ico1 那套 driftStep）。
-           ★ 运动区域（只对这四只生效，写在 area 里）：
-                 top 0~100%、right 0~60%
-                 →  距屏幕右边缘 0%~60%（即 left 40% ~ right 100%），
-                    水平只在屏幕右侧那 60% 里弹、竖直占满整屏。
-                    改范围就改这四条里的 area（不用动全局 DRIFT.area）。
-           ★ 出场 / 退场：
-                 start   = text-21 的淡入起点（A）→ 四只跟着 text-21 一起淡入；
-                 fadeOut = text-21 → 在 text-21 的【淡出区间】（它的 B → E）里一起暗下去，
-                           text-21 完全消失时它们正好也没了。
-           ★ 大小在 3.css 的 .bug-icon-15 ~ -18 里调（--icon-height），
-             想四只不一样大就分别改；位置不用写，脚本每帧自己摆。
-           ★ randomDir: true —— 每只随机一个初始方向，
-             否则四只都会沿用同一个兜底方向、排成一条线往右飞（同一个起点种子）。
-           ★ 它们没有 hover 名字 → 3.css 里另有 pointer-events: none，不挡底下文字。 */
+        /* ---- 图标 15（understand-1.avif）—— text-20 淡入时出现，跟 text-20 一起淡出 ----
+           ★ 现在【只留这一只】，而且改成 pin: true：
+               · 它的位置不再交给随机飘动，而是由 4.js 的 “text-20：ico15 弹跳敲字”
+                 那一段每帧写 transform ——
+                 从上方飞进来 → 在文字之间弹跳 → 依次敲 S / T / I / N / G → 从右侧飞出；
+               · 3.js 这边只负责它的【淡入 / 淡出】（start / fadeOut 都跟 text-20 走）；
+               · 所以 area / randomDir 都不需要了（pin 的图标不参与飘动和互撞）。
+           ★ 图标 16 / 17 / 18 暂时不用（注释掉了，要用时把这三条取消注释即可）。 */
         {
             cls: "bug-icon-15",
             host: ".text-20",
             src: "https://static.igem.wiki/teams/6059/wiki/home/understand-1.avif",
             name: "Understand (1)",
-            start: { from: ".text-20", mark: "A" },   /* 跟着 text-21 的淡入区间出现 */
-            fadeOut: ".text-20",                       /* 跟着 text-21 的淡出区间消失 */
-            /* ★ 屏幕右侧 0~60%（距右边缘 0~60%）= left 40% ~ right 100%、top 0~100% */
-            area: { left: 40, right: 100, top: 0, bottom: 100 },
-            randomDir: true                            /* 初始方向随机，四只不会同向 */
+            pin: true,                                 /* ★ 位置由 4.js 的弹跳动画控制 */
+            start: { from: ".text-20", mark: "A" },    /* 跟着 text-20 的淡入区间出现 */
+            fadeOut: ".text-20"                        /* 跟着 text-20 的淡出区间消失 */
         },
+
+        /*
         {
             cls: "bug-icon-16",
             host: ".text-20",
@@ -335,6 +322,7 @@
             area: { left: 40, right: 100, top: 0, bottom: 100 },
             randomDir: true
         },
+        */
 
         /* ---- 图标 19（expand.webm）—— text-15 淡入时出现，text-16 淡出时消失，一直循环播放 ----
            ★ 素材用【相对路径】./expand.webm（和 index.html 放在同一个目录）。

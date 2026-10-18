@@ -1008,7 +1008,22 @@ function tick(now) {
     }
 
     /* 冻结时页面钉在触发线上（一点不动）；其余情况走普通映射 */
-    window.scrollTo({ top: pageTopFor(cur), behavior: "instant" });
+    /* ★★★ left: 0 必须写，这是“刷新后整页左移、右边空出一条、看起来像被宝剑进度条占了”
+       这个毛病的根治点。原因链条（三个文件合起来才成立，缺一条都不会犯）：
+         ① 页面确实存在【横向可滚动区域】：2.css 里 .bg-video-wrap-falls-1 用了
+            right: -10%，那个绝对定位的背景视频右边缘伸到页面右边界外面 10% 页宽，
+            于是 scrollWidth = clientWidth + 0.1 × 页宽（1440 宽时约 144px）。
+         ② overflow-x: hidden（1.css 的 body）只让【用户】滚不动，按规范
+            “可滚动区域”还在：浏览器自己仍然能把它滚走 —— 滚动位置恢复、焦点进视口、
+            页面内查找、以及某些 UA 对超出视口的元素做对齐，都会写 scrollLeft。
+         ③ 这里以前只写 top：按 CSSOM 规范，scrollTo 里没给的 left 会【保留当前值】，
+            所以一旦横向被别人滚歪过一次，之后每帧都只是“保持歪着”。
+            结果：底图（body 背景，background-position-x 固定为 0）和所有按 % 定位的
+            文字一起左移，右侧露出白边；而宝剑是 position: fixed，不跟着文档滚，
+            仍然稳稳贴在视口右边缘 —— 看上去就是“进度条占了页面右边那条宽度”。
+       把 left 钉成 0：横向偏移每帧都被拉回，刷新恢复过来的旧偏移也会在下一帧消失。
+       纵向一点没变（top 还是 pageTopFor(cur)），不牵动任何其他效果。 */
+    window.scrollTo({ left: 0, top: pageTopFor(cur), behavior: "instant" });
     render();
 
     /* 冻结播放期间滚轮随时可能继续滑，保持排帧以便及时收尾 */
@@ -1176,6 +1191,13 @@ window.addEventListener("keydown", e => {
 });
 
 window.addEventListener("scroll", () => {
+    /* ★ 横向兜底归零（见 tick 里那段说明）：只要发现横向被滚走了就立刻拉回 0。
+       只在真的不为 0 时才动手，所以不会和页面自己的滚动互相打架；
+       刷新后浏览器把上次的横向偏移恢复回来时，也是靠这一下当场修正。 */
+    if (window.scrollX) {          /* 0 / undefined 都不动，只有真的歪了才修 */
+        window.scrollTo({ left: 0, top: window.scrollY, behavior: "instant" });
+    }
+
     /* 冻结播放期间页面位置是我们自己钉死的常量，进度也是时间驱动的：
        绝不能让浏览器的滚动事件反过来改进度，否则这段会被打乱。 */
     if (freezeActive) {
@@ -1263,6 +1285,11 @@ bgImg.onload = function () {
             maxProgress()
         );
         render();
+
+        /* ★ 刷新 / 从链接进来时，浏览器会把上次的滚动位置一起恢复回来（横向也算）：
+           这里先归零一次 —— 只动横向，纵向保持原样，所以不会把人从半路弹回顶部。
+           （之后由 tick 每帧、以及 scroll 监听里的兜底持续保证横向为 0。） */
+        window.scrollTo({ left: 0, top: window.scrollY, behavior: "instant" });
 
         window.addEventListener("resize", onResize);
 

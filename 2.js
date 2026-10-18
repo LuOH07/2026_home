@@ -40,6 +40,18 @@ var VIDEO_GROUPS = {
     "TnpB": [
         "./assets/TnpB_1.webm",
         "./assets/TnpB_2.webm"
+    ],
+    /* ★ TnpB 的【终点定格视频】：TnpB_1 走完最后一段、走到轨迹最后一个点之后播的那一个
+       （相对路径 ./TnpB-end.webm —— 和 index.html 放在同一个目录，不在 assets 里）。
+
+       · 它是一个单独的“组”（不是 TnpB 的第 3 个），所以：
+           - 不跟滚动走（不在 MOVE_GROUPS 里）；
+           - VIDEO_NAMES 里没有它 → 不接鼠标、不会 hover 出名字，不挡底下的东西；
+       · 平时完全不显示，什么时候播 / 什么时候收起来由 MOVE_FX["tnpb-1"].finale 管；
+       · 位置 / 大小正常写在 2.css 的 .bg-video-wrap-tnpbend-1 里（top / left / width）。
+       ★ 不想用它：把这一段删掉（或者把 finale 那一项删掉），其余都不用动。 */
+    "TnpBEnd": [
+        "./TnpB-end.webm"
     ]
 };
 
@@ -122,6 +134,11 @@ var VIDEO_CLASS = "bg-video";
        播完（视频 ended）人物再按当前滚动位置出现 —— 如果那段就是轨迹的最后一段，
        看起来就是：走到终点 → 播一遍动画 → 人物常驻在那里；
        【往上滑】经过不播；再滑下来会再播一次（可以反复）。
+     · 终点定格视频（finale）：人物【往下滑】正好走到轨迹【最后一个点】时播一遍，
+       播完【停在最后一帧】不动（人物一直藏着）；往回滚到那个点上面，
+       它就消失、人物重新出现继续正常走路；再滑到终点又播一次（可以反复）。
+       ★ 它和上面两个不一样：位置 / 大小不在 2.js 里算，直接写在 2.css 的
+         .bg-video-wrap-tnpbend-1 里（top / left / width），2.js 只管什么时候播。
    ========================================================================== */
 
 /* ★★ 哪些视频要“跟着滚动位置走”，每一组的轨迹点写在 2.css 的哪里。
@@ -161,6 +178,13 @@ var MOVE_GROUPS = {
    end    = 终点动画：人物【往下滑】正好走完 segments 里那几段（段号从 1 数）的终点时播；
             播的时候人物藏着，播完再按当前滚动位置出现 —— 如果那段就是轨迹最后一段，
             看起来就是“常驻在最后那个终点”；再滑下来会再播一次（可以反复）。
+   finale = 终点定格视频：人物【往下滑】正好走到轨迹【最后一个点】时播一遍，
+            ★ 播完【停在最后一帧】不动 —— 不循环、也不收起来，人物一直藏着；
+            · 往回（往上）滚到那个点上面 → 它立刻收起来，人物重新出现、继续正常走路；
+            · 再往下滑到终点 → 再播一遍（可以反复）。
+            ★ 它不需要 key 之外的 up / left —— 位置 / 大小直接写在
+              2.css 的 .bg-video-wrap-tnpbend-1 里（top / left / width），这里只管调度：
+                 finale: { key: "TnpBEnd_1", rate: 1 }
 
    key      = 视频键，= VIDEO_GROUPS 里的 “<类名>_<序号>”，
               容器 id 就是 bgVideoWrap_<key>（例如 CRISPR_1 → bgVideoWrap_CRISPR_1）
@@ -181,7 +205,13 @@ var MOVE_GROUPS = {
      它的宽度在 2.css 里和 crispr-3 保持一致（现在都是 6vw），所以出现前后大小不变。 */
 var MOVE_FX = {
     "tnpb-1": {
-        end: { key: "TnpB_2", segments: [3, 4, 8, 14, 16, 18, 20], rate: 1, up: 0.4, left: 0 }
+        end: { key: "TnpB_2", segments: [3, 4, 8, 14, 16, 18, 20], rate: 1, up: 0.4, left: 0 },
+
+        /* ★★ TnpB 的终点定格视频（TnpB-end.webm，2.css 里是 .bg-video-wrap-tnpbend-1）：
+           TnpB_1 走完最后一段、正好走到轨迹【最后一个点】（.tnpb-move-42）时播一遍，
+           播完停在最后一帧；往回滚到那个点上面它消失、TnpB_1 重新出现，
+           再滑到终点再播一次。位置 / 大小不在这里 —— 在 2.css 那一条里调。 */
+        finale: { key: "TnpBEnd_1", rate: 1 }
     },
     "crispr-3": {
         appear: { key: "CRISPR_1", rate: 1, up: 0.05, left: -1.5 },
@@ -416,6 +446,7 @@ function makeMotionState(el) {
         lastCenterY: null,              /* 上一帧的中心线纵坐标：用来判断“这一帧是不是刚走完某段终点” */
         appearFx: null,                 /* 出场动画播放器（配置里有 appear 才建） */
         endFx: null,                    /* 终点动画播放器（配置里有 end 才建） */
+        finaleFx: null,                 /* 终点定格视频播放器（配置里有 finale 才建） */
         appeared: false,                /* 出场动画是不是已经过了（每次刷新只播一次） */
         lastScreenY: null,              /* 上一帧第一个轨迹点在屏幕上的纵坐标（判断“刚进画面”） */
         visible: null,                  /* 当前显示状态（null = 还没设置过） */
@@ -680,6 +711,7 @@ function makeFxPlayer(cfg, kind) {
         video: null,
         ready: false,                                /* 找过元素了没（找不到就当没有这个动画） */
         active: false,                               /* 正在播 */
+        held: false,                                 /* ★ 定格视频专用：已经播完、停在最后一帧上了 */
         state: null,                                 /* 播完要把哪个人物露出来（联动动画没有） */
         timer: 0,                                    /* 兜底计时器：视频放不出来也能收尾 */
         also: [],                                    /* 这个动画触发时顺带播的联动动画（播放器数组） */
@@ -875,14 +907,181 @@ function endFxTriggerSeg(pl, segments, prevCenter, centerY) {
     return found;
 }
 
+/* ==========================================================================
+   ★ 终点定格视频（MOVE_FX 里的 finale）—— TnpB 走到轨迹最后一个点之后播的那一个
+   --------------------------------------------------------------------------
+   和上面的“出场 / 终点动画”不是一回事：
+     · 出场 / 终点动画：播一遍就收起来，人物接着按滚动位置走；
+     · 这一个：播完【一直停在最后一帧】上，人物一直藏着 ——
+       看起来就是“走到终点、最后一个画面定住了”；
+     · 往回（往上）滚到终点那个位置（轨迹最后一个点）上面，它立刻收起来，
+       人物重新出现、继续正常走路；再往下滑到终点，它就再播一遍（可以反复）。
+
+   位置 / 大小不在这里算：直接写在 2.css 的 .bg-video-wrap-tnpbend-1 里
+   （top / left / width，和别的视频一样相对底图）。这里只管“什么时候播 / 什么时候收”。
+   ========================================================================== */
+
+/* 判定“走到终点”/“退出终点”的余量（px）。
+   ★ 两个值故意不一样（退出要退出得更远一点），这样停在终点时不会来回闪。 */
+var FINALE_TRIGGER_EPS = 0.5;
+var FINALE_DISMISS_EPS = 2;
+
+/* 把定格视频找出来，变成“平时不出现、只播一遍、播完停住” */
+function setupFinale(pl) {
+    if (!pl || pl.ready || !pl.key) return;
+    pl.ready = true;                                 /* 只找一次，找不到就算了 */
+
+    var wrap = wrapByKey(pl.key);
+    var video = wrap ? wrap.querySelector("video") : null;
+    if (!wrap || !video) return;
+
+    pl.wrap = wrap;
+    pl.video = video;
+
+    video.loop = false;                              /* 只播一遍（不循环） */
+    video.removeAttribute("loop");
+    video.pause();
+
+    rewindFinale(pl);                                /* 回到第一帧待命 */
+    wrap.style.visibility = "hidden";                /* 平时完全不显示 */
+
+    video.addEventListener("ended", function () { holdFinale(pl, "ended"); });
+    video.addEventListener("error", function () { holdFinale(pl, "error"); });
+}
+
+/* 回到第一帧（下次播还是从头播） */
+function rewindFinale(pl) {
+    if (!pl || !pl.video) return;
+    try { pl.video.currentTime = pl.video.__startAt || 0; } catch (err) { /* 忽略 */ }
+}
+
+/* 播一遍：容器露出来、人物藏起来。位置 / 大小由 2.css 决定，这里一个字都不改。 */
+function playFinale(pl, state) {
+    if (!pl || !pl.cfg) return false;
+
+    setupFinale(pl);
+    if (!pl.ready || !pl.wrap) return false;
+
+    pl.held = false;
+    pl.active = true;
+    pl.state = state;
+    pl.tries = 0;
+
+    rewindFinale(pl);
+    pl.wrap.style.visibility = "visible";
+    hideMotion(state);                               /* 播放 / 定格期间人物藏着 */
+
+    try { pl.video.playbackRate = pl.rate; } catch (err) { /* 忽略 */ }
+    var p = pl.video.play();
+    if (p && typeof p.catch === "function") {
+        p.catch(function () { /* 放不出来也没关系：下面的计时器会收尾 */ });
+    }
+
+    /* 兜底计时器：万一 ended 不来（某些浏览器 / 视频坏掉），也别一直卡在“正在播” */
+    clearTimeout(pl.timer);
+    pl.timer = setTimeout(function () { holdFinale(pl, "timer"); }, fxDurationMs(pl));
+    return true;
+}
+
+/* 播完了：★ 停在最后一帧 —— 容器保持可见，人物继续藏着（canShowMotion 里算）。
+
+   why 说明这次是谁叫的：
+     · "ended" = 视频自己播完了（正常情况）→ 定格在最后一帧；
+     · "error" = 视频出错（路径写错 / 解码失败）→ 别定格了，收起来、人物回来；
+     · "timer" = 兜底计时器先到（有的浏览器拿不到时长）：视频还在播就再等一会儿，
+                 等它真的播完 —— 这样“停”下来的一定是最后一帧，不会冻在半路。 */
+function holdFinale(pl, why) {
+    if (!pl || !pl.active) return;
+
+    var v = pl.video;
+
+    if (why === "timer" && v && !v.ended && !v.error) {
+        pl.tries = (pl.tries || 0) + 1;
+        if (pl.tries <= 8) {                              /* 最多再等 8 × 0.7 秒 */
+            clearTimeout(pl.timer);
+            pl.timer = setTimeout(function () { holdFinale(pl, "timer"); }, 700);
+            return;
+        }
+    }
+
+    clearTimeout(pl.timer);
+    pl.timer = 0;
+    pl.active = false;
+    pl.tries = 0;
+
+    var s = pl.state;
+    pl.state = null;
+
+    /* 出错、或者等完了还没播起来（被浏览器拦掉等）：干脆别放这一帧，人物直接回来 */
+    var dead = (why === "error") || (v && v.error) ||
+               (why === "timer" && v && !v.ended && v.currentTime < 0.1);
+
+    if (dead) {
+        if (pl.wrap) pl.wrap.style.visibility = "hidden";
+        pl.held = false;
+        if (s) { s.visible = null; stepMotion(s); }
+        return;
+    }
+
+    pl.held = true;                                      /* 定格：画面一直停在这里 */
+    if (s) { s.visible = null; stepMotion(s); }
+}
+
+/* 往回滚到终点上面：收起来，人物重新出现（继续正常走路）。
+   ★ 故意不在这里调 stepMotion()：它是从 stepMotion() 里被叫到的，
+     外面那一帧马上就会把人物重新摆好、重新露出来（showMotionNow）。 */
+function dismissFinale(pl, state) {
+    if (!pl || (!pl.active && !pl.held)) return;
+
+    clearTimeout(pl.timer);
+    pl.timer = 0;
+    pl.active = false;
+    pl.held = false;
+    pl.state = null;
+    pl.tries = 0;
+
+    if (pl.video) { try { pl.video.pause(); } catch (err) { /* 忽略 */ } }
+    rewindFinale(pl);
+    if (pl.wrap) pl.wrap.style.visibility = "hidden";
+
+    if (state) state.visible = null;                 /* 让外面的 showMotionNow() 重新写一次 */
+}
+
+/* 每帧看一眼定格视频该不该播 / 该不该收：
+     · 还没播、也还没定格：这一帧【往下滑】正好扫到轨迹最后一个点 → 播一遍；
+     · 正在播 / 已经定格：往回滚到那个点上面 → 收起来，人物重新出现。
+   “终点” = 最后一段的终点 = 轨迹最后一个点（这里是 .tnpb-move-42，top: 95.4%）。 */
+function updateFinale(state, centerY, prevCenter) {
+    var pl = state.finaleFx;
+    if (!pl || !pl.cfg || !state.segments.length) return;
+
+    var endY = state.segments[state.segments.length - 1].to.y;
+
+    /* 正在播 / 已经定格：往回退出终点就收起来（往下滚不管，就让它停着） */
+    if (pl.active || pl.held) {
+        if (centerY < endY - FINALE_DISMISS_EPS) dismissFinale(pl, state);
+        return;
+    }
+
+    /* 刚重建过路线（改窗口大小等）：这一帧不判断，免得误播 */
+    if (prevCenter === null || prevCenter === undefined) return;
+
+    /* 上一帧还没到终点、这一帧到了 → 是往下滑正好走到终点 */
+    if (prevCenter < endY - FINALE_TRIGGER_EPS && centerY >= endY - FINALE_TRIGGER_EPS) {
+        playFinale(pl, state);
+    }
+}
+
 /* 这个人物现在能不能露出来：
      · 有出场动画、而且还没轮到播（在等“第一次滑到第一个轨迹点”）→ 先藏着；
      · 出场 / 终点动画正在播 → 藏着；
+     · 终点定格视频正在播 / 已经停在最后一帧 → 藏着；
    其余情况正常显示。 */
 function canShowMotion(state) {
     if (state.appearFx && state.appearFx.cfg && !state.appeared) return false;
     if (state.appearFx && state.appearFx.active && state.appearFx.state === state) return false;
     if (state.endFx && state.endFx.active && state.endFx.state === state) return false;
+    if (state.finaleFx && (state.finaleFx.active || state.finaleFx.held)) return false;
     return true;
 }
 
@@ -904,12 +1103,16 @@ function makeStateFx(state) {
         state.endFx = makeFxPlayer(fx.end, "end");
         state.endFx.also = (fx.end.also || []).map(makeLinkedFx);
     }
+
+    /* ★ 终点定格视频（TnpB 走完最后一段之后播、播完停在最后一帧的那个） */
+    if (fx.finale) state.finaleFx = makeFxPlayer(fx.finale, "finale");
 }
 
 /* 启动时把每一组的动画都收起来（不循环、不自动播、不可见） */
 function setupStateFx(state) {
     if (state.appearFx) setupFx(state.appearFx);
     if (state.endFx) setupFx(state.endFx);
+    if (state.finaleFx) setupFinale(state.finaleFx);
     (state.endFx && state.endFx.also ? state.endFx.also : []).forEach(setupFx);
 }
 
@@ -985,6 +1188,10 @@ function stepMotion(state) {
         var fxSeg = endFxTriggerSeg(state.endFx, state.segments, prevCenter, centerY);
         if (fxSeg) playFx(state.endFx, state, fxSeg.to);
     }
+
+    /* ★ 终点定格视频：走完最后一段、正好走到轨迹最后一个点 → 播一遍（播完停在最后一帧）；
+       往回滚到那个点上面 → 收起来、人物重新出现（继续正常走路）。 */
+    updateFinale(state, centerY, prevCenter);
 
     state.cur.x = pos.x;
     state.cur.y = pos.y;
@@ -1151,7 +1358,7 @@ function initMovement() {
         rebuildAll();
     };
 
-    /* 控制台查看用：homeVideos.fxOf("crispr-3") → { appear, end } 两个动画播放器 */
+    /* 控制台查看用：homeVideos.fxOf("tnpb-1") → { appear, end, finale } 这几个播放器 */
     function stateOf(group) {
         for (var i = 0; i < states.length; i++) {
             if (states[i].group === group) return states[i];
@@ -1161,7 +1368,33 @@ function initMovement() {
 
     window.homeVideos.fxOf = function (group) {
         var s = stateOf(group);
-        return s ? { appear: s.appearFx, end: s.endFx, state: s } : null;
+        return s ? { appear: s.appearFx, end: s.endFx, finale: s.finaleFx, state: s } : null;
+    };
+
+    /* 终点定格视频的查看 / 调试：
+         homeVideos.tnpbFinale.state()   → "idle" / "playing" / "held"（定格中）
+         homeVideos.tnpbFinale.play()    → 手动播一遍
+         homeVideos.tnpbFinale.dismiss() → 手动收起来（人物重新出现） */
+    window.homeVideos.tnpbFinale = {
+        player: function () { return tnpbState ? tnpbState.finaleFx : null; },
+        state: function () {
+            var pl = tnpbState ? tnpbState.finaleFx : null;
+            if (!pl) return "none";
+            if (pl.held) return "held";
+            if (pl.active) return "playing";
+            return "idle";
+        },
+        play: function () {
+            var pl = tnpbState ? tnpbState.finaleFx : null;
+            return pl ? playFinale(pl, tnpbState) : false;
+        },
+        dismiss: function () {
+            var pl = tnpbState ? tnpbState.finaleFx : null;
+            if (!pl) return false;
+            dismissFinale(pl, tnpbState);
+            stepMotion(tnpbState);
+            return true;
+        }
     };
 
     /* 旧名字，留着兼容（= tnpb-1 的终点动画） */
