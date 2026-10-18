@@ -80,7 +80,9 @@ body {
 .bg-video-wrap {
     position: absolute;     /* 跟随底图/文档；不要用 fixed */
     z-index: 0;             /* 层级：0 = 在正文之下；想让某个压在上面就在它自己那条里写 z-index */
-    pointer-events: none;   /* 不挡鼠标事件，不会影响原有滚动交互 */
+    pointer-events: none;   /* 默认不挡鼠标事件，不会影响原有滚动交互；
+                               有名字的那些在下面 [data-video-name] 那条里单独打开，
+                               好让鼠标移上去能 hover 出名字 */
     background: transparent;/* 保持透明，1.js 画的 map.png 底图仍能看到 */
 
     --rotate: 0deg;         /* ← 旋转角度：该类所有视频通用；单个视频可在自己那条里覆盖 */
@@ -94,6 +96,75 @@ body {
     pointer-events: none;
     transform: rotate(var(--rotate, 0deg));  
     transform-origin: 50% 50%;               
+}
+
+/* ==========================================================================
+   ★ 鼠标悬停（hover）显示的名字
+   --------------------------------------------------------------------------
+   鼠标移到视频上 → 视频【正上方】淡入它的名字；移开就淡出。
+
+   名字从哪来：
+     · 文字在 2.js 的 VIDEO_NAMES 里（CRISPR / target gene / TnpB），
+       每组视频各挂一个，改名字只改那一处；
+     · 名字是容器里的一个 <span class="bg-video-label">（2.js 在 mount() 里建），
+       容器上同时会写 data-video-name = 那句话；
+     · 它是容器的子元素，所以跟着容器走 —— tnpb-1 / crispr-3 跟着滚轮走的那些，
+       名字也一直贴在它们正上方；容器被藏起来时（出场 / 终点动画），名字一起藏。
+
+   为什么下面那条 pointer-events 只对 [data-video-name] 打开：
+     .bg-video-wrap 平时是 pointer-events: none（不挡鼠标、不影响滚动和文字），
+     只有“有名字”的容器才重新接鼠标，才可能 hover 出字来。
+     ★ 它只影响鼠标悬停，滚轮照旧冒泡到 window 驱动页面（1.js / 2.js 的监听都在 window 上）。
+
+   字型 / 颜色 = 【正文】（1.css 的 .text-box）：'impact' / #324561 / letter-spacing 1px。
+   想改字号 / 位置 / 颜色，只动下面 .bg-video-label 那一条即可。
+   ========================================================================== */
+
+/* 有名字的视频才接鼠标（其余的照旧 pointer-events: none，不挡下面的东西） */
+.bg-video-wrap[data-video-name] {
+    pointer-events: auto;
+}
+
+/* 名字本体：贴在视频正上方、水平居中 */
+.bg-video-label {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;                       /* 视频正上方 */
+    transform: translateX(-50%);        /* 水平居中在视频中线上 */
+    margin-bottom: 6px;
+
+    font-family: 'impact', sans-serif;  /* ← 正文字体（和 1.css 的 .text-box 一致） */
+    font-size: 28px;                    /* 和 3.css 里图标名字一样大 */
+    line-height: 1.2;
+    letter-spacing: 1px;                /* ← 正文的字距（1.css 的 .text-box） */
+    color: #324561;                     /* ← 正文颜色（1.css 的 .text-box） */
+    white-space: nowrap;                /* 名字不断行 */
+
+    /* ★ 白色描边：8 个方向各描一层，看上去就是一圈干净的白色轮廓。
+       ★ 粗细只改 --label-outline 这一个值即可（1px 细 / 2px 默认 / 3px 粗）。
+       ★ 为什么不用 -webkit-text-stroke：它的描边是【压在字里面】的，
+         Impact 本来就瘦，一描字就细一半、还会发虚；
+         用 8 向 text-shadow 描在外面，字形完全不变，只在周围多一圈白边。 */
+    --label-outline: 2px;
+    text-shadow:
+        calc(-1 * var(--label-outline)) calc(-1 * var(--label-outline)) 0 #fff,
+        calc(-1 * var(--label-outline)) 0                               0 #fff,
+        calc(-1 * var(--label-outline)) var(--label-outline)            0 #fff,
+        0                               calc(-1 * var(--label-outline)) 0 #fff,
+        0                               var(--label-outline)             0 #fff,
+        var(--label-outline)            calc(-1 * var(--label-outline)) 0 #fff,
+        var(--label-outline)            0                               0 #fff,
+        var(--label-outline)            var(--label-outline)            0 #fff;
+
+    opacity: 0;                         /* 平时不显示 */
+    transition: opacity .18s ease;      /* 移入淡入、移出淡出，不会突然闪 */
+    pointer-events: none;               /* 名字本身不接鼠标，免得一碰就消失 */
+    user-select: none;
+}
+
+/* ★ hover 显示 / 移开消失：纯 CSS，不需要监听鼠标 */
+.bg-video-wrap[data-video-name]:hover .bg-video-label {
+    opacity: 1;
 }
 
 /* ======================= CRISPR 类 ======================= */
@@ -243,6 +314,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
+    pointer-events: none;       /* ★ 不接鼠标：它是铺满整页的隐形盒子，接鼠标会把底下视频的 hover 挡掉 */
 }
 
 .tnpb-points > div {
@@ -538,6 +610,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
+    pointer-events: none;       /* ★ 不接鼠标：和 .tnpb-points 一样，别把底下视频的 hover 挡掉 */
 }
 
 .crispr3-points > div {

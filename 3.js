@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    /* ======================= 1. 十八个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~21，2 号已删，12 / 13 号已删） ======================= */
+    /* ======================= 1. 十九个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~22，2 号已删，12 / 13 号已删） ======================= */
     /* ============ ico5 / ico7 / ico6 的出场时刻（三只都挂在 text-1 上） ============
        text-1 = "Compact is only the" + <br> + "BEGINNING"，它自己有四个时刻（见 1.js）：
            A ──淡入(0.6s)── H ──停留(3s)── B ──淡出(0.6s)── E
@@ -239,6 +239,8 @@
 
         /* ---- 图标 14（suicide.webm）—— text-17 淡入时出现，text-18 淡出之后消失 ----
            ★ 右边带一个【开关按钮】（见下面的 toggle）：绿 = 开、灰 = 关。
+             按钮【上方】还有一行字 “Kill Switch”（toggle.label）：
+             字体 / 颜色跟正文一样，样式在 3.css 的 .bug-icon-14 .bug-toggle-label。
              视频不再自己播，完全由开关控制（所以 autoplay / loop 都写 false，
              mediaLive() 对这只图标不生效，改由 switchTick() 管）：
                 关 → 开：正放（0 → 最后一帧），细菌一点点变灰死掉，停住后【开 = 灰/最后一帧】
@@ -257,12 +259,18 @@
             /* ★ 跟着 text-18 的【淡出区间】一起消失（它的 B → E），倒放时对称亮回来 */
             fadeOut: ".text-12",
             /* ★★ 开关按钮（3.css 的 .bug-icon-14 .bug-toggle 调样式 / 位置）★★
-               end = 视频【画面】真正结束的时刻：这个 webm 容器时长 2.10s，
-                     但画面到 1.13s 就结束了（后面是静音尾巴）。
-                     不改它的话，正放会在灰色的最后一帧上白等 1 秒。
-                     以后换素材、或者想让“最后一帧”更早 / 更晚，就改这个数；
-                     写 0 或删掉 = 用容器时长（video.duration）。 */
-            toggle: { end: 1.13 }
+               end = 视频【画面】真正结束的时刻（不是容器时长）：
+                     这个 webm 的容器时长 2.51s，但画面在 1.545s 就结束了
+                     （后面是静音的音频尾巴，视频流只有 86 帧 / 60fps）。
+                     ★ 换素材后必须重新量一次，否则正放会在中途停住（看起来“只播了一半”）。
+                       量法：ffmpeg -hide_banner -i xxx.webm -map 0:v:0 -f null -
+                       看最后一行 time=…，或看 showinfo 里最后一帧的 pts_time。
+                     写 0 或删掉 = 用容器时长（video.duration）：动画一定能放完，
+                     只是最后会在静止的最后一帧上多等约 1 秒，倒放时也会先空转一会儿。
+               label = 按钮【上方】那行说明文字（现在是 "Kill Switch"）。
+                       字形 / 颜色跟正文一样，位置 / 字号在 3.css 的
+                       .bug-icon-14 .bug-toggle-label 里调；不想显示就删掉这一项。 */
+            toggle: { end: 1.55, label: "Kill Switch" }
         },
 
         /* ---- 图标 15 / 16 / 17 / 18（understand-1.avif）—— text-21 淡入时【四只一起】出现，
@@ -291,7 +299,7 @@
             host: ".text-21",
             src: "https://static.igem.wiki/teams/6059/wiki/home/understand-1.avif",
             name: "Understand (1)",
-            start: { from: ".text-21", mark: "A" },   /* 跟着 text-21 的淡入区间出现 */
+            start: { from: ".text-20", mark: "A" },   /* 跟着 text-21 的淡入区间出现 */
             fadeOut: ".text-21",                       /* 跟着 text-21 的淡出区间消失 */
             /* ★ 屏幕右侧 0~60%（距右边缘 0~60%）= left 40% ~ right 100%、top 0~100% */
             area: { left: 40, right: 100, top: 0, bottom: 100 },
@@ -302,7 +310,7 @@
             host: ".text-21",
             src: "https://static.igem.wiki/teams/6059/wiki/home/understand-1.avif",
             name: "Understand (2)",
-            start: { from: ".text-21", mark: "A" },
+            start: { from: ".text-20", mark: "A" },
             fadeOut: ".text-21",
             area: { left: 40, right: 100, top: 0, bottom: 100 },
             randomDir: true
@@ -312,7 +320,7 @@
             host: ".text-21",
             src: "https://static.igem.wiki/teams/6059/wiki/home/understand-1.avif",
             name: "Understand (3)",
-            start: { from: ".text-21", mark: "A" },
+            start: { from: ".text-20", mark: "A" },
             fadeOut: ".text-21",
             area: { left: 40, right: 100, top: 0, bottom: 100 },
             randomDir: true
@@ -322,7 +330,7 @@
             host: ".text-21",
             src: "https://static.igem.wiki/teams/6059/wiki/home/understand-1.avif",
             name: "Understand (4)",
-            start: { from: ".text-21", mark: "A" },
+            start: { from: ".text-20", mark: "A" },
             fadeOut: ".text-21",
             area: { left: 40, right: 100, top: 0, bottom: 100 },
             randomDir: true
@@ -409,6 +417,29 @@
             start: { from: ".text-17", mark: "A" },
             /* ★ 跟着 text-19 的【淡出区间】一起消失（它的 B → E） */
             fadeOut: ".text-19"
+        },
+
+        /* ---- 图标 22（laptop.avif）—— text-17 淡入时出现，text-19 淡出时消失 ----
+           ★ 和图标 21 一样【横跨 text-17 / 18 / 19】这三段文字：
+                start   = text-17 的淡入起点（A）→ 跟着 text-17 一起淡入；
+                fadeOut = text-19 → 在 text-19 的【淡出区间】（它的 B → E）里一起暗下去，
+                          text-19 完全消失时它正好也没了。
+              中间 text-17 淡出、text-18 / text-19 依次上来的那几段都保持全亮，
+              往上滑倒放时会对称地亮回来。
+           ★ 它是一张图片（.avif），所以不需要 autoplay / loop 那些视频开关。
+           ★ 图层：仍在 .bug-icons 这个 z-index: 3 的画框里，而 text-17 / 18 / 19
+              的内联 z-index 都比 3 高，所以它【天然在文字下面】。
+           ★ 位置 / 大小在 3.css 的 .bug-icon-22 里调（left / top / --icon-height）。 */
+        {
+            cls: "bug-icon-22",
+            host: ".text-17",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/computer.avif",
+            name: "Computer",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-22 决定 */
+            /* ★ 跟着 text-17 的【淡入区间】一起淡入（它的 A → H） */
+            start: { from: ".text-17", mark: "A" },
+            /* ★ 跟着 text-19 的【淡出区间】一起消失（它的 B → E） */
+            fadeOut: ".text-19"
         }
     ];
 
@@ -417,7 +448,8 @@
        图标 5 / 6 / 7 跟 .text-2、图标 8 跟 .text-9、图标 9 跟 .text-7、
        图标 10 跟 .text-10、图标 11 跟 .text-11、
        图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21、
-       图标 19 跟 .text-16、图标 20 跟 .text-14、图标 21 跟 .text-19
+       图标 19 跟 .text-16、图标 20 跟 .text-14、图标 21 跟 .text-19、
+       图标 22 跟 .text-19
        （图标 12 / 13 已删除，不再有它们的事） */
     const FADE_OUT_HOST = ".text-6";
 
@@ -479,7 +511,7 @@
     const rand = (a, b) => a + Math.random() * (b - a);
     const len = d => Math.sqrt(d.x * d.x + d.y * d.y);
 
-    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十八个“图标位” =======================
+    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十九个“图标位” =======================
        每个图标是一个 .bug-icon-slot（定位用的盒子），里面放：
          · <img class="bug-icon">   —— 图片本身
          · <span class="bug-label">  —— hover 时才显示的名字（配了 label 才生成）
@@ -652,6 +684,19 @@
             toggle.setAttribute("aria-checked", "false");
             toggle.setAttribute("aria-label", (cfg.name || "icon") + " 开关");
             slot.appendChild(toggle);
+
+            /* ★ 按钮上方那行字（ICONS 的 toggle.label，现在是 "Kill Switch"）：
+               用 <span> 而不是写进按钮里 —— 它只是说明文字，不该参与“开关”的
+               可点区域 / 读屏器的按钮名（按钮名仍由上面的 aria-label 决定）。
+               位置 / 字号 / 颜色全在 3.css 的 .bug-icon-14 .bug-toggle-label 里调；
+               它在 slot 里面，所以跟着视频一起出现 / 淡出，也会跟着按钮一起挪。 */
+            if (cfg.toggle.label) {
+                const tlabel = document.createElement("span");
+                tlabel.className = "bug-toggle-label";
+                tlabel.textContent = cfg.toggle.label;
+                tlabel.setAttribute("aria-hidden", "true");   /* 纯装饰，读屏器跳过 */
+                slot.appendChild(tlabel);
+            }
         }
 
         row.appendChild(slot);
@@ -1229,7 +1274,7 @@
     /* 这条状态该停在哪一帧：关 = 第一帧（彩色），开 = 最后一帧（灰色） */
     function restTime(n) {
         const end = switchEnd(n);
-        return n.sw.on ? Math.max(0, end - 0.02) : 0;
+        return n.sw.on ? Math.max(0, end - 0.001) : 0;
     }
 
     /* 停掉正在跑的正放 / 倒放（不改变画面位置） */
@@ -1760,7 +1805,7 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到全部图标（现在 18 只，含各自的飘动状态 n.drift）；
+       __bugIcons.nodes 能看到全部图标（现在 19 只，含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.timeline 是 ico5 / ico7 的出场时刻表（4.js 读它来定 BEGINNING 的出场点）；
        __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效

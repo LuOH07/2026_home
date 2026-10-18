@@ -1,15 +1,18 @@
 /* ==========================================================================
-   3.css —— 十八个图标的大小与位置（编号 1、3~11、14~21；2 / 12 / 13 号已删）
+   3.css —— 十九个图标的大小与位置（编号 1、3~11、14~22；2 / 12 / 13 号已删）
              1 b-subtilis / 3 p-putida / 4 e-coli-1（会飘动）
              5 crispr / 6 tnpb / 7 arrow / 8 ctac / 9 tnpb-1 / 10 title / 11 answer
              14 suicide（text-17 淡入时出现、text-18 淡出之后消失，在文字下方；
-                        右边带一个绿/灰开关按钮，点它正放 / 倒放这段视频）
+                        右边带一个绿/灰开关按钮，点它正放 / 倒放这段视频；
+                        按钮上方一行字 “Kill Switch”，字体 / 颜色同正文）
              15/16/17/18 understand（text-21 淡入时四只一起出现、跟 text-21 一起淡出，会飘动）
                                       （钉在屏幕上，不飘动）
              19 expand（text-15 淡入时出现、text-16 淡出时消失，一直循环播放，在文字下方）
              20 standing（text-13 淡入时出现、text-14 淡出时消失，只播一次、停在最后一帧）
              21 model（text-17 淡入时出现、text-19 淡出时消失，只播一次、停在最后一帧；
                       宽横幅，贴在页面右侧、文字下方）
+             22 laptop（laptop.avif，text-17 淡入时出现、text-19 淡出时消失；
+                       位置 / 大小见下面 .bug-icon-22，文字下方）
    ★ 12 build / 13 expand 已按需求整条删除（图标与视频效果都没了），文字不受影响。
    ★ 19 号是后来重新加的 expand 视频（expand.webm，循环播放），和旧的 13 号不是同一条。
    ========================================================================== */
@@ -320,7 +323,7 @@ video.bug-icon {
     --icon-height: 800px;               /* ← 视频高度（宽度按视频比例自动） */
     left: 35%;                          /* ← 水平位置（盒子中点对准屏幕一半） */
     right: auto;
-    top: 58%;                           /* ← 竖直位置（盒子中点；文字中心在屏幕 40% 处） */
+    top: 53%;                           /* ← 竖直位置（盒子中点；文字中心在屏幕 40% 处） */
     bottom: auto;
     transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
 }
@@ -341,14 +344,26 @@ video.bug-icon {
    图标 14（suicide.webm）—— text-17 淡入时出现，text-18 淡出之后消失
    ★ 右边带一个开关按钮（下面 .bug-toggle 那几条）：绿=开、灰=关，
      点击时正放 / 倒放这段视频（逻辑全在 3.js 的 toggleSwitch / switchAnimate）
+   ★ 按钮上面还有一行字 “Kill Switch”（见下面 .bug-toggle-label）：
+     字形 / 颜色跟正文一模一样（'impact' / #324561 / letter-spacing 1px），
+     只在这个图标亮着的时候才看得到（跟着 slot 的 opacity 一起淡入淡出）
    ============================================================================ */
 .bug-icon-14 {
-    --icon-height: 500px;               /* ← 视频高度（宽度按视频比例自动；2846×1452 ≈ 1.96:1） */
-    left: 40%;                          /* ← 水平位置（盒子中点） */
+    --icon-height: 500px;               /* ← 视频高度（宽度按比例自动；现在是竖版 1098×1312 ≈ 0.84:1，
+                                            所以 500px 高时宽度约 418px） */
+    left: 35%;                          /* ← 水平位置（盒子中点） */
     right: auto;
     top: 68%;                           /* ← 竖直位置（盒子中点；文字中心在屏幕 40%） */
     bottom: auto;
     transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
+
+    /* ★ 开关的几何：定义在 slot 上，【按钮】和它上面那行【文字】共用同一套数，
+       所以改下面 --toggle-w 一个值，按钮和文字会一起跟着挪 / 一起缩放。 */
+    --toggle-w: clamp(46px, 5.2vw, 108px);
+    --toggle-h: calc(var(--toggle-w) * 0.5135);              /* 高 ≈ 宽的 51%（原 38 / 74） */
+    --toggle-knob: calc(var(--toggle-h) - 6px);              /* 圆点直径 = 高 − 上下各 3px */
+    --toggle-travel: calc(var(--toggle-w) - 6px - var(--toggle-knob));  /* 圆点行程 */
+    --toggle-gap: calc(var(--toggle-w) * 0.19);              /* 和视频之间的空隙（原 14 / 74） */
 }
 
 /* ----------------------------------------------------------------------------
@@ -356,8 +371,9 @@ video.bug-icon {
    ----------------------------------------------------------------------------
    · 位置：left: 100% = 紧贴视频右缘，再往右拉开一点空隙、竖直对齐视频中线。
      它在 slot 里面，所以视频挪哪儿它就跟到哪儿。
-     ★ 想挂到视频【左边】：left: 100% → right: 100%，translate 的 x 改成负值。
-   · 大小【跟着页面宽度缩放】（下面 --toggle-w）：
+     ★ 想挂到视频【左边】：left: 100% → right: 100%，translate 的 x 改成负值
+       （上面“Kill Switch”那行字若不想跟过去，也照同样思路改）。
+   · 大小【跟着页面宽度缩放】（上面 --toggle-w）：
         --toggle-w 就是这个开关的宽度，默认 = 页面宽度的 5.2%，
                     夹在 46px（再小就点不准）和 108px（再大就比视频还抢眼）之间。
         高度、圆点直径、圆点行程、和视频之间的空隙【全部由它算出来】，
@@ -367,15 +383,6 @@ video.bug-icon {
      而且只在图标亮着（.is-live）时才可点，暗着的时候绝不挡底下文字。
    ============================================================================ */
 .bug-icon-14 .bug-toggle {
-    /* ★★ 想调大小：只改这一行 ★★
-       纯按页面宽度等比（没有上下限）：--toggle-w: 5.2vw;
-       现在这版带上下限，窄屏不至于太小、大屏不至于太大。 */
-    --toggle-w: clamp(46px, 5.2vw, 108px);
-    --toggle-h: calc(var(--toggle-w) * 0.5135);              /* 高 ≈ 宽的 51%（原 38 / 74） */
-    --toggle-knob: calc(var(--toggle-h) - 6px);              /* 圆点直径 = 高 − 上下各 3px */
-    --toggle-travel: calc(var(--toggle-w) - 6px - var(--toggle-knob));  /* 圆点行程 */
-    --toggle-gap: calc(var(--toggle-w) * 0.19);              /* 和视频之间的空隙（原 14 / 74） */
-
     position: absolute;
     left: 100%;                         /* 贴在视频右缘 */
     top: 50%;
@@ -426,6 +433,35 @@ video.bug-icon {
     outline-offset: 3px;
 }
 
+/* ----------------------------------------------------------------------------
+   按钮上方那行字 “Kill Switch”（3.js 里写 toggle.label 才会生成）
+   ----------------------------------------------------------------------------
+   · 字形 / 颜色 = 【正文】（1.css 的 .text-box）：'impact' / #324561 / letter-spacing 1px。
+     字号默认 28px（和 hover 名字 .bug-label 一致，压在按钮上方不至于太抢眼）；
+     ★ 想和正文一样大：把 font-size 改成 44px；想更小就 22px，位置不用动。
+   · 位置（全部由上面 --toggle-* 算出来，按钮挪 / 缩放时文字自动跟着走）：
+        left: 100% + translateX(--toggle-gap) → 左缘和按钮左缘对齐；
+        bottom: 50% + --toggle-h/2 + 10px     → 正好落在按钮上沿上方 10px。
+     想离按钮更远：把最后的 10px 改大；想贴到按钮左边（和按钮竖排）：
+     把 left/bottom 换成 left: 100%; top: 50%; transform: translate(gap, -50%) 之类。
+   · 只在图标亮着的时候看得见（跟着 slot 的 opacity 一起淡入淡出）；
+     pointer-events: none —— 不挡底下文字，也不会抢走开关的点击。
+   ============================================================================ */
+.bug-icon-14 .bug-toggle-label {
+    position: absolute;
+    left: 100%;
+    bottom: calc(50% + var(--toggle-h) * 0.5 + 10px);
+    transform: translateX(var(--toggle-gap));
+    font-family: 'impact', sans-serif;  /* ← 正文字体（和 1.css 的 .text-box 一致） */
+    font-size: 18px;
+    line-height: 1.2;
+    letter-spacing: 1px;                /* 和正文一样有点字距，Impact 不至于挤成一团 */
+    color: #324561;                     /* ← 正文颜色（1.css 的 .text-box） */
+    white-space: nowrap;                /* 不换行 */
+    pointer-events: none;
+    user-select: none;
+}
+
 /* 它没有 hover 名字 → 亮着的时候也别接鼠标，免得挡住底下文字 */
 .bug-icon-slot.bug-icon-14.is-live {
     pointer-events: none;
@@ -455,10 +491,10 @@ video.bug-icon {
    图标 19（expand.webm）—— text-15 淡入时出现、text-16 淡出时消失；一直循环播放
    ============================================================================ */
 .bug-icon-19 {
-    --icon-height: 550px;               /* ← 视频高度（宽度自动 ≈ height × 1.59） */
+    --icon-height: 700px;               /* ← 视频高度（宽度自动 ≈ height × 1.59） */
     left: auto;                         /* ★ 必须：清掉 .bug-icon-slot 兜底的 left: 25% */
-    right: 6%;                          /* ← 贴屏幕右边（想留白改 3% / 5%） */
-    top: 80%;                           /* ← 竖直位置（盒子中点） */
+    right: 0%;                          /* ← 贴屏幕右边（想留白改 3% / 5%） */
+    top: 70%;                           /* ← 竖直位置（盒子中点） */
     bottom: auto;
     filter: opacity(1);
     transform: translateY(-50%);        /* ★ 只做竖直居中，横向交给 right */
@@ -530,6 +566,38 @@ video.bug-icon {
     pointer-events: none;
 }
 
+/* ============================================================================
+   图标 22（laptop.avif）—— text-17 淡入时出现、text-19 淡出时消失
+   ----------------------------------------------------------------------------
+   ★ 和图标 21 一样横跨 text-17 / 18 / 19 这三段：从 text-17 的淡入起点（A）
+     一直亮到 text-19 的淡出区间（B → E）—— 中间那几段换文字时保持全亮，
+     往上滑倒放时会对称地亮回来（时间轴见 3.js 的 ICONS 里 ico22 那一条）。
+   ★ 位置 = 【贴屏幕右边】（和 19 / 20 / 21 号同一套写法）：水平用 right，竖直用 top 定中点。
+        right        ：图标【右缘】距屏幕【右边】的百分比 —— 更贴边就调小，更靠左就调大
+        top          ：盒子【中点】距屏幕上边的百分比（文字中心在 40% 处，68% 正好落在文字下方）
+        --icon-height：图标高度（宽度按图片自身比例自动；laptop.avif 是 2343×2035 ≈ 1.15:1，
+                       即 width ≈ height × 1.15 —— 600px 高时宽约 691px）
+     ★ 为什么必须写 left: auto：.bug-icon-slot 的兜底是 left: 25%，不清掉它，
+       盒子会被 left 拽住、right 就不生效（之前 left / right 互相打架就是这个原因）。
+     ★ 为什么 transform 只剩 translateY(-50%)：横向已经由 right 定死，
+       再写 translateX(-50%) 会把盒子整体左移半个宽（画面看起来就偏左了）。
+   ★ 图层：仍然待在 .bug-icons（z-index: 3）这个画框里，text-17 / 18 / 19 的内联
+     z-index 都 ≥ 4，所以它【一定在文字下面】—— 不要给它单独写 z-index。
+   ============================================================================ */
+.bug-icon-22 {
+    --icon-height: 800px;               /* ← 图标高度（宽度自动 ≈ height × 1.15 = 691px） */
+    left: auto;                         /* ★ 必须：清掉 .bug-icon-slot 兜底的 left: 25% */
+    right: -1%;                          /* ← 贴屏幕右边（想留白多一点改 6% / 8%） */
+    top: 80%;                           /* ← 竖直位置（盒子中点；落在文字下方） */
+    bottom: auto;
+    transform: translateY(-50%);        /* ★ 只做竖直居中，横向交给 right */
+}
+
+/* 它没有 hover 名字 → 亮着的时候也别接鼠标，免得挡住底下文字 */
+.bug-icon-slot.bug-icon-22.is-live {
+    pointer-events: none;
+}
+
 /* 窄屏：画框本来就铺满视口，位置是百分比、自动跟着缩；
    只需要把图标本身收小一点，免得在小屏上占掉半屏。 */
 @media (max-width: 900px) {
@@ -585,5 +653,9 @@ video.bug-icon {
     /* model.webm 也跟着收小 */
     .bug-icon-21 {
         --icon-height: 80px;
+    }
+    /* laptop.avif 也跟着收小 */
+    .bug-icon-22 {
+        --icon-height: 100px;
     }
 }

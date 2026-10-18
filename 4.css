@@ -73,12 +73,16 @@
    ★ --text3-word-size 是【唯一】的字号旋钮：外框（词间空格）和两个词都读它，
      所以改这一个数，两个词和中间的空隙一起缩放，比例不会跑掉。 */
 .text-3 .familiar-host {
-    --text3-word-size: 128px;     /* ← 44px 的整句里，这两个词单独放大到 128px */
+    --text3-word-size: 164px;     /* ← 44px 的整句里，这两个词单独放大到 128px */
+    --text3-shift:0%;             /* ← 只改这一个数就能左右平移整组（页面宽度的 %） */
 
     display: inline-block;
     white-space: nowrap;
     font-size: var(--text3-word-size);   /* 只为让词间那个空格也按 128px 排 */
     line-height: 1.05;                   /* 128px 的默认行高会把这一行撑得太高，收一点 */
+
+    /* 1vw = 页面宽度的 1%，所以 数字 × 1vw 就是“页面宽度的百分比” */
+    transform: translateX(calc(var(--text3-shift) * 1vw));
 }
 
 /* 两个词：各自是一个行内盒子（以后要加背景 / 动效都方便），
@@ -88,6 +92,8 @@
     display: inline-block;
     font-size: var(--text3-word-size);
     line-height: 1.05;
+    --host-shift: -3;                              
+    transform: translateX(calc(var(--host-shift) * 1vw)); 
     vertical-align: baseline;     /* 和前后 44px 的文字坐在同一条基线上 */
 }
 

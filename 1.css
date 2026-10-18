@@ -69,6 +69,7 @@ body {
     top: 7%;
     left: 12%;
     max-width: 45%;
+    line-height: 2;
     font-size: 44px;
 }
 .text-4 {
@@ -166,8 +167,8 @@ body {
 }
 .text-19 {
     top: 74%;
-    right: 10%;
-    max-width: 40%;
+    right: 2%;
+    max-width: 55%;
     font-size: 44px;
 }
 .text-20 {

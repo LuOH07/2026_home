@@ -1,4 +1,4 @@
-﻿
+
 /* ==========================================================================
    一、视频清单（要加/减少视频改这里）
    ========================================================================== */
@@ -26,6 +26,24 @@ var VIDEO_GROUPS = {
         "./assets/TnpB_1.webm",
         "./assets/TnpB_2.webm"
     ]
+};
+
+/* ==========================================================================
+   一-2、★ 鼠标悬停（hover）时显示的名字
+   --------------------------------------------------------------------------
+   键 = VIDEO_GROUPS 里的组名；值 = 鼠标移到这个视频上时、在它下面淡入的文字。
+   这一组里的【每一个】视频都挂同一个名字，例如 CRISPR 的三格
+   （CRISPR_1 出场 / CRISPR_3 走路 / CRISPR_4 终点）都显示 "CRISPR"。
+
+   · 想改名：直接改下面的字符串；
+   · 想让某一组没有名字（既不显示字、也不接鼠标）：把它的值写成 "" 或删掉这一项；
+   · 字型 / 颜色 / 位置、淡入淡出速度全在 2.css 的 .bg-video-label 里
+     （现在 = 和正文一样：'impact' / #324561 / letter-spacing 1px）。
+   ========================================================================== */
+var VIDEO_NAMES = {
+    "CRISPR": "CRISPR",
+    "gene": "target gene",
+    "TnpB": "TnpB"
 };
 
 /* 公共类名（一般不用改）：容器 .bg-video-wrap-<类名小写>-<序号>，视频 .bg-video */
@@ -305,6 +323,9 @@ function ensurePointBox(spec) {
     box.id = spec.box + "Box";
     box.className = spec.box;
     box.setAttribute("aria-hidden", "true");
+    /* ★ 铺满整页的隐形盒子：永远不接鼠标 —— 否则它会盖在视频上面，
+       把视频的 hover（悬停显示名字）全挡掉 */
+    box.style.pointerEvents = "none";
     document.body.appendChild(box);
     return box;
 }
@@ -1278,6 +1299,25 @@ function applyStartAt(video) {
         applyStartAt(video);
 
         wrap.appendChild(video);
+
+        /* ★ 悬停名字：鼠标移到这个视频上时，在它下面淡入它的名字
+           （名字在字表 VIDEO_NAMES 里，样式在 2.css 的 .bg-video-label）。
+           · data-video-name 写上去 = 这个视频接鼠标 —— 2.css 里
+             .bg-video-wrap[data-video-name] 会把 pointer-events 打开；
+             没名字的视频仍然是 pointer-events: none，照旧不挡任何东西。
+           · 名字是容器里的一个 <span>，跟着容器的 transform 一起动，
+             所以 tnpb-1 / crispr-3 这种“跟着滚动走”的，名字也一直贴在它下面。
+           · 容器被藏起来（visibility: hidden，出场 / 终点动画期间）时，
+             名字会跟着一起藏 —— visibility 是继承的，不用另外处理。 */
+        var labelText = VIDEO_NAMES[group] ? String(VIDEO_NAMES[group]).trim() : "";
+        if (labelText) {
+            wrap.dataset.videoName = labelText;
+
+            var label = document.createElement("span");
+            label.className = "bg-video-label";
+            label.textContent = labelText;
+            wrap.appendChild(label);
+        }
 
         /* 插到 body 最前面，保证它在所有正文元素之下 */
         if (anchor) {

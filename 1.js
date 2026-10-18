@@ -35,10 +35,12 @@ const COMPONENT_TIMING = [];
    向上滑回那条线 → 倒着放一遍。可以写多组，各自在自己的位置触发、互不影响。
    ★ 它们的时长仍然取 0.1 那套，不单独设；下面几个旋钮只管“冻结这段怎么演”
      （撞线判定的实现在 1.js 的 updateZoneArms / zoneToStart，不在这两个文件里配）。 */
-const FREEZE_GROUPS = [
-    [" "],
-];
-/*已不需要（悲）*/
+const FREEZE_GROUPS = [];
+/*已不需要（悲）
+   ★ 这里必须是【空数组】= 不冻结任何文字。
+     以前写的是 [[" "]]：单个空格不是合法选择器，el.matches(" ") 会抛错被 matches() 兜住返回 false，
+     于是每次 layout() 都要刷几十条 “选择器无效” 的 warn，效果和空数组完全一样。
+     以后要恢复冻结：照格式写成 [ [".text-4", ".text-5", ".text-6"] ] 即可。 */
 
 /* 冻结期间：滚轮 delta → 文字进度的倍率。
    1 = 和页面滚动同速（整段 3 句要滑约 900px 才放完，比较慢）；调大 = 同样距离走得更快。
@@ -63,15 +65,76 @@ const ARRIVE_TOL = 24;
 const FREEZE_CATCHUP = 480;
 
 /* ---- 0.3 文字停在屏幕哪个高度（两类共用）----
-   0.5 = 正中间；0.4 = 从上往下 40%（距底部 60%）。
-   冻结文字和跟随滚动的文字都用这一个值，改它整体上下移动，动效本身不受影响。 */
-const ANCHOR_RATIO = 0.4;
-const anchorY = () => (window.innerHeight || document.documentElement.clientHeight) * ANCHOR_RATIO;
+   ANCHOR_RATIO = 没被下面覆盖表点名的句子的高度，用的是【文字中心】：
+     0.5 = 正中间；0.4 = 从上往下 40%（距底部 60%）。改它整体上下移动，动效本身不受影响。
+   ★ 只影响“停在屏幕多高”，【不影响】“滚到哪一屏出现” —— 后者由 1.css 的 top 决定
+     （见 relaxNonFrozenToAuthored），所以改这里不会让两个文案在时间上撞车。
 
-/* 元素要“上移多少”才能把竖直中心放到锚线上。
+   ★ 单句单独设高度 → 写进 ANCHOR_OVERRIDES，它的数字是【文字块的上沿】（从顶边量）：
+       top: 0.3 → 这一句的顶边压在“从上往下 30%”那条线上，文字往下排。
+       30% = 距底 70%，也就是“70% 高度”；top: 0.2 = 距底 80% = “80% 高度”。
+     ★ 用上沿而不是中心：每句行数不一样（1~6 行），用中心的话长短句的顶边会各差
+       几十像素、对不齐；用上沿，所有被点名的句子“第一行从哪儿开始”是齐的，
+       往下排到哪儿由行数自己决定。
+     ★ 上沿语义天然不会把字切在顶上（顶边就在 20%~30% 处）；
+       只有块高超过（视口高 − 上沿线）时才会顶到底边，那种极端情况由下面的夹取兜住。 */
+const ANCHOR_RATIO = 0.4;
+
+/* 单句覆盖表：从上往下匹配，命中的句子按上沿定位。例：
+   const ANCHOR_OVERRIDES = [
+       { sel: ".text-12", top: 0.45 },
+       { sel: ".text-13", top: 0.3 }
+   ]; */
+const ANCHOR_OVERRIDES = [
+    { sel: ".text-1",  top: 0.3 },   /* 70% 高度 → 距顶 30% */
+    { sel: ".text-2",  top: 0.3 },   /* 70% 高度 → 距顶 30% */
+    { sel: ".text-10", top: 0.3 },   /* 70% 高度 → 距顶 30% */
+    { sel: ".text-12", top: 0.3 },   /* 70% 高度 → 距顶 30% */
+    { sel: ".text-15", top: 0.2 },   /* 80% 高度 → 距顶 20% */
+    { sel: ".text-16", top: 0.2 },   /* 80% 高度 → 距顶 20% */
+    { sel: ".text-17", top: 0.2 },   /* 80% 高度 → 距顶 20% */
+    { sel: ".text-18", top: 0.2 },   /* 80% 高度 → 距顶 20% */
+    { sel: ".text-19", top: 0.2 }    /* 80% 高度 → 距顶 20% */
+];
+
+/* 这个元素的上沿该压在视口从上往下多少比例：命中覆盖表就返回它的 top，没命中返回 null */
+function topOf(el) {
+    if (el) {
+        for (let i = 0; i < ANCHOR_OVERRIDES.length; i++) {
+            const r = ANCHOR_OVERRIDES[i];
+            if (r && r.sel && matches(el, r.sel)) return r.top != null ? r.top : null;
+        }
+    }
+    return null;
+}
+
+const viewportH = () => window.innerHeight || document.documentElement.clientHeight;
+const anchorY = () => viewportH() * ANCHOR_RATIO;      // 兜底：没有元素时的基准锚线
+
+/* 这一句的锚线高度（px）= 文字块【中心】该停在屏幕上的 y。
+   · 命中覆盖表 → 中心 = 视口高 × top + h/2
+       于是 上沿 = 中心 − h/2 = 视口高 × top，正好压在那条线上；文字往下排。
+   · 没命中    → 中心 = 视口高 × ANCHOR_RATIO，
+       再夹进 [h/2, 视口高 − h/2]，免得特别长的句子把字顶出屏幕。
+   ★ h 必须由调用方传进来（render 里有缓存好的 it.h），不要在 render 里现场读 offsetHeight ——
+     render 每帧都在写 style，再读布局会让浏览器每帧强制重排，容易掉帧。 */
+const anchorYOf = (el, h) => {
+    const vh = viewportH();
+    const hh = h || 0;
+    const t = topOf(el);
+
+    /* 上沿定位：上沿永远在 20%~30% 处，只有块高到装不下时才会顶到底边，这里兜一下 */
+    if (t !== null) return Math.min(vh * t + hh / 2, Math.max(vh - hh / 2, hh / 2));
+
+    const y = vh * ANCHOR_RATIO;
+    if (hh <= 0) return y;
+    return Math.min(Math.max(y, hh / 2), Math.max(vh - hh / 2, hh / 2));
+};
+
+/* 元素要“上移多少”才能把竖直中心放到锚线上（锚线取这个元素自己的上沿 / 全局比例）。
    pageTop 传这一帧页面停的位置、h 传元素高度、top 传它的静态 top。
    冻结播放和普通滚动都走这一个式子，所以两边落点完全一致。 */
-const pinDy = (pageTop, h, top) => anchorY() - h / 2 + pageTop - top;
+const pinDy = (el, pageTop, h, top) => anchorYOf(el, h) - h / 2 + pageTop - top;
 
 /* ============================ 1. 滚动 → 进度换算 ============================
    滚轮要滚多远才放完（不影响上面那些“秒”，那两个是正交的）
@@ -235,7 +298,7 @@ function buildOneZone(group) {
     const L = introLen();
     const top = first.top != null ? first.top : first.el.offsetTop;
     const h = first.h != null ? first.h : (first.el.offsetHeight || 0);
-    const tr = clamp(top + h / 2 - anchorY(), 0, pageMaxScroll());
+    const tr = clamp(top + h / 2 - anchorYOf(first.el, h), 0, pageMaxScroll());
     const hit = tr + L;
 
     /* ---- 把这组的包络重串到 hit 上 ----
@@ -633,7 +696,7 @@ function layout() {
     const introNominal = INTRO_SECONDS * REF_WHEEL_RATE * WHEEL_SPEED;
     const limit = pageMaxScroll() + introNominal;
 
-    const arrivals = measured.map(m => introNominal + m.top + m.h / 2 - anchorY());
+    const arrivals = measured.map(m => introNominal + m.top + m.h / 2 - anchorYOf(m.el, m.h));
     const secs = measured.map(m => {
         const t = timingOf(m.el);
         return t.fadeIn + t.hold + t.fadeOut;
@@ -854,7 +917,7 @@ function render() {
         }
 
         /* 钉在锚线上：元素中心落在屏幕从上往下 ANCHOR_RATIO 处（默认 40%） */
-        const dy = pinDy(sa, h, top);
+        const dy = pinDy(el, sa, h, top);
 
         let op;
         if (p < H) {
@@ -869,7 +932,7 @@ function render() {
            用的还是同一个 pinDy 式子，只是把“页面位置”换成冻结点，
            因此每一段的视觉中心都落在锚线上，和跟随滑动的文字完全对齐。 */
         const frozenHere = freezeActive && !!it.skipFrozen;
-        const useDy = frozenHere ? pinDy(clamp(frozenAt, 0, pageMaxScroll()), h, top) : dy;
+        const useDy = frozenHere ? pinDy(el, clamp(frozenAt, 0, pageMaxScroll()), h, top) : dy;
 
         el.style.visibility = "visible";
         el.style.opacity = String(op);
