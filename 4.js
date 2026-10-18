@@ -7,17 +7,24 @@
    所以这里能读到前面三段脚本已经建好的 DOM 和全局变量（如 window.__home）。
 
    本文件当前做两件事：
-    ① 给 text-1 这句话里的某几个词套上样式钩子
-        “Compact”   → <span class="compact">   （白字 + #467aae / 20px 圆角卡片，见 4.css）
-        “Beginning” → <span class="beginning"> （单独放大到 128px，见 4.css）
-      其余文字（“ is only the”）原样保留，一个字符都不改。
+    ① 给 text-1 / text-3 这两句里的某几个词套上样式钩子
+        text-1：
+         “Compact”   → <span class="compact">   （白字 + #467aae / 20px 圆角卡片，见 4.css）
+         “Beginning” → <span class="beginning"> （单独放大到 152px，见 4.css）
+        text-3：
+         “Familiar”  → <span class="familiar">  （单独放大到 128px，见 4.css）
+         “Host”      → <span class="host">      （单独放大到 128px，见 4.css）
+        text-6：
+         “Not”       → <span class="not">       （单独放大到 128px，见 4.css）
+      其余文字（text-1 的 “ is only the”、text-3 的 “Genome editing gets harder beyond”、
+      text-6 的 “But small does … mean flexible.”）原样保留，一个字符都不改。
     ② 驱动 “BEGINNING” 的出场（等 ico7 箭头的渐入走完 → 弹出并淡入 → 缩回原大小），
       并把“缩完”那一刻报给 3.js —— ico6 要等它演完才出现。
 
    ★ 为什么在 JS 里包、而不是改 index.html：
      index.html 是“文案文件”，保持它一个字都不动；
      这一层只是给某些词加样式钩子，属于效果层的事。
-     想撤掉某个效果：把下面 TARGETS 里对应的那一行删掉即可
+     想撤掉某个效果：把下面 TARGETS / PARTS3 里对应的那一行删掉即可
      （4.css 里那条规则随之失效；留着也无害）。
    ★ 不会重复包：该词已经在某个 span 里时直接跳过，刷新 / 重跑都安全。
    ========================================================================== */
@@ -29,6 +36,26 @@
     var TARGETS = [
         { word: "compact",   cls: "compact" },     /* → 4.css 的 .text-1 .compact   */
         { word: "beginning", cls: "beginning" }    /* → 4.css 的 .text-1 .beginning */
+    ];
+
+    /* text-3 那句里的两个词：各自包成独立的 <span>，各有一个自己的类，
+       所以可以分别调（现在是都放大到 128px，见 4.css 的 .text-3 .familiar / .host）。
+       两个词外面再包一层 .familiar-host，只负责“不被拆到两行”；
+       其余文字（“Genome editing gets harder beyond”）原样保留。 */
+    var HOST3 = ".text-3";
+    var GROUP3 = "familiar-host";
+    var PARTS3 = [
+        { word: "familiar", cls: "familiar" },     /* → 4.css 的 .text-3 .familiar */
+        { word: "host",     cls: "host" }          /* → 4.css 的 .text-3 .host     */
+    ];
+
+    /* text-6 那句（“But small does Not mean flexible.”）里的 “Not”：
+       单个词，包一层自己的类就够了（不需要外框锁行），
+       样式在 4.css 的 .text-6 .not（单独放大到 128px）。
+       其余文字原样保留。 */
+    var HOST6 = ".text-6";
+    var TARGETS6 = [
+        { word: "not", cls: "not" }                /* → 4.css 的 .text-6 .not */
     ];
 
     /* 把 host 里【第一次出现的整词 word】包成 <span class="cls">，
@@ -69,10 +96,73 @@
         }
     }
 
+    /* 把 host 里【第一次出现的整个短语】包成：
+         <span class="familiar-host"><span class="familiar">Familiar</span> <span class="host">Host</span></span>
+       外面那层组只负责 white-space: nowrap —— 这两个词永远待在同一行，
+       不会被拆成上下两行（不然 128px 之后一行只放得下一个词，看着像阶梯）；
+       每个词自己那层才是真正调字号的地方（4.css）。
+       ★ 和 wrapWord 一样不区分大小写，span 里保留原文的写法；
+         词与词之间的空白（哪怕多个空格）原样搬进去。
+       找不到 / 已经包过就什么也不做。 */
+    function wrapPhrase(host, groupCls, parts) {
+        if (host.querySelector("." + groupCls)) return;
+
+        var phrase = parts.map(function (p) { return p.word; }).join(" ");
+        var wordChar = /[A-Za-z0-9_-]/;
+        var nodes = Array.prototype.slice.call(host.childNodes);
+
+        for (var i = 0; i < nodes.length; i++) {
+            var node = nodes[i];
+            if (node.nodeType !== Node.TEXT_NODE) continue;
+
+            var text = node.nodeValue;
+            var at = text.toLowerCase().indexOf(phrase.toLowerCase());
+            if (at < 0) continue;
+
+            /* 首尾整词判定：短语前后不能紧挨着字母 / 数字 / 下划线 / 连字符 */
+            if (at > 0 && wordChar.test(text.charAt(at - 1))) continue;
+            var next = text.charAt(at + phrase.length);
+            if (next && wordChar.test(next)) continue;
+
+            var group = document.createElement("span");
+            group.className = groupCls;
+
+            /* 按空白切开：词 / 空白 交替出现，词交给对应那层 span，空白原样保留 */
+            var tokens = text.substr(at, phrase.length).split(/(\s+)/);
+            var k = 0;
+            tokens.forEach(function (tok) {
+                if (!tok) return;
+                if (/^\s+$/.test(tok)) {
+                    group.appendChild(document.createTextNode(tok));
+                    return;
+                }
+                var owner = parts[k++] || {};
+                var span = document.createElement("span");
+                span.className = owner.cls || "";
+                span.textContent = tok;                      /* ← 原样保留大小写 */
+                group.appendChild(span);
+            });
+
+            var before = document.createTextNode(text.slice(0, at));
+            var after = document.createTextNode(text.slice(at + phrase.length));
+
+            host.insertBefore(before, node);
+            host.insertBefore(group, node);
+            host.insertBefore(after, node);
+            host.removeChild(node);
+            return;
+        }
+    }
+
     function apply() {
-        var host = document.querySelector(HOST);
-        if (!host) return;
-        TARGETS.forEach(function (t) { wrapWord(host, t.word, t.cls); });
+        var host1 = document.querySelector(HOST);
+        if (host1) TARGETS.forEach(function (t) { wrapWord(host1, t.word, t.cls); });
+
+        var host3 = document.querySelector(HOST3);
+        if (host3) wrapPhrase(host3, GROUP3, PARTS3);
+
+        var host6 = document.querySelector(HOST6);
+        if (host6) TARGETS6.forEach(function (t) { wrapWord(host6, t.word, t.cls); });
     }
 
     apply();

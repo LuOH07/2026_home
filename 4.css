@@ -54,3 +54,65 @@
     will-change: transform, opacity;
 }
 
+/* ---------------------- text-3：“Familiar Host” 两个词单独放大到 128px ---------------------- */
+/* ★ 为什么先把 text-3 改成块级：
+   1.css 的 .text-box 是 display:flex + flex-direction:column，
+   它的【直接子元素】会被块级化成独立的 flex item —— 那样
+   <span class="familiar"> 和 <span class="host"> 会各自占一整行，
+   “Genome editing gets harder beyond Familiar Host” 会被拆成三行。
+   改成 block 之后 text-3 里恢复正常的行内文字流：
+   居中对齐（.text-box 的 text-align: center）、字号、位置都不变，
+   而这两个词可以各自是一个真正的行内盒子。只影响 text-3，别的文字不动。 */
+.text-3 {
+    display: block;
+}
+
+/* 两个词的“外框”：负责把 “Familiar Host” 锁在同一行里，并给词间空格定字号。
+   128px 之后一行只放得下一个词，不锁住就会被拆成上下两行（看着像阶梯）。
+   inline-block = 一整块，放不下时整体换到下一行，而不是词与词之间断行。
+   ★ --text3-word-size 是【唯一】的字号旋钮：外框（词间空格）和两个词都读它，
+     所以改这一个数，两个词和中间的空隙一起缩放，比例不会跑掉。 */
+.text-3 .familiar-host {
+    --text3-word-size: 128px;     /* ← 44px 的整句里，这两个词单独放大到 128px */
+
+    display: inline-block;
+    white-space: nowrap;
+    font-size: var(--text3-word-size);   /* 只为让词间那个空格也按 128px 排 */
+    line-height: 1.05;                   /* 128px 的默认行高会把这一行撑得太高，收一点 */
+}
+
+/* 两个词：各自是一个行内盒子（以后要加背景 / 动效都方便），
+   字号统一跟着外框的 --text3-word-size 走。 */
+.text-3 .familiar,
+.text-3 .host {
+    display: inline-block;
+    font-size: var(--text3-word-size);
+    line-height: 1.05;
+    vertical-align: baseline;     /* 和前后 44px 的文字坐在同一条基线上 */
+}
+
+/* ★ 想单独调某一个词（比如 Host 要小一点）：
+   就在它自己那条里覆盖 font-size —— 只影响这一个词，另一个和空格不动。
+   .text-3 .host { font-size: 96px; } */
+
+/* ---------------------- text-6：“Not” 单独放大到 128px ---------------------- */
+/* ★ 和 text-3 一样，先把这句改成块级：
+   .text-box 是 display:flex + flex-direction:column，<span> 会被块级化成独立 flex item，
+   “But small does Not mean flexible.” 就会被拆成好几行。
+   改成 block 之后恢复普通行内文字流，居中（text-align: center）、字号、位置都不变。 */
+.text-6 {
+    display: block;
+}
+
+/* 只改这一个词的字号（44px → 128px）：
+   颜色 / 字体 / 位置关系都不动，句子里其余文字仍是 44px。 */
+.text-6 .not {
+    --not-size: 128px;            /* ← 只改这一个数就能整体缩放这个词 */
+
+    display: inline-block;        /* 单独成盒（以后要加背景 / 动效都方便），但仍留在这一行里 */
+    font-size: var(--not-size);
+    line-height: 1.05;            /* 128px 的默认行高会把这一行撑得太高，收一点 */
+    vertical-align: baseline;     /* 和前后 44px 的文字坐在同一条基线上 */
+}
+
+

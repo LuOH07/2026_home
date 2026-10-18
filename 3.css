@@ -1,11 +1,14 @@
 /* ==========================================================================
-   3.css —— 十五个图标的大小与位置（编号 1、3~11、14~18；2 / 12 / 13 号已删）
+   3.css —— 十六个图标的大小与位置（编号 1、3~11、14~19；2 / 12 / 13 号已删）
              1 b-subtilis / 3 p-putida / 4 e-coli-1（会飘动）
              5 crispr / 6 tnpb / 7 arrow / 8 ctac / 9 tnpb-1 / 10 title / 11 answer
-             14 contain（text-17 淡入时出现、text-18 淡出之后消失，在文字下方）
+             14 suicide（text-17 淡入时出现、text-18 淡出之后消失，在文字下方；
+                        右边带一个绿/灰开关按钮，点它正放 / 倒放这段视频）
              15/16/17/18 understand（text-21 淡入时四只一起出现、跟 text-21 一起淡出，会飘动）
                                       （钉在屏幕上，不飘动）
+             19 expand（text-15 淡入时出现、text-16 淡出时消失，一直循环播放，在文字下方）
    ★ 12 build / 13 expand 已按需求整条删除（图标与视频效果都没了），文字不受影响。
+   ★ 19 号是后来重新加的 expand 视频（expand.webm，循环播放），和旧的 13 号不是同一条。
    ========================================================================== */
 
 .bug-icons {
@@ -225,7 +228,7 @@ video.bug-icon {
    ============================================================================ */
 .bug-icon-8 {
     --icon-height: 200px;
-    left: 35%;
+    left: 40%;
     right: auto;
     top: 70%;
     bottom: auto;
@@ -267,9 +270,9 @@ video.bug-icon {
    ============================================================================ */
 .bug-icon-9 {
     --icon-height: 400px;
-    left: 35%;
+    left: 36%;
     right: auto;
-    top: 45%;
+    top: 43%;
     bottom: auto;
     transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
     z-index: -1;                        /* 画框内最底层：飘动的图标压在它上面 */
@@ -332,7 +335,9 @@ video.bug-icon {
    ============================================================================ */
 
 /* ============================================================================
-   图标 14（contain.webm）—— text-17 淡入时出现，text-18 淡出之后消失
+   图标 14（suicide.webm）—— text-17 淡入时出现，text-18 淡出之后消失
+   ★ 右边带一个开关按钮（下面 .bug-toggle 那几条）：绿=开、灰=关，
+     点击时正放 / 倒放这段视频（逻辑全在 3.js 的 toggleSwitch / switchAnimate）
    ============================================================================ */
 .bug-icon-14 {
     --icon-height: 500px;               /* ← 视频高度（宽度按视频比例自动；2846×1452 ≈ 1.96:1） */
@@ -341,6 +346,81 @@ video.bug-icon {
     top: 68%;                           /* ← 竖直位置（盒子中点；文字中心在屏幕 40%） */
     bottom: auto;
     transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
+}
+
+/* ----------------------------------------------------------------------------
+   图标 14 的开关按钮（3.js 里写 toggle 才会有）—— 贴在视频右边、随视频走
+   ----------------------------------------------------------------------------
+   · 位置：left: 100% = 紧贴视频右缘，再往右拉开一点空隙、竖直对齐视频中线。
+     它在 slot 里面，所以视频挪哪儿它就跟到哪儿。
+     ★ 想挂到视频【左边】：left: 100% → right: 100%，translate 的 x 改成负值。
+   · 大小【跟着页面宽度缩放】（下面 --toggle-w）：
+        --toggle-w 就是这个开关的宽度，默认 = 页面宽度的 5.2%，
+                    夹在 46px（再小就点不准）和 108px（再大就比视频还抢眼）之间。
+        高度、圆点直径、圆点行程、和视频之间的空隙【全部由它算出来】，
+        所以只要改这一个数（或者干脆改成纯 5.2vw 去掉 clamp），整体等比缩放。
+   · 颜色：开 = 绿 #34C759，关 = 灰 #C9D2DC。
+   · pointer-events：画框和 slot 都是 none，这里必须自己打开；
+     而且只在图标亮着（.is-live）时才可点，暗着的时候绝不挡底下文字。
+   ============================================================================ */
+.bug-icon-14 .bug-toggle {
+    /* ★★ 想调大小：只改这一行 ★★
+       纯按页面宽度等比（没有上下限）：--toggle-w: 5.2vw;
+       现在这版带上下限，窄屏不至于太小、大屏不至于太大。 */
+    --toggle-w: clamp(46px, 5.2vw, 108px);
+    --toggle-h: calc(var(--toggle-w) * 0.5135);              /* 高 ≈ 宽的 51%（原 38 / 74） */
+    --toggle-knob: calc(var(--toggle-h) - 6px);              /* 圆点直径 = 高 − 上下各 3px */
+    --toggle-travel: calc(var(--toggle-w) - 6px - var(--toggle-knob));  /* 圆点行程 */
+    --toggle-gap: calc(var(--toggle-w) * 0.19);              /* 和视频之间的空隙（原 14 / 74） */
+
+    position: absolute;
+    left: 100%;                         /* 贴在视频右缘 */
+    top: 50%;
+    transform: translate(var(--toggle-gap), -50%);
+    width: var(--toggle-w);
+    height: var(--toggle-h);
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: #C9D2DC;                /* 关：灰 */
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+    cursor: pointer;
+    pointer-events: none;               /* 默认不可点，图标亮着时才打开（见下一条） */
+    transition: background-color .25s ease, opacity .25s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 白色圆点（尺寸同样由 --toggle-w 算出来） */
+.bug-icon-14 .bug-toggle::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: var(--toggle-knob);
+    height: var(--toggle-knob);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
+    transition: transform .25s ease;
+}
+
+/* 开：变绿 + 圆点滑到右边 */
+.bug-icon-14 .bug-toggle.is-on {
+    background: #34C759;
+}
+.bug-icon-14 .bug-toggle.is-on::after {
+    transform: translateX(var(--toggle-travel));
+}
+
+/* 只有图标亮着的时候按钮才能点（暗着的时候 .is-live 会被摘掉） */
+.bug-icon-slot.bug-icon-14.is-live .bug-toggle {
+    pointer-events: auto;
+}
+
+/* 键盘聚焦时给个框，鼠标点击不显示（:focus-visible） */
+.bug-icon-14 .bug-toggle:focus-visible {
+    outline: 2px solid #465E77;
+    outline-offset: 3px;
 }
 
 /* 它没有 hover 名字 → 亮着的时候也别接鼠标，免得挡住底下文字 */
@@ -365,6 +445,24 @@ video.bug-icon {
 .bug-icon-slot.bug-icon-16.is-live,
 .bug-icon-slot.bug-icon-17.is-live,
 .bug-icon-slot.bug-icon-18.is-live {
+    pointer-events: none;
+}
+
+/* ============================================================================
+   图标 19（expand.webm）—— text-15 淡入时出现、text-16 淡出时消失；一直循环播放
+   ============================================================================ */
+.bug-icon-19 {
+    --icon-height: 550px;               /* ← 视频高度（宽度自动 ≈ height × 1.59） */
+    left: auto;                         /* ★ 必须：清掉 .bug-icon-slot 兜底的 left: 25% */
+    right: 4%;                          /* ← 贴屏幕右边（想留白改 3% / 5%） */
+    top: 80%;                           /* ← 竖直位置（盒子中点） */
+    bottom: auto;
+    filter: opacity(1);
+    transform: translateY(-50%);        /* ★ 只做竖直居中，横向交给 right */
+}
+
+/* 它没有 hover 名字 → 亮着的时候也别接鼠标（盖掉 .is-live 的 pointer-events: auto） */
+.bug-icon-slot.bug-icon-19.is-live {
     pointer-events: none;
 }
 
@@ -399,15 +497,21 @@ video.bug-icon {
     .bug-icon-11 {
         --icon-height: 110px;
     }
-    /* contain.webm 也跟着收小 */
+    /* suicide.webm 也跟着收小 */
     .bug-icon-14 {
         --icon-height: 90px;
     }
+    /* ★ 它右边那个开关【不在这里改】：那个按钮的大小本来就是按页面宽度算的
+       （--toggle-w: clamp(46px, 5.2vw, 108px)），窄屏自动变小，不用再单独覆盖。 */
     /* understand-1.avif 的四只也跟着收小 */
     .bug-icon-15,
     .bug-icon-16,
     .bug-icon-17,
     .bug-icon-18 {
         --icon-height: 70px;
+    }
+    /* expand.webm 也跟着收小 */
+    .bug-icon-19 {
+        --icon-height: 90px;
     }
 }

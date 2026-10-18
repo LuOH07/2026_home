@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    /* ======================= 1. 十五个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~18，2 号已删，12 / 13 号已删） ======================= */
+    /* ======================= 1. 十六个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~19，2 号已删，12 / 13 号已删） ======================= */
     /* ============ ico5 / ico7 / ico6 的出场时刻（三只都挂在 text-1 上） ============
        text-1 = "Compact is only the" + <br> + "BEGINNING"，它自己有四个时刻（见 1.js）：
            A ──淡入(0.6s)── H ──停留(3s)── B ──淡出(0.6s)── E
@@ -237,19 +237,32 @@
             fadeOut: ".text-10"                        /* ★ text-11【淡出】时跟着消失 */
         },
 
-        /* ---- 图标 14（contain.webm）—— text-17 淡入时出现，text-18 淡出之后消失 ---- */
+        /* ---- 图标 14（suicide.webm）—— text-17 淡入时出现，text-18 淡出之后消失 ----
+           ★ 右边带一个【开关按钮】（见下面的 toggle）：绿 = 开、灰 = 关。
+             视频不再自己播，完全由开关控制（所以 autoplay / loop 都写 false，
+             mediaLive() 对这只图标不生效，改由 switchTick() 管）：
+                关 → 开：正放（0 → 最后一帧），细菌一点点变灰死掉，停住后【开 = 灰/最后一帧】
+                开 → 关：倒放（最后一帧 → 0），细菌变回彩色，停住后【关 = 彩/第一帧】
+             不点击的时候就是上面那两个静止帧。 */
         {
             cls: "bug-icon-14",
             host: ".text-12",
-            src: "./contain.webm",                   /* ★ 相对路径：和 index.html 同目录 */
-            name: "Contain",
+            src: "./suicide.webm",                   /* ★ 相对路径：和 index.html 同目录 */
+            name: "Suicide",
             pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-14 决定 */
-            autoplay: false,                /* ★ 亮起来才播（不然进页面就播完了） */
-            loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
+            autoplay: false,                /* ★ 由开关控制，不自己播 */
+            loop: false,                    /* ★ 不循环：播到头 / 退到头就停 */
             /* ★ 跟着 text-17 的【淡入区间】一起淡入（它的 A → H） */
             start: { from: ".text-12", mark: "A" },
             /* ★ 跟着 text-18 的【淡出区间】一起消失（它的 B → E），倒放时对称亮回来 */
-            fadeOut: ".text-12"
+            fadeOut: ".text-12",
+            /* ★★ 开关按钮（3.css 的 .bug-icon-14 .bug-toggle 调样式 / 位置）★★
+               end = 视频【画面】真正结束的时刻：这个 webm 容器时长 2.10s，
+                     但画面到 1.13s 就结束了（后面是静音尾巴）。
+                     不改它的话，正放会在灰色的最后一帧上白等 1 秒。
+                     以后换素材、或者想让“最后一帧”更早 / 更晚，就改这个数；
+                     写 0 或删掉 = 用容器时长（video.duration）。 */
+            toggle: { end: 1.13 }
         },
 
         /* ---- 图标 15 / 16 / 17 / 18（understand-1.avif）—— text-21 淡入时【四只一起】出现，
@@ -313,6 +326,34 @@
             fadeOut: ".text-21",
             area: { left: 40, right: 100, top: 0, bottom: 100 },
             randomDir: true
+        },
+
+        /* ---- 图标 19（expand.webm）—— text-15 淡入时出现，text-16 淡出时消失，一直循环播放 ----
+           ★ 素材用【相对路径】./expand.webm（和 index.html 放在同一个目录）。
+           ★ 循环播放：这里【故意不写】autoplay / loop，全用默认值
+             （autoplay: true、loop: true，见上面的 createIconVideo），
+             所以它一出现就一直在放、放完自动从头再来；
+             只有跟着文字暗下去的那一刻才暂停（mediaLive），再亮起来接着放，
+             不会白烧 CPU，也不会每次出现都从第一帧重演。
+           ★ 全程不闪：从 text-15 的淡入起点（A）一直亮到 text-16 的淡出区间（B → E），
+             中间“text-15 自己淡出、text-16 还没上来”的那一段也保持全亮 ——
+             这正是“text-15 出现，text-16 没了才收”的意思。
+           ★ 图层：它仍然待在 .bug-icons 这个 z-index: 3 的画框里，而 text-15 / text-16
+             的内联 z-index 早就不止 3，所以它【天然叠在文字下面】——
+             不需要、也不要给它单独写 z-index。
+           ★ 位置 / 大小在 3.css 的 .bug-icon-19 里调（left / top / --icon-height）。
+           ★ 它没有 hover 名字 → 3.css 里另有 pointer-events: none，不挡底下文字。 */
+        {
+            cls: "bug-icon-19",
+            host: ".text-15",
+            src: "./expand.webm",                    /* ★ 相对路径：和 index.html 同目录 */
+            name: "Expand",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-19 决定 */
+            /* ★ 跟着 text-15 的【淡入区间】一起淡入（它的 A → H） */
+            start: { from: ".text-15", mark: "A" },
+            /* ★ 跟着 text-16 的【淡出区间】一起消失（它的 B → E），
+               往上滑倒放时会对称地跟着亮回来 */
+            fadeOut: ".text-16"
         }
     ];
 
@@ -320,7 +361,8 @@
        写了 fadeOut 的各自认自己的宿主：图标 1 / 3 / 4 跟 .text-5（三只一起退场）、
        图标 5 / 6 / 7 跟 .text-2、图标 8 跟 .text-9、图标 9 跟 .text-7、
        图标 10 跟 .text-10、图标 11 跟 .text-11、
-       图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21
+       图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21、
+       图标 19 跟 .text-16
        （图标 12 / 13 已删除，不再有它们的事） */
     const FADE_OUT_HOST = ".text-6";
 
@@ -382,7 +424,7 @@
     const rand = (a, b) => a + Math.random() * (b - a);
     const len = d => Math.sqrt(d.x * d.x + d.y * d.y);
 
-    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十五个“图标位” =======================
+    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十六个“图标位” =======================
        每个图标是一个 .bug-icon-slot（定位用的盒子），里面放：
          · <img class="bug-icon">   —— 图片本身
          · <span class="bug-label">  —— hover 时才显示的名字（配了 label 才生成）
@@ -539,6 +581,24 @@
             slot.appendChild(label);
         }
 
+        /* ★ 图标 14 的开关按钮（ICONS 里写了 toggle 才有）：
+           建在【同一个 slot】里，用 CSS 的 left:100% 挂到视频右边 ——
+           所以视频挪到哪儿、放大缩小，它都跟着走（位置 / 样式都在 3.css 的
+           .bug-icon-14 .bug-toggle 里调）。
+           · 用 <button> 而不是 <div>：键盘 Tab 能聚焦、空格 / 回车能按，读屏器认得；
+           · role="switch" + aria-checked 让读屏器念“开 / 关”；
+           · pointer-events 由 CSS 管（图标亮着时才可点，暗着的时候不挡鼠标）。 */
+        let toggle = null;
+        if (cfg.toggle) {
+            toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.className = "bug-toggle";
+            toggle.setAttribute("role", "switch");
+            toggle.setAttribute("aria-checked", "false");
+            toggle.setAttribute("aria-label", (cfg.name || "icon") + " 开关");
+            slot.appendChild(toggle);
+        }
+
         row.appendChild(slot);
 
         return {
@@ -553,6 +613,14 @@
             overlayOn: false,       /* 这段视频现在是不是处在“该显示 / 该播”的状态（见 overlayLive） */
             overlayTries: 0,        /* play() 被拒的次数：连续失败就放弃，不再每帧重试 */
             overlayBroken: false,   /* true = 这段视频加载 / 解码不出来（文件路径不对等），彻底不管它 */
+            toggle,                 /* 开关按钮（<button>；只有写了 ICONS 的 toggle 才有） */
+            sw: {                   /* 开关 / 正放 / 倒放的状态机（见下面的 switchTick） */
+                on: false,              /* false = 关（灰）· true = 开（绿） */
+                anim: 0,                /* 0 = 没在动 · 1 = 正放中 · -1 = 倒放中 */
+                raf: null,              /* 收尾监视 / 倒放用的 rAF 句柄 */
+                live: false,            /* 上一帧这只图标是不是亮的（用来判断“刚亮起 / 刚暗下”） */
+                ready: false            /* 静止帧有没有摆过（metadata 到位后才摆得动） */
+            },
             drift: null,
             lastX: null,
             lastY: null
@@ -587,6 +655,21 @@
         n.overlay.addEventListener("playing", () => {
             if (n.overlayOn) n.slot.classList.add("is-overlay-video");
         });
+    });
+
+    /* ★ 开关按钮（现在只有图标 14 有）：连上点击 + 先把按钮画成“关”的样子。
+       点击只负责翻状态并触发正放 / 倒放（见 toggleSwitch）；
+       “亮起来 / 暗下去时该停在哪一帧”由 update() 每帧调的 switchTick() 管。
+       <button> 自己会把 空格 / 回车 转成 click，所以这里只监听 click 就够了。 */
+    nodes.forEach(n => {
+        if (!n.toggle) return;
+        n.toggle.addEventListener("click", e => {
+            /* 别让点击顺带触发页面滚动 / 其它默认行为（按钮在 fixed 画框里，本来也不该滚） */
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSwitch(n);
+        });
+        paintToggle(n);
     });
 
     function mount() {
@@ -1063,6 +1146,154 @@
         }
     }
 
+    /* ======================= 开关按钮（图标 14 的 suicide） =======================
+       一个两态开关（绿 = 开 / 灰 = 关），它同时决定视频停在哪一帧、以及往哪个方向演：
+
+           关（灰）  ──正放 0 → 最后一帧──▶  开（绿）     【开 = 灰 / 最后一帧】
+           开（绿）  ──倒放 最后一帧 → 0──▶  关（灰）     【关 = 彩 / 第一帧】
+
+       ★ 为什么“倒放”要自己写：浏览器的 playbackRate 不接受负数（写 -1 会被夹到 0.0625），
+         所以开 → 关 是靠一个 rAF 循环把 currentTime 一点点往回拨（≈ 1 倍速）。
+         正放则直接用 play()，另配一个 rAF 盯着“画面放完了没有”。
+       ★ 为什么正放要盯着停：这个素材的容器时长 2.10s，但画面到 1.13s 就结束了
+         （后面是静音尾巴）。不管的话，正放会在灰色的最后一帧上白等 1 秒，
+         再点“关”时还会先卡一下。停在哪由 ICONS 里的 toggle.end 决定。
+       ★ 静止帧（“不点击的时候”）：关 → currentTime = 0（第一帧，彩色）；
+         开 → currentTime = end（最后一帧，灰色）。图标每次亮起来 / 暗下去都会重新摆一次，
+         所以滚走再滚回来、换窗口大小，看到的都是该有的那一帧。 */
+
+    /* 画面真正结束的时刻：ICONS 的 toggle.end 优先（它比容器短），拿不到就用容器时长 */
+    function switchEnd(n) {
+        const v = n.el;
+        const dur = (v && isFinite(v.duration) && v.duration > 0) ? v.duration : 0;
+        const cfgEnd = (n.cfg.toggle && typeof n.cfg.toggle.end === "number") ? n.cfg.toggle.end : 0;
+        if (cfgEnd > 0) return dur > 0 ? Math.min(cfgEnd, dur) : cfgEnd;
+        return Math.max(0, dur - 1e-3);
+    }
+
+    /* 这条状态该停在哪一帧：关 = 第一帧（彩色），开 = 最后一帧（灰色） */
+    function restTime(n) {
+        const end = switchEnd(n);
+        return n.sw.on ? Math.max(0, end - 0.02) : 0;
+    }
+
+    /* 停掉正在跑的正放 / 倒放（不改变画面位置） */
+    function switchStop(n) {
+        if (n.sw.raf !== null) {
+            cancelAnimationFrame(n.sw.raf);
+            n.sw.raf = null;
+        }
+        n.sw.anim = 0;
+        if (n.el) {
+            try { n.el.pause(); } catch (err) { /* metadata 还没到，忽略 */ }
+        }
+    }
+
+    /* 把画面钉在“这条状态该有的那一帧”上，并停下一切播放 */
+    function switchRest(n) {
+        switchStop(n);
+        if (!n.el) return;
+        const t = restTime(n);
+        try {
+            /* 差得远才写 currentTime：同值写入在部分浏览器上会触发一次没必要的 seek */
+            if (Math.abs(n.el.currentTime - t) > 0.001) n.el.currentTime = t;
+            n.sw.ready = true;
+        } catch (err) {
+            n.sw.ready = false;                     /* metadata 还没到：下一帧再试 */
+        }
+    }
+
+    /* 把开关画成绿 / 灰（CSS 只看 .is-on 这个类） */
+    function paintToggle(n) {
+        if (!n.toggle) return;
+        n.toggle.classList.toggle("is-on", !!n.sw.on);
+        n.toggle.setAttribute("aria-checked", n.sw.on ? "true" : "false");
+    }
+
+    /* 从当前位置开始往一个方向演到那一端：
+       forward = true  → 正放（→ 最后一帧），演完停在“开”的静止帧；
+       forward = false → 倒放（→ 第一帧），演完停在“关”的静止帧。
+       ★ 起点取“现在实际在哪”，所以连点两下不会先跳回某一端再走。 */
+    function switchAnimate(n, forward) {
+        if (!n.el) return;
+        switchStop(n);
+
+        const end = switchEnd(n);
+        if (end <= 0) return;                       /* 时长还没读到，等下一帧 */
+
+        const now = n.el.currentTime || 0;
+        const atEnd = now >= end - 0.02;
+
+        if (forward) {
+            const from = atEnd ? 0 : Math.max(0, Math.min(now, end));   /* 已经在末尾就从头演 */
+            try { n.el.currentTime = from; } catch (err) { return; }
+            n.sw.anim = 1;
+            const p = n.el.play();
+            if (p && typeof p.catch === "function") p.catch(() => {});
+
+            /* 看住它：走到 end（画面真正的最后一帧）就踩刹车，别播静音尾巴 */
+            const watch = () => {
+                if (n.sw.anim !== 1) return;
+                if (!isFinite(n.el.currentTime)) { n.sw.raf = requestAnimationFrame(watch); return; }
+                if (n.el.currentTime >= end - 0.005) { switchRest(n); return; }
+                n.sw.raf = requestAnimationFrame(watch);
+            };
+            n.sw.raf = requestAnimationFrame(watch);
+        } else {
+            let t = atEnd ? end : Math.min(now, end);
+            if (now <= 0.02) t = end;               /* 已经在开头就先把画面摆到末尾再倒着走 */
+            try { n.el.currentTime = t; } catch (err) { return; }
+            n.sw.anim = -1;
+
+            let last = 0;
+            const back = nowTs => {
+                if (n.sw.anim !== -1) return;
+                const dt = last ? Math.min(0.05, (nowTs - last) / 1000) : 1 / 60;
+                last = nowTs;
+                t = Math.max(0, t - dt);
+                try { n.el.currentTime = t; } catch (err) { /* 忽略 */ }
+                if (t <= 0.002) { switchRest(n); return; }
+                n.sw.raf = requestAnimationFrame(back);
+            };
+            n.sw.raf = requestAnimationFrame(back);
+        }
+    }
+
+    /* 点击：翻状态 → 重画按钮 → 往对应的方向演 */
+    function toggleSwitch(n) {
+        n.sw.on = !n.sw.on;
+        paintToggle(n);
+        switchAnimate(n, n.sw.on);                  /* 关 → 开 正放；开 → 关 倒放 */
+    }
+
+    /* 每帧调（代替 mediaLive）：管“亮起来 / 暗下去”时的静止帧，
+       以及 metadata 晚到时补摆一次。
+       ★ 图标暗下去时直接把画面钉回静止帧（视觉上看不见，正好省得它继续倒放烧 CPU），
+         下次滚回来一露脸就是该有的那一帧。 */
+    function switchTick(n, live) {
+        if (!n.el) return;
+        const v = !!live;
+
+        if (v !== n.sw.live) {
+            n.sw.live = v;
+            if (!v) {
+                switchRest(n);                      /* 暗下去：收工，钉回静止帧 */
+                return;
+            }
+            if (n.sw.anim === 0) switchRest(n);      /* 刚亮起来：先把静止帧摆好 */
+            return;
+        }
+
+        /* 一直亮着但静止帧还没摆成功（metadata 是后来才到的）→ 补一次 */
+        if (v && !n.sw.ready && n.sw.anim === 0) switchRest(n);
+    }
+
+    /* 视频图标统一入口：有开关的交给开关，其余的仍走老的“亮起来才播”逻辑 */
+    function mediaOrSwitch(n, live) {
+        if (n.cfg.toggle) { switchTick(n, live); return; }
+        mediaLive(n, live);
+    }
+
     /* ---- 图标 8 的“淡入之后插入的那段视频”（ICONS 里的 video）----
        由 update() 每帧调，两个入参：
          ready = 时间轴已经走过 text-8 的【淡入终点】（win.b）—— 也就是“文字完全亮起来了”；
@@ -1309,7 +1540,7 @@
             if (!host) {
                 n.slot.style.opacity = "0";
                 hoverable(n, false);
-                mediaLive(n, false);
+                mediaOrSwitch(n, false);
                 overlayLive(n, false, false);       /* 叠加视频（图标 8）也一起停下来 */
                 driftVisible(n, false);
                 return;
@@ -1319,7 +1550,7 @@
             if (!win) {
                 n.slot.style.opacity = "0";
                 hoverable(n, false);
-                mediaLive(n, false);
+                mediaOrSwitch(n, false);
                 overlayLive(n, false, false);       /* 叠加视频（图标 8）也一起停下来 */
                 driftVisible(n, false);
                 return;
@@ -1395,8 +1626,9 @@
             const live = op > 0.02;
 
             /* ★ 视频图标（ICONS 里 src 写成 .webm / .mp4 的那几个）：
-               只在这只图标亮着的时候解码播放，暗下去就暂停，省 CPU / 电量。 */
-            mediaLive(n, live);
+               只在这只图标亮着的时候解码播放，暗下去就暂停，省 CPU / 电量。
+               ★ 写了 toggle 的（图标 14）不走这一套：它由开关控制，见 mediaOrSwitch。 */
+            mediaOrSwitch(n, live);
 
             /* ★ pin 的图标（5 / 6）不参与飘动 / 碰撞：它们的左右位置写在 3.css 里，
                这里只负责透明度，所以完全不碰 n.drift、也不写内联 left / top。 */
@@ -1473,7 +1705,7 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到全部图标（现在 15 只，含各自的飘动状态 n.drift）；
+       __bugIcons.nodes 能看到全部图标（现在 16 只，含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.timeline 是 ico5 / ico7 的出场时刻表（4.js 读它来定 BEGINNING 的出场点）；
        __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效
