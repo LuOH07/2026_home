@@ -45,6 +45,8 @@
     line-height: 1.05;
 
     /* 出场动效（由 4.js 每帧写 inline transform / opacity，滚轮驱动）：
+       · 等 ico7（箭头）的渐入彻底走完，这个词才弹出来（4.js 从 3.js 的时刻表读起点）；
+       · 弹出后先淡入、再缩回这里的字号，缩完那一刻 ico6 才出场；
        · inline-block 才能吃 transform；
        · 原点固定在左上角 → 出现时往右下“长”，缩回 scale(1) 正好归位。 */
     display: inline-block;

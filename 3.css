@@ -169,9 +169,9 @@ video.bug-icon {
         top   / bottom ：距屏幕上边 / 下边的距离（百分比＝相对屏幕高度）
         --icon-height  ：图标高度（宽度按图片比例自适应）
 
-   出场 / 退场（细节在 3.js 文件顶上那组常数里）：
-        text-1 的第一行出现 → ico5 → ico7（箭头）→ BEGINNING 完全出现 → ico6；
-        text-2 完全消失时这三只【一起】淡出。
+   出场 / 退场（细节在 3.js 文件顶上那组常数 + 4.js 里 BEGINNING 的两段时长）：
+        text-1 的第一行出现 → ico5 → ico7（箭头）→ ico7 渐入走完、BEGINNING 弹出并缩小
+        → BEGINNING 缩完、ico6；text-2 完全消失时这三只【一起】淡出。
 
    注意两点：
      · 定位用的是 position: absolute，父级 .bug-icons 是 position: fixed 且铺满视口，
@@ -190,7 +190,7 @@ video.bug-icon {
     transform: none;
 }
 
-/* 图标 6（tnpb.avif）：text-1 的 BEGINNING 完全出现之后才出现，位置＝屏幕中间下方 */
+/* 图标 6（tnpb.avif）：BEGINNING 缩回原大小、整段演完之后才出现，位置＝屏幕中间下方 */
 .bug-icon-6 {
     --icon-height: 180px;
     left: 50%;                /* ← 水平居中 */
@@ -201,7 +201,7 @@ video.bug-icon {
 }
 
 /* ============================================================================
-   图标 7（arrow.avif）—— ico5 淡入结束之后紧接着出现，图标 6 等 BEGINNING 出现后才出现
+   图标 7（arrow.avif）—— ico5 淡入结束之后紧接着出现；它渐入走完，BEGINNING 才出场
    ----------------------------------------------------------------------------
    · 位置：默认放在图标 5 / 6 的正中间，由 3.js 的 placeBetween() 按两只图标
      真实渲染出来的盒子自动算（ICONS 里的 between）；

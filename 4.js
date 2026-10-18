@@ -6,10 +6,13 @@
    加载顺序是 1.js → 2.js → 3.js → 4.js（见 index.html），
    所以这里能读到前面三段脚本已经建好的 DOM 和全局变量（如 window.__home）。
 
-   本文件当前只做一件事：给 text-1 这句话里的某几个词套上样式钩子
-     “Compact”   → <span class="compact">   （白字 + #467aae / 20px 圆角卡片，见 4.css）
-     “Beginning” → <span class="beginning"> （单独放大到 128px，见 4.css）
-   其余文字（“ is only the”）原样保留，一个字符都不改。
+   本文件当前做两件事：
+    ① 给 text-1 这句话里的某几个词套上样式钩子
+        “Compact”   → <span class="compact">   （白字 + #467aae / 20px 圆角卡片，见 4.css）
+        “Beginning” → <span class="beginning"> （单独放大到 128px，见 4.css）
+      其余文字（“ is only the”）原样保留，一个字符都不改。
+    ② 驱动 “BEGINNING” 的出场（等 ico7 箭头的渐入走完 → 弹出并淡入 → 缩回原大小），
+      并把“缩完”那一刻报给 3.js —— ico6 要等它演完才出现。
 
    ★ 为什么在 JS 里包、而不是改 index.html：
      index.html 是“文案文件”，保持它一个字都不动；
@@ -78,14 +81,28 @@
        BEGINNING 的出场动效（纯滚轮驱动，能随滚轮倒放）
        ----------------------------------------------------------------------
        时间轴（都用 1.js 已有的进度单位，秒 = 进度 / window.__home.rate）：
-         A ──淡入── H ──────── 停留 ──────── B ──淡出── E
-               └ 整句淡入         └ ★ 这段里演 BEGINNING
-       所以顺序正好是：
-         ① A→H：整句（Compact is only the）淡入，BEGINNING 藏起来（opacity 0）
-         ② H 之后：BEGINNING 原地出现，视觉大小 304px，同时淡入
-         ③ 接着缩小回 4.css 里的字号（现在是 152px），停在它本来该在的位置
+          A ──淡入── H ──────── 停留 ──────── B ──淡出── E
+                └ 整句淡入         └ ★ 这段里演 BEGINNING
+
+       ★ BEGINNING 什么时候出场，由 3.js 的 ico7（箭头）说了算：
+         3.js 把 ico7 的出场 / 渐入时长按 FRAC 报在 __bugIcons.timeline.ico7End 上
+         （1 FRAC = 这一句的淡入窗口 H - A），这里把它换成进度：
+             起点 = A + ico7End × (H - A)      ← 箭头渐入【彻底走完】的那一刻
+         整个顺序：
+           ① A→H：整句（Compact is only the）淡入，BEGINNING 先藏起来（opacity 0）
+           ② ico5 → ico7（都归 3.js 管），等箭头的渐入彻底走完
+           ③ BEGINNING 原地出现（视觉大小 PEAK_PX），淡入用 APPEAR_SEC 秒
+           ④ 再缩小回 4.css 里的字号（现在是 152px），用 SHRINK_SEC 秒
+           ⑤ 缩完那一刻 → 3.js 的 ico6 才出场（它来读下面挂出去的 done）
+
+       ★ 这里算出来的两个时刻会挂到 window.__beginning 上给 3.js 的 ico6 用：
+             start(item) —— BEGINNING 开始出现
+             done(item)  —— 缩小完全结束（ico6 就等这一刻）
+         两段时长会按“这句还能在画面上待多久”整体压缩（MIN_FIT），
+         所以 done 必须和 frame() 用同一套算法，不能在 3.js 里拿秒数硬算。
+         真被拖长了也没关系：ico6 一直亮到 text-2 淡出，和后面的文字同屏不影响。
        做法：每帧读 window.__home.cur（1.js 已算好的进度），只改 .beginning 的
-             inline transform / opacity —— 布局归 CSS，时间归 1.js，这里只做插值。
+              inline transform / opacity —— 布局归 CSS，时间归 1.js，这里只做插值。
 
        ★ 为什么用 transform: scale 而不是改 font-size：
          1.js 的 layout() 会量一次 offsetHeight 来定“钉在画面 40% 处”的位置。
@@ -136,6 +153,36 @@
         }
     }
 
+    /* ---- BEGINNING 这两个时刻（进度值）----
+       start = 开始出现（= ico7 的渐入彻底走完）    done = 缩小完全结束（ico6 等这一刻）
+       ★ 两段时长要按“这句还能在画面上待多久”整体压缩（MIN_FIT），
+         所以这里算出来的 appear / shrink 必须和 frame() 用的是同一份 —— 共用这个函数。 */
+    function schedOf(it) {
+        var rate = (window.__home && window.__home.rate) || 0;
+        /* 3.js 的时刻表：ico7End = 箭头渐入结束（1 FRAC = H - A）。
+           万一 3.js 不在（只加载了本文件），退回老行为：整句淡入结束就出场。 */
+        var tl = window.__bugIcons && window.__bugIcons.timeline;
+        var start = tl ? it.A + tl.ico7End * (it.H - it.A) : it.H;
+
+        var total = APPEAR_SEC + SHRINK_SEC;
+        var avail = rate > 0 ? (it.E - start) / rate : total;   /* 这句还能在画面上待多久（秒） */
+        var k = Math.min(1, Math.max(MIN_FIT, avail / total));
+
+        return {
+            start: start,
+            appear: APPEAR_SEC * k,
+            shrink: SHRINK_SEC * k,
+            done: start + (APPEAR_SEC + SHRINK_SEC) * k * rate
+        };
+    }
+
+    /* 3.js 的 ico6 就是等 done —— 它在 4.js 之后加载，但这两函数是每帧才调用的，
+       所以挂在这里正好（3.js 的 beginningDone() 会来读）。 */
+    window.__beginning = {
+        start: function (it) { return schedOf(it).start; },
+        done:  function (it) { return schedOf(it).done; }
+    };
+
     var lastCur = null;
 
     function frame() {
@@ -149,18 +196,16 @@
         var rate = home.rate;
         if (!it || !(rate > 0)) return;
 
-        var t = (home.cur - it.H) / rate;             /* 相对「整句淡入结束」的秒数 */
-        var avail = (it.E - it.H) / rate;             /* 这一句还能在画面上待多久 */
-        var total = APPEAR_SEC + SHRINK_SEC;
-        var k = Math.min(1, Math.max(MIN_FIT, avail / total));
-        var a = APPEAR_SEC * k, s = SHRINK_SEC * k;
+        var sch = schedOf(it);                        /* 出场点 + 两段实际时长（含 MIN_FIT 缩放） */
+        var t = (home.cur - sch.start) / rate;        /* 相对 BEGINNING 出场那一刻的秒数 */
+        var a = sch.appear, s = sch.shrink;
 
         if (t <= 0) {
-            paint(0, peakScale);                      /* 整句淡入期间：还看不见 */
+            paint(0, peakScale);                      /* 还没轮到（整句淡入期间也藏）：看不见 */
         } else if (t < a) {
-            paint(t / a, peakScale);                  /* 原地 304px 淡入 */
+            paint(t / a, peakScale);                  /* 原地按 PEAK_PX 淡入 */
         } else if (t < a + s) {
-            var u = easeOut((t - a) / s);             /* 304px → 本来的字号 */
+            var u = easeOut((t - a) / s);             /* PEAK_PX → 本来的字号 */
             paint(1, peakScale + (1 - peakScale) * u);
         } else {
             paint(null, null);                        /* 归位：样式全部交还 4.css */

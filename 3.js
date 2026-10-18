@@ -6,21 +6,28 @@
        text-1 = "Compact is only the" + <br> + "BEGINNING"，它自己有四个时刻（见 1.js）：
            A ──淡入(0.6s)── H ──停留(3s)── B ──淡出(0.6s)── E
 
-       第一行 "Compact is only the" 跟着【整句】一起淡入（A → H），
-       而 "BEGINNING" 由 4.js 在整句淡入【结束】(H) 那一刻弹出来，再用 APPEAR_SEC = 0.35 秒淡入。
-       所以“BEGINNING 完全出现” = H + 0.35 秒。
+       第一行 "Compact is only the" 跟着【整句】一起淡入（A → H）；
+       "BEGINNING" 的动效由 4.js 负责（弹出 → 淡入 → 缩回原大小），
+       它现在要等 ico7（箭头）的渐入【彻底走完】才出场，
+       而 ico6 又要等 BEGINNING 缩回原大小、【整段演完】才出场 ——
+       所以这三只的先后是串起来的：
 
-       下面这几只的时间全部用【淡入窗口的倍数】表示（1 个 FRAC = H - A = 0.6 秒），
+           第一行出现 → ico5 → ico7 → BEGINNING 弹出并缩小 → ico6
+
+       下面这几个数用【淡入窗口的倍数】表示（1 个 FRAC = H - A = 0.6 秒），
        这样改 1.js 的 FADE_IN_SECONDS，整段节奏会自动跟着缩放。
        FRAC 坐标里 A = 0、H = 1.0（真实时间 = 这个数 × 0.6 秒）：
 
-         ico5        起点 0.50（第一行出现的时刻）  淡入 0.40  →  0.90 淡完
-         ico7        起点 0.90（ico5 淡入结束）     淡入 0.70  →  1.60 淡完
-         BEGINNING   起点 1.00（= text-1 的 H）弹出，淡入 0.58（≈ 0.35 秒）→ 1.58 完全出现
-         ico6        起点 1.58（BEGINNING 完全出现）淡入 0.50  →  2.08 淡完
+         ico5        起点 0.50（第一行出现的时刻） 淡入 0.40 → 0.90 淡完
+         ico7        起点 0.90（ico5 淡入结束）    淡入 0.70 → 1.60 淡完
+         BEGINNING   起点 1.60（= ico7 渐入结束）  淡入 0.58 → 2.18，再缩小 1.92 → 4.10 演完
+         ico6        起点 4.10（BEGINNING 演完）   淡入 0.50 → 4.60 淡完
 
-       也就是要求的那段顺序：
-           第一行出现 → ico5 → ico7 → BEGINNING 弹出 → ico6。
+       换成秒：ico5 0.30~0.54，ico7 0.54~0.96，BEGINNING 0.96~2.46，ico6 2.46~2.76。
+       这三只本来就一直亮到 text-2 淡出，所以就算某段被拖长、和后面的文字同屏，也没关系。
+
+       ★ BEGINNING 的两段时长（APPEAR_SEC / SHRINK_SEC）和“什么时候算演完”都写在 4.js，
+         这里不重复抄数：ico6 的起点由下面的 beginningDone() 每帧向 4.js 要。
        三只【一起】在 text-2 完全消失的时候没掉：它们共用 fadeOut ".text-2"，
        从 text-2 开始淡出算起，等到 text-2 淡到 0，它们也正好淡到 0（见 update 里的 outT）。 */
     const FIRST_LINE_FRAC = 0.5;    /* 第一行“出现”的时刻：淡入窗口走一半 ——
@@ -30,7 +37,18 @@
     const ICO7_AT         = ICO5_AT + ICO5_FADE_FRAC;     /* ico7 起点 = ico5 淡入结束（≈ 0.54s） */
     const ICO7_FADE_FRAC  = 0.7;    /* ico7（箭头）淡入时长：0.7 × 0.6s ≈ 0.42s（从左往右扫开） */
     const ICO6_FADE_FRAC  = 0.5;    /* ico6 淡入时长：0.5 × 0.6s ≈ 0.30s */
-    const BEGINNING_SEC   = 0.35;   /* 4.js 里 BEGINNING 的 APPEAR_SEC：它从弹出到完全出现要这么久 */
+
+    /* 把 ico5 / ico7 的时刻表报给 4.js：它要拿 ico7End 定 BEGINNING 的出场点。
+       ★ 4.js 在 3.js 之后加载（见 index.html），所以它加载时这里一定已经建好了；
+         反过来，ico6 的起点要读 4.js 的 window.__beginning（见 beginningDone）。 */
+    const TIMELINE = {
+        ico5At: ICO5_AT,
+        ico5Fade: ICO5_FADE_FRAC,
+        ico7At: ICO7_AT,
+        ico7Fade: ICO7_FADE_FRAC,
+        ico7End: ICO7_AT + ICO7_FADE_FRAC,   /* = 1.60：ico7 渐入彻底结束 → BEGINNING 该出场了 */
+        ico6Fade: ICO6_FADE_FRAC
+    };
 
     /* ---- 图标 1 / 3 / 4 的出场顺序（三只一起认 text-5 的淡出区间退场）----
          1 = text-4【开始出现】（它的 A）→ 跟着 text-4 一起淡入
@@ -81,10 +99,11 @@
              （图标 1 / 3 / 4 各有自己的 fadeOut：".text-5"，跟着 text-5 一起退场。）
            ★ 三只的出场顺序（时刻全部相对 text-1 的淡入窗口，见文件顶上那组常数）：
                 ico5 → text-1 的第一行出现之后
-                ico7 → ico5 淡入结束之后
-                ico6 → BEGINNING 完全出现之后
+                ico7 → ico5 淡入结束之后（它的渐入走完 = BEGINNING 的出场时刻，见 4.js）
+                ico6 → BEGINNING 缩回原大小、【整段演完】之后
              想让它们整体早一点 / 晚一点：只改文件顶上的 FIRST_LINE_FRAC 和
-             ICO5_FADE_FRAC / ICO7_FADE_FRAC / ICO6_FADE_FRAC / BEGINNING_SEC。 */
+             ICO5_FADE_FRAC / ICO7_FADE_FRAC / ICO6_FADE_FRAC，
+             以及 4.js 的 APPEAR_SEC / SHRINK_SEC。 */
         {
             cls: "bug-icon-5",
             host: ".text-1",
@@ -104,10 +123,10 @@
             name: "TnpB",
             pin: true,                      /* ★ 不飘动：位置由 3.css 决定 */
             fadeOut: ".text-2",             /* ★ text-2 完全消失时一起消失 */
-            /* ★ 等 text-1 的 "BEGINNING"【完全出现】之后才淡入：
-                 BEGINNING 由 4.js 在整句淡入结束（H）那一刻弹出，再用 BEGINNING_SEC 秒淡入完，
-                 所以 ico6 的起点 = H + BEGINNING_SEC 秒（用 rate 把秒换成进度） */
-            start: { from: ".text-1", mark: "H", shift: () => BEGINNING_SEC * HOME().rate },
+            /* ★ 等 BEGINNING【弹出 → 淡入 → 缩回原大小】整段演完才淡入：
+                 那两段的时长由 4.js 算（它负责 BEGINNING 的动画），
+                 这里每帧向它要“演完那一刻的进度”，见下面的 beginningDone()。 */
+            start: { from: ".text-1", mark: "H", shift: item => beginningDone(item) - item.H },
             fadeScale: ICO6_FADE_FRAC       /* ★ 淡入时长 ≈ 0.30s */
         },
         {
@@ -118,12 +137,13 @@
             pin: true,                      /* ★ 不飘动：位置默认由下面的 between 自动算 */
             fadeOut: ".text-2",             /* ★ 和图标 5 / 6 一起消失（text-2 完全消失时） */
             /* ★ ico5 淡入结束之后【紧接着】出现：
-                 起点 = ico5 的起点 + ico5 的淡入时长（见文件顶上那组常数） */
+                 起点 = ico5 的起点 + ico5 的淡入时长（见文件顶上那组常数）。
+                 这一段的渐入【彻底走完】= BEGINNING 的出场时刻（TIMELINE.ico7End，4.js 读它）。 */
             start: { from: ".text-1", mark: "A", shift: item => (item.H - item.A) * ICO7_AT },
             /* ★ 淡入时【左半边先出现、右半边后出现】：
                用一条从左往右扫开的柔性遮罩，实现见下面的 paintReveal()。 */
             reveal: { feather: 0.42 },
-            /* ★ 淡入时长 ≈ 0.42s：调大 = 箭头扫得更慢，ico6 之前的那一段会拖长 */
+            /* ★ 淡入时长 ≈ 0.42s：调大 = 箭头扫得更慢，BEGINNING 的出场也会跟着一起往后推 */
             fadeScale: ICO7_FADE_FRAC,
             /* ★ 位置：默认对准图标 5 / 6 两只图标的【正中间】（见 placeBetween）；
                想手动钉死就删掉这一行，然后改 3.css 的 .bug-icon-7。 */
@@ -649,6 +669,23 @@
         const h = HOME();
         if (h.freezeActive && it.freezeZone && it.freezeZone === h.frozenZone) return h.freezePos;
         return h.cur;
+    }
+
+    /* ---- ico6 的起点：BEGINNING 整段演完（弹出淡入 + 缩回原大小）那一刻 ----
+       BEGINNING 的动画归 4.js 管，它把两个时间点挂到 window.__beginning 上：
+           start(item) —— 开始出现      done(item) —— 缩回原大小、整段结束
+       两段时长会按“这句还能在画面上待多久”整体压缩（MIN_FIT），所以
+       done 不能在这里用秒数硬算，必须问 4.js（每帧调用，1.js 重建时间轴后也自动跟上）。
+       ★ 4.js 还没加载 / 被删掉时（只有本文件在跑）退回一个合理的兜底：
+         ico7 结束在 1.6、BEGINNING 两段合计 2.5，合起来是 H 往后再 3.1 个窗口
+         （= 1.86 秒），和 4.js 正常运行时的时刻基本对齐。 */
+    function beginningDone(item) {
+        const b = window.__beginning;
+        if (b && typeof b.done === "function") {
+            const v = b.done(item);
+            if (typeof v === "number" && isFinite(v)) return v;
+        }
+        return item.H + (item.H - item.A) * 3.1;
     }
 
     /* ---- 把 ICONS 里的 start / end 翻译成时间轴上的绝对进度 ----
@@ -1438,6 +1475,7 @@
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
        __bugIcons.nodes 能看到全部图标（现在 15 只，含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
+       __bugIcons.timeline 是 ico5 / ico7 的出场时刻表（4.js 读它来定 BEGINNING 的出场点）；
        __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效
        （比如 DRIFT.on = false 关掉飘动，DRIFT.randomDir = true 让初始方向也随机）。 */
     window.__bugIcons = {
@@ -1445,6 +1483,7 @@
         nodes,
         row,
         DRIFT,
+        timeline: TIMELINE,
         get outDone() { return outStateOf(FADE_OUT_HOST).done; }
     };
 })();
