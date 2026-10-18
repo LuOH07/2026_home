@@ -293,7 +293,7 @@ video.bug-icon {
     --icon-height: 800px;               /* ← 视频高度（宽度按视频比例自动） */
     left: 35%;                          /* ← 水平位置（盒子中点对准屏幕一半） */
     right: auto;
-    top: 55%;                           /* ← 竖直位置（盒子中点；文字中心在屏幕 40% 处） */
+    top: 58%;                           /* ← 竖直位置（盒子中点；文字中心在屏幕 40% 处） */
     bottom: auto;
     transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
 }
