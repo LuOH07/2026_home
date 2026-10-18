@@ -672,6 +672,8 @@
     font-size: calc(var(--t20-big-size) * var(--t20-big-scale, 1));
     line-height: 0;               /* ★ 不参与行高：四行的位置不会被推歪（原因见上面） */
     vertical-align: baseline;     /* ★ 和前后 44px 的字坐在同一条基线上 */
+    transform-origin: 50% 100%;   /* ★ 被撞时从【基线】往压缩放（像踩了一下） */
+    will-change: transform;
     letter-spacing: 0;            /* 大字母上那 1px 字距会被一起放大，这里归零 */
     margin: 0 var(--t20-big-gap) 0 var(--t20-big-gap-before);
 

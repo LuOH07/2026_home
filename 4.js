@@ -615,6 +615,10 @@
             spinTau: 0.18,       /* ★ 角速度衰减的长度（u）：越大转得越久（每个撞击约转 1100×0.18 ≈ 200°） */
             spinFlip: true,      /* ★ 每次撞击方向相反（像真的弹一下就换个转向） */
             lineFadeU: 0.055,    /* ★ 每段文字淡入用多长（u）：越小越“啪”地出现 */
+            bounceAmp: 0.16,     /* ★ 字母被撞后弹一下的幅度（0 = 不弹） */
+            bounceHalf: 0.045,   /* ★ 弹的半周期（u）：越小弹得越快 */
+            bounceTau: 0.060,    /* ★ 弹的衰减（u）：越小停得越快 */
+            bounceSpan: 0.22,    /* ★ 超过这个范围就不再写 transform（省一次样式更新） */
             lineDelay: 0.012     /* ★ 敲中之后隔多久开始淡入下一段 */
         };
 
@@ -808,7 +812,10 @@
             if (!(u > 0)) {                          /* 还没开始 / 往回滚过了头：复位 */
                 setActive(false);
                 geom = null;
-                for (var i = 0; i < letters.length; i++) letters[i].classList.remove("is-hit");
+                for (var i = 0; i < letters.length; i++) {
+                    letters[i].classList.remove("is-hit");
+                    letters[i].style.transform = "";          /* 弹一下的痕迹也清掉 */
+                }
                 return;
             }
             if (u > 1) u = 1;
@@ -827,9 +834,24 @@
             var legsEnd = e0 + legW * legCount;
 
             /* 敲击状态：入场落地（u = e0）就敲中 S，之后每过一段多敲中一颗；
-               往回滚会自动取消（字回到 #fbe15c）。 */
+               往回滚会自动取消（字回到 #fbe15c）。
+               ★ 被撞的那一下，字自己也会【弹一下】：阻尼正弦（压扁 → 回弹 → 稳定），
+                 幅度只由 dh（距离被撞过了多少 u）算，所以倒着滚会原样倒放。 */
             for (var j = 0; j < letters.length; j++) {
-                letters[j].classList.toggle("is-hit", u >= e0 + legW * j);
+                var hitU = e0 + legW * j;
+                var on = u >= hitU;
+                letters[j].classList.toggle("is-hit", on);
+
+                var dh = u - hitU;
+                if (on && CFG.bounceAmp > 0 && dh > 0 && dh < CFG.bounceSpan) {
+                    var decay = Math.exp(-dh / CFG.bounceTau);
+                    var sy = 1 - CFG.bounceAmp * decay * Math.sin(dh * Math.PI / CFG.bounceHalf);
+                    var sx = 1 + (1 - sy) * 0.55;              /* 压扁时横向鼓一点 */
+                    letters[j].style.transform =
+                        "scale(" + sx.toFixed(3) + "," + sy.toFixed(3) + ")";
+                } else if (letters[j].style.transform) {
+                    letters[j].style.transform = "";
+                }
             }
 
             /* 压扁：刚敲中的一小段 u 里压一下、很快弹回 */
