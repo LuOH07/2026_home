@@ -439,7 +439,21 @@
             /* ★ 跟着 text-17 的【淡入区间】一起淡入（它的 A → H） */
             start: { from: ".text-17", mark: "A" },
             /* ★ 跟着 text-19 的【淡出区间】一起消失（它的 B → E） */
-            fadeOut: ".text-19"
+            fadeOut: ".text-19",
+
+            /* ★★ 图标里再叠一段视频（本地文件 model.mp4）★★
+               · 视频以【这个图标为容器】：位置 / 大小全部相对图标盒子算，
+                 在 3.css 的 .bug-icon-22 .bug-icon-video 里调
+                 （--video-w / --video-h / --video-dx / --video-dy）；
+               · 只播一次，播完【停在最后一帧】不动 —— hold: true 就是让它在
+                 ended 之后既不收起、也不回到第一帧（对比图标 8 默认的“收起来露静态图”）；
+               · 图标亮起来时自动播一次；
+               · 右下角有一颗白色圆形的重新播放键（replay: true）：
+                 位置 / 大小（都是相对图标容器的百分比）都在 3.css 的
+                 .bug-icon-22 .bug-replay 里调，
+                 点它就让视频从第一帧重新播（逻辑见 replayOverlay）。
+               ★ 两个都不能删：hold 少了会在播完后收起来，replay 少了就没有那颗按钮。 */
+            video: { src: "./model.mp4", hold: true, replay: true }
         }
     ];
 
@@ -656,6 +670,21 @@
             slot.appendChild(overlay);
         }
 
+        /* ★ “重新播放”按钮（ICONS 里写了 video.replay: true 才有，现在只有图标 22）：
+            建在【同一个 slot】里，位置写在 3.css 的 .bug-icon-22 .bug-replay 上，
+            所以视频 / 图标挪到哪儿、放大缩小，它都跟着走。
+            · 用 <button> 而不是 <div>：键盘 Tab 能聚焦、空格 / 回车能按，读屏器认得；
+            · 里面不放字（播放三角是 CSS 的 ::after 画的），靠 aria-label 告诉读屏器它是干嘛的；
+            · pointer-events 由 CSS 管（图标亮着时才可点，暗着的时候不挡鼠标）。 */
+        let replay = null;
+        if (cfg.video && cfg.video.replay) {
+            replay = document.createElement("button");
+            replay.type = "button";
+            replay.className = "bug-replay";
+            replay.setAttribute("aria-label", (cfg.name || "icon") + " 重新播放视频");
+            slot.appendChild(replay);
+        }
+
         /* hover 显示的名字：没有名字的图标（比如图标 5 / 6）就不生成这个 span。
            ★ 图标 1 / 3 / 4 的名字在 3.css 里被设成【斜体】。
              这三只的出场：1 跟 text-4 一起淡入、3 在 text-4 淡出时淡入、
@@ -709,10 +738,11 @@
             label,
             pinned: !!cfg.pin,      /* true = 钉在屏幕上，不飘动 */
             playing: false,         /* 视频图标：现在是不是在解码播放（见 mediaLive） */
-            overlay,                /* 叠在图标上的“一次性视频”（现在只有图标 8 有，见 ICONS 的 video） */
+            overlay,                /* 叠在图标上的“一次性视频”（图标 8 的 CTAC.webm、图标 22 的 model.mp4） */
             overlayOn: false,       /* 这段视频现在是不是处在“该显示 / 该播”的状态（见 overlayLive） */
             overlayTries: 0,        /* play() 被拒的次数：连续失败就放弃，不再每帧重试 */
             overlayBroken: false,   /* true = 这段视频加载 / 解码不出来（文件路径不对等），彻底不管它 */
+            replay,                 /* “重新播放”按钮（<button>；只有写了 ICONS 的 video.replay 才有） */
             toggle,                 /* 开关按钮（<button>；只有写了 ICONS 的 toggle 才有） */
             sw: {                   /* 开关 / 正放 / 倒放的状态机（见下面的 switchTick） */
                 on: false,              /* false = 关（灰）· true = 开（绿） */
@@ -751,10 +781,14 @@
 
         /* ★ 视频真的开始出画面了，才把下面那张静态图藏起来：
            数据还没到时视频是透明的，前面露出来的仍然是静态图，不会空一片。
-           （两段素材长宽比不同，静态图一直亮着会看到两个大小不同的图案。） */
-        n.overlay.addEventListener("playing", () => {
-            if (n.overlayOn) n.slot.classList.add("is-overlay-video");
-        });
+           （两段素材长宽比不同，静态图一直亮着会看到两个大小不同的图案。）
+           ★ 带重播按钮的那种（replay: true，图标 22）不做这一手：
+             视频是【叠在图标上】的，图标本来就是它的底，藏掉反而会露出空框。 */
+        if (!(n.cfg.video && n.cfg.video.replay)) {
+            n.overlay.addEventListener("playing", () => {
+                if (n.overlayOn) n.slot.classList.add("is-overlay-video");
+            });
+        }
     });
 
     /* ★ 开关按钮（现在只有图标 14 有）：连上点击 + 先把按钮画成“关”的样子。
@@ -770,6 +804,19 @@
             toggleSwitch(n);
         });
         paintToggle(n);
+    });
+
+    /* ★ 重新播放按钮（现在只有图标 22 的 model.mp4 有）：
+       点一下 = 让叠在图标里的那段视频从第一帧重新播（见 replayOverlay）。
+       <button> 自己会把 空格 / 回车 转成 click，所以这里只监听 click 就够了。 */
+    nodes.forEach(n => {
+        if (!n.replay) return;
+        n.replay.addEventListener("click", e => {
+            /* 别让点击顺带触发页面滚动 / 其它默认行为（按钮在 fixed 画框里，本来也不该滚） */
+            e.preventDefault();
+            e.stopPropagation();
+            replayOverlay(n);
+        });
     });
 
     function mount() {
@@ -1394,6 +1441,33 @@
         mediaLive(n, live);
     }
 
+    /* ---- “重新播放”按钮的动作（图标 22 右下角那颗白圆）----
+       把叠在图标里的视频倒回第一帧、再播一次。
+       ★ 视频已经播完停在最后一帧：这里先 currentTime = 0（改它会把画面拉回第一帧）
+         再 play()，所以按下按钮是“从第一帧重新演一遍”，不是接着播。
+       ★ metadata 还没到时改 currentTime 会抛异常，忽略即可 ——
+         play() 照样会把解码拉起来，从第一帧开始放。
+       ★ 故意不碰 slot 的透明度 / 时间轴：按钮只管视频，图标什么时候亮由 1.js 的时间轴说了算。 */
+    function replayOverlay(n) {
+        const v = n.overlay;
+        if (!v || n.overlayBroken) return;
+
+        n.overlayTries = 0;
+        n.overlayOn = true;
+        v.style.opacity = "1";
+
+        try { v.currentTime = 0; } catch (err) { /* metadata 还没到，忽略 */ }
+
+        const p = v.play();
+        if (p && typeof p.catch === "function") {
+            p.catch(() => {
+                /* 这一次没播起来（数据还没准备好）→ 放开标记，
+                   让 update() → overlayLive 下一帧再试一次。 */
+                n.overlayOn = false;
+            });
+        }
+    }
+
     /* ---- 图标 8 的“淡入之后插入的那段视频”（ICONS 里的 video）----
        由 update() 每帧调，两个入参：
          ready = 时间轴已经走过 text-8 的【淡入终点】（win.b）—— 也就是“文字完全亮起来了”；
@@ -1407,6 +1481,43 @@
     function overlayLive(n, ready, live) {
         const v = n.overlay;
         if (!v || n.overlayBroken) return;
+
+        const spec = n.cfg.video || {};
+
+        /* ---- ② 带“重新播放按钮”的那种（图标 22 的 model.mp4，写了 replay: true）----
+           视频【长期待在图标容器里】，透明度始终 1（显隐完全交给 slot 的 opacity）；
+           图标第一次亮起来时自动播一次；
+           【播完停在最后一帧】：ended 之后既不重置、也不藏起来、也不回到第一帧；
+           只有点右下角那颗圆按钮才从头再来（见 replayOverlay）。
+           亮不亮都不暂停 —— 它只播一次，暗下去就暂停的话可能永远走不到结尾。 */
+        if (spec.replay) {
+            /* 只写一次（只在真的变了的时候写 DOM，免得每帧都动样式） */
+            if (v.style.opacity !== "1") v.style.opacity = "1";
+
+            /* 图标还没亮 / 已经踢过 play() 了 → 什么都不做（绝不每帧重播） */
+            if (!live || n.overlayOn) return;
+
+            /* 已经播完（正定格在最后一帧）就不再自动从头来：想再看一遍就点那颗按钮。
+               往回滚出画面再回来也不会重播 —— 定格就是定格。 */
+            if (v.ended) return;
+
+            n.overlayOn = true;                  /* 记下“已经踢过 play()”，重播交给 replayOverlay */
+
+            /* ★ 数据还没到 / 浏览器把这次 play() 拦掉 → 放开标记，下一帧再试；
+                 连着失败很多次（文件丢了、编码不支持）才彻底放弃。 */
+            const pr = v.play();
+            if (pr && typeof pr.catch === "function") {
+                pr.catch(() => {
+                    n.overlayOn = false;
+                    n.overlayTries += 1;
+                    if (n.overlayTries >= 60) {
+                        n.overlayBroken = true;
+                        v.style.opacity = "0";
+                    }
+                });
+            }
+            return;
+        }
 
         const want = !!(ready && live);
         if (want === n.overlayOn) return;        /* 状态没变：正在播 / 已经播完 都别动它 */

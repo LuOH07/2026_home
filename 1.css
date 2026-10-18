@@ -396,7 +396,11 @@ body.frozen-scroll .text-6 {
     width: 100%;
     aspect-ratio: 16 / 9;      /* 和 title.mp4 一致（1280×720） */
     overflow: hidden;
-    background: #000;
+    /* ★ 不要再用 #000：视频帧在合成时按整数像素对齐，容器高度 / 宽度是小数时
+       视频画面会比盒子小不到 1px，那一条就露出这里的底色 —— 原本的 #000 就是
+       “title 视频和正文之间那条黑线”。改成白色后漏出来的 1px 和视频末帧
+       （白场）、底图顶部（白）完全同色，看不出来。 */
+    background: #fff;
     z-index: 0;                /* 压在底图之上、文字 / 人物视频（z-index ≥ 1）之下 */
     pointer-events: none;
 }
@@ -409,7 +413,8 @@ body.frozen-scroll .text-6 {
     height: 100%;
     border: 0;
     object-fit: cover;
-    background: #000;
+    /* 同上：这一层漏出来的 1px 必须是白的，不能是 #000 */
+    background: #fff;
     pointer-events: none;
 }
 

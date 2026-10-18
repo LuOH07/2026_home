@@ -10,7 +10,13 @@
     <link rel="stylesheet" href="./4.css">
 </head>
 <body>
-    <img class="map-structure" src=" ">
+    <!-- structure 图层（叠在底图之上、所有组件之下，样式见 2.css 的 .map-structure）：
+         现在是 1×1 透明占位图 —— 什么都不画，也不会挡任何东西。
+         ★ 千万别留空 src（src="" 或 src=" "）：浏览器会把它当“加载失败的图片”，
+           在整页左右两边各描一条 1px 灰线（从底图顶部一直到底部），
+           看起来就像页面被加了一圈边框。
+         ★ 将来要用 structure.avif：只把下面的 src 换掉即可，其余样式不用动。 -->
+    <img class="map-structure" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGBgAAAABQABeqhXUAAAAABJRU5ErkJggg==">
 
     <div class="text-box text-1">Compact is only the<br>BEGINNING</div>
     <div class="text-box text-2">Engineering ISHahl1 TnpB for versatile genome engineering, expanded targeting, and mechanistic insight.</div>

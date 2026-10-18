@@ -203,7 +203,7 @@ const GAP_SPEED_EASE = 50;
 
 /* 底图地址：量页面高度（body height）和画到 body 上的背景用的都是它，
    换图只改这一行；页面高度、文字/轨迹点的 % 全都跟着这张图的比例走。 */
-const BG_URL = "https://static.igem.wiki/teams/6059/wiki/home/map-4.avif";
+const BG_URL = "https://static.igem.wiki/teams/6059/wiki/home/map-5.avif";
 
 const bgImg = new Image();
 bgImg.src = BG_URL;
