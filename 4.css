@@ -1,0 +1,54 @@
+/* ---------------------- text-1：只有 “Compact” 是卡片 ---------------------- */
+/* ★ 为什么要把 text-1 改成块级：
+   1.css 的 .text-box 是 display:flex + flex-direction:column，
+   它的【直接子元素】会被 blockify 成独立的 flex item —— 那样 <span class="compact">
+   就不再是行内元素，“Compact”会自己占一整行，句子被拆成三行。
+   改成 block 之后 text-1 里恢复正常的行内文字流：
+   <br> 照样断行、字号/行距都不变，
+   而 “Compact” 这个词可以是一个真正的行内卡片。只影响 text-1，别的文字不动。 */
+.text-1 {
+    display: block;
+    text-align: left;             /* ★ 整句左对齐（.text-box 原本是 text-align: center） */
+}
+
+.text-1 .compact {
+    /* ── 可调旋钮：只影响这一个词，动它们不会牵动整句 ── */
+    --compact-bg: #467aae;        /* 矩形颜色 */
+    --compact-radius: 20px;       /* 圆角（要求就是 20px） */
+    --compact-pad-x: 0.24em;      /* 矩形左右比字宽出多少（em = 跟着 60px 字号缩放） */
+    --compact-pad-y: 0.08em;      /* 矩形上下比字高出多少 */
+
+    display: inline-block;        /* 让背景 / 圆角能包住这一个词，且不打断这一行 */
+    padding: var(--compact-pad-y) var(--compact-pad-x);
+    background: var(--compact-bg);
+    border-radius: var(--compact-radius);
+    color: #ffffff;               /* ★ 只有这个字改纯白 */
+
+    /* 卡片上下各多出的那点高度，用负 margin 抵掉一部分，
+       免得第一行和 “Beginning” 之间的行距被明显撑大 */
+    margin: -0.04em 0;
+    line-height: 1.15;
+}
+
+/* 句子里其余部分：故意不给任何规则 —— 沿用 1.css 的 .text-box（颜色 #324561、
+   字体 impact、字号 60px），没有背景、没有圆角。 */
+
+/* ---------------------- text-1：“Beginning” 单独放大 ---------------------- */
+/* 只改这一个词的字号（60px → 128px），颜色 / 字体 / 位置关系都不动。
+   ★ 用 em 无关的绝对 px，和 1.css 的 60px 是同一套单位，方便对着调。
+   ★ line-height 收一点：128px 的木字默认行高会把这一行撑得很高，
+     而且会把上面那行 “Compact is only the” 和它之间的间距拉得过大。 */
+.text-1 .beginning {
+    --beginning-size: 152px;   /* ← 只改这一个数就能整体缩放这个词 */
+
+    font-size: var(--beginning-size);
+    line-height: 1.05;
+
+    /* 出场动效（由 4.js 每帧写 inline transform / opacity，滚轮驱动）：
+       · inline-block 才能吃 transform；
+       · 原点固定在左上角 → 出现时往右下“长”，缩回 scale(1) 正好归位。 */
+    display: inline-block;
+    transform-origin: left top;
+    will-change: transform, opacity;
+}
+

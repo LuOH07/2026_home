@@ -2,9 +2,35 @@
     "use strict";
 
     /* ======================= 1. 十五个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~18，2 号已删，12 / 13 号已删） ======================= */
-    /* 图标 7（箭头）的淡入时长倍数：
-       ico6 要等它【渐入完全结束】之后才出现，所以两处都引用这一个数，只改这里 */
-    const ARROW_FADE_SCALE = 1.8;
+    /* ============ ico5 / ico7 / ico6 的出场时刻（三只都挂在 text-1 上） ============
+       text-1 = "Compact is only the" + <br> + "BEGINNING"，它自己有四个时刻（见 1.js）：
+           A ──淡入(0.6s)── H ──停留(3s)── B ──淡出(0.6s)── E
+
+       第一行 "Compact is only the" 跟着【整句】一起淡入（A → H），
+       而 "BEGINNING" 由 4.js 在整句淡入【结束】(H) 那一刻弹出来，再用 APPEAR_SEC = 0.35 秒淡入。
+       所以“BEGINNING 完全出现” = H + 0.35 秒。
+
+       下面这几只的时间全部用【淡入窗口的倍数】表示（1 个 FRAC = H - A = 0.6 秒），
+       这样改 1.js 的 FADE_IN_SECONDS，整段节奏会自动跟着缩放。
+       FRAC 坐标里 A = 0、H = 1.0（真实时间 = 这个数 × 0.6 秒）：
+
+         ico5        起点 0.50（第一行出现的时刻）  淡入 0.40  →  0.90 淡完
+         ico7        起点 0.90（ico5 淡入结束）     淡入 0.70  →  1.60 淡完
+         BEGINNING   起点 1.00（= text-1 的 H）弹出，淡入 0.58（≈ 0.35 秒）→ 1.58 完全出现
+         ico6        起点 1.58（BEGINNING 完全出现）淡入 0.50  →  2.08 淡完
+
+       也就是要求的那段顺序：
+           第一行出现 → ico5 → ico7 → BEGINNING 弹出 → ico6。
+       三只【一起】在 text-2 完全消失的时候没掉：它们共用 fadeOut ".text-2"，
+       从 text-2 开始淡出算起，等到 text-2 淡到 0，它们也正好淡到 0（见 update 里的 outT）。 */
+    const FIRST_LINE_FRAC = 0.5;    /* 第一行“出现”的时刻：淡入窗口走一半 ——
+                                       easeOut 曲线下这时已经 87% 不透明，第一行看得清了 */
+    const ICO5_FADE_FRAC  = 0.4;    /* ico5 淡入时长：0.4 × 0.6s ≈ 0.24s */
+    const ICO5_AT         = FIRST_LINE_FRAC;              /* ico5 起点 = 第一行出现的那一刻 */
+    const ICO7_AT         = ICO5_AT + ICO5_FADE_FRAC;     /* ico7 起点 = ico5 淡入结束（≈ 0.54s） */
+    const ICO7_FADE_FRAC  = 0.7;    /* ico7（箭头）淡入时长：0.7 × 0.6s ≈ 0.42s（从左往右扫开） */
+    const ICO6_FADE_FRAC  = 0.5;    /* ico6 淡入时长：0.5 × 0.6s ≈ 0.30s */
+    const BEGINNING_SEC   = 0.35;   /* 4.js 里 BEGINNING 的 APPEAR_SEC：它从弹出到完全出现要这么久 */
 
     /* ---- 图标 1 / 3 / 4 的出场顺序（三只一起认 text-5 的淡出区间退场）----
          1 = text-4【开始出现】（它的 A）→ 跟着 text-4 一起淡入
@@ -48,20 +74,28 @@
             fadeOut: ".text-5"
         },
 
-        /* ---- 下面两只【不飘动】，钉在屏幕上（pin: true）----
-           ★ 位置在 3.css 的 .bug-icon-5 / .bug-icon-6 里改（left / bottom）
-           ★ 它们【只活到 text-2 淡出为止】：fadeOut 写的是 ".text-2"，
+        /* ---- 下面三只【不飘动】，钉在屏幕上（pin: true）----
+           ★ 位置在 3.css 的 .bug-icon-5 / .bug-icon-6 / .bug-icon-7 里改（left / bottom）
+           ★ 它们【只活到 text-2 消失为止】：fadeOut 都写 ".text-2"，
              text-2 开始淡出时它们跟着暗下去，text-2 完全消失时它们也正好没了。
-             （图标 1 / 3 / 4 各有自己的 fadeOut：".text-5"，跟着 text-5 一起退场。） */
+             （图标 1 / 3 / 4 各有自己的 fadeOut：".text-5"，跟着 text-5 一起退场。）
+           ★ 三只的出场顺序（时刻全部相对 text-1 的淡入窗口，见文件顶上那组常数）：
+                ico5 → text-1 的第一行出现之后
+                ico7 → ico5 淡入结束之后
+                ico6 → BEGINNING 完全出现之后
+             想让它们整体早一点 / 晚一点：只改文件顶上的 FIRST_LINE_FRAC 和
+             ICO5_FADE_FRAC / ICO7_FADE_FRAC / ICO6_FADE_FRAC / BEGINNING_SEC。 */
         {
             cls: "bug-icon-5",
             host: ".text-1",
             src: "https://static.igem.wiki/teams/6059/wiki/home/crispr.avif",
             name: "CRISPR",
             pin: true,                      /* ★ 不飘动：位置由 3.css 决定 */
-            fadeOut: ".text-2",             /* ★ text-2 淡出时一起消失 */
-            /* text-1【一出现】就跟着出现 */
-            start: { from: ".text-1", mark: "A" }
+            fadeOut: ".text-2",             /* ★ text-2 完全消失时一起消失 */
+            /* ★ text-1 的【第一行出现之后】才开始淡入：
+                 起点 = A + FIRST_LINE_FRAC × (H - A)，这时第一行已经 87% 不透明 */
+            start: { from: ".text-1", mark: "A", shift: item => (item.H - item.A) * ICO5_AT },
+            fadeScale: ICO5_FADE_FRAC       /* ★ 淡入时长 ≈ 0.24s（见文件顶上那组常数） */
         },
         {
             cls: "bug-icon-6",
@@ -69,10 +103,12 @@
             src: "https://static.igem.wiki/teams/6059/wiki/home/tnpb.avif",
             name: "TnpB",
             pin: true,                      /* ★ 不飘动：位置由 3.css 决定 */
-            fadeOut: ".text-2",             /* ★ text-2 淡出时一起消失 */
-            /* ★ 等图标 7（箭头）【渐入完全结束】之后才出现 ——
-               顺序变成：text-1 消失 → 箭头淡入 → ico6 淡入 */
-            start: { from: ".text-1", mark: "E", shift: item => (item.H - item.A) * ARROW_FADE_SCALE }
+            fadeOut: ".text-2",             /* ★ text-2 完全消失时一起消失 */
+            /* ★ 等 text-1 的 "BEGINNING"【完全出现】之后才淡入：
+                 BEGINNING 由 4.js 在整句淡入结束（H）那一刻弹出，再用 BEGINNING_SEC 秒淡入完，
+                 所以 ico6 的起点 = H + BEGINNING_SEC 秒（用 rate 把秒换成进度） */
+            start: { from: ".text-1", mark: "H", shift: () => BEGINNING_SEC * HOME().rate },
+            fadeScale: ICO6_FADE_FRAC       /* ★ 淡入时长 ≈ 0.30s */
         },
         {
             cls: "bug-icon-7",
@@ -80,16 +116,15 @@
             src: "https://static.igem.wiki/teams/6059/wiki/home/arrow.avif",
             name: "Arrow",
             pin: true,                      /* ★ 不飘动：位置默认由下面的 between 自动算 */
-            fadeOut: ".text-2",             /* ★ 和图标 5 / 6 一起消失 */
-            /* ★ text-1【完全消失】之后立刻出现（比 ico6 早）：
-               ico6 要等这一段的渐入彻底走完才开始淡入（见 ico6 的 shift）。 */
-            start: { from: ".text-1", mark: "E" },
+            fadeOut: ".text-2",             /* ★ 和图标 5 / 6 一起消失（text-2 完全消失时） */
+            /* ★ ico5 淡入结束之后【紧接着】出现：
+                 起点 = ico5 的起点 + ico5 的淡入时长（见文件顶上那组常数） */
+            start: { from: ".text-1", mark: "A", shift: item => (item.H - item.A) * ICO7_AT },
             /* ★ 淡入时【左半边先出现、右半边后出现】：
                用一条从左往右扫开的柔性遮罩，实现见下面的 paintReveal()。 */
             reveal: { feather: 0.42 },
-            /* ★ 淡入时长 = 自己那条默认时长 × 这个倍数（ico6 等的就是这一段）：
-               调大 = 渐入更慢，ico6 的出场也会跟着一起往后推 */
-            fadeScale: ARROW_FADE_SCALE,
+            /* ★ 淡入时长 ≈ 0.42s：调大 = 箭头扫得更慢，ico6 之前的那一段会拖长 */
+            fadeScale: ICO7_FADE_FRAC,
             /* ★ 位置：默认对准图标 5 / 6 两只图标的【正中间】（见 placeBetween）；
                想手动钉死就删掉这一行，然后改 3.css 的 .bug-icon-7。 */
             between: [".bug-icon-5", ".bug-icon-6"]
