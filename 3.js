@@ -6,41 +6,53 @@
        ico6 要等它【渐入完全结束】之后才出现，所以两处都引用这一个数，只改这里 */
     const ARROW_FADE_SCALE = 1.8;
 
+    /* ---- 图标 1 / 3 / 4 的出场顺序（三只一起认 text-5 的淡出区间退场）----
+         1 = text-4【开始出现】（它的 A）→ 跟着 text-4 一起淡入
+         3 = text-4【开始淡出】（它的 B）→ 在 text-4 暗下去的同时淡入
+         4 = text-5【淡入结束】（它的 H）→ 等 text-5 完全亮起来之后才淡入
+       三只都在 text-5【开始淡出】（它的 B）的时候一起淡出（见各自的 fadeOut，
+       默认的淡出宿主 .text-6 对它们不再生效）。
+       时刻记号：A = 开始淡入，H = 淡入结束，B = 开始淡出，E = 完全消失（见 1.js）。 */
     const ICONS = [
         {
             cls: "bug-icon-1",
-            host: ".text-3",
-            src: "./2.webm",                 /* ★ 视频素材：自动用 <video muted autoplay loop> 建节点 */
+            host: ".text-4",
+            src: "./B. subtilis.webm",                 /* ★ 视频素材：自动用 <video muted autoplay loop> 建节点 */
             name: "Bacillus subtilis",
             label: "B. subtilis",
-            /* 出场时间不变：text-3 一淡入就跟着淡入，时长 = text-3 的淡入区间 */
-            start: { from: ".text-3", mark: "A" }
+            /* text-4 一淡入就跟着淡入，时长 = text-4 的淡入区间 */
+            start: { from: ".text-4", mark: "A" },
+            /* ★ text-5【开始淡出】时一起暗下去（不再等到默认的 .text-6） */
+            fadeOut: ".text-5"
         },
         {
             cls: "bug-icon-3",
-            host: ".text-5",
+            host: ".text-4",
             src: "https://static.igem.wiki/teams/6059/wiki/home/p-putida.avif",
             name: "Pseudomonas putida",
             label: "P. putida",
-            /* text-4【完全淡入】之后才开始淡入；时长仍然和图标 1 一样 */
-            start: { from: ".text-4", mark: "H" }
+            /* text-4【开始淡出】的时候淡入（mark: B）；时长仍然和图标 1 一样 */
+            start: { from: ".text-4", mark: "B" },
+            /* ★ text-5【开始淡出】时一起暗下去 */
+            fadeOut: ".text-5"
         },
         {
             cls: "bug-icon-4",
-            host: ".text-4",
+            host: ".text-5",
             src: "https://static.igem.wiki/teams/6059/wiki/home/e-coli-1.avif",
             name: "Escherichia coli (2)",
             label: "E. coli",
-            /* text-3【完全淡出】之后才开始淡入（mark: E），时长仍然和图标 1 一样
-               （以前它和图标 2 同时出场，现在 2 号已删，这一段只剩它） */
-            start: { from: ".text-3", mark: "E" }
+            /* text-5【完全淡入】之后才开始淡入（mark: H），时长仍然和图标 1 一样 */
+            start: { from: ".text-5", mark: "H" },
+            /* ★ text-5【开始淡出】时一起暗下去 */
+            fadeOut: ".text-5"
         },
 
         /* ---- 下面两只【不飘动】，钉在屏幕上（pin: true）----
            ★ 位置在 3.css 的 .bug-icon-5 / .bug-icon-6 里改（left / bottom）
            ★ 它们【只活到 text-2 淡出为止】：fadeOut 写的是 ".text-2"，
              text-2 开始淡出时它们跟着暗下去，text-2 完全消失时它们也正好没了。
-             （图标 1 / 3 / 4 没有写 fadeOut，所以仍然跟着默认的 .text-6 一起消失。） */
+             （图标 1 / 3 / 4 各有自己的 fadeOut：".text-5"，跟着 text-5 一起退场。） */
         {
             cls: "bug-icon-5",
             host: ".text-1",
@@ -84,16 +96,16 @@
         },
         {
             cls: "bug-icon-8",
-            host: ".text-8",
+            host: ".text-7",
             src: "https://static.igem.wiki/teams/6059/wiki/home/ctac.avif",
             name: "CTAC",
             pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-8 决定 */
             /* ★ text-8【淡入区间】里跟着一起淡入 ——
                这两段在冻结组里，时钟会自动切到滚轮驱动的 freezePos（见 resolveWindow），
                所以“text-8 刚开始淡入”这一刻是准的。 */
-            start: { from: ".text-8", mark: "A" },
+            start: { from: ".text-7", mark: "A" },
             /* ★ text-9 淡出时一起消失；往上滑倒放时也会对称地亮回来 */
-            fadeOut: ".text-9",
+            fadeOut: ".text-8",
 
             /* ★★ 新增：text-8【淡入完全结束】之后，在同一个位置插入一段视频 ★★
                · src 写【相对路径】：./CTAC.webm（和 index.html 放在同一个目录）；
@@ -116,15 +128,15 @@
              文字是 1~33（按出场顺序递增），所以它【一定在文字下面】。 */
         {
             cls: "bug-icon-9",
-            host: ".text-7",
+            host: ".text-6",
             src: "https://static.igem.wiki/teams/6059/wiki/home/tnpb-1.avif",
             name: "TnpB",
             pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-9 决定 */
             /* ★ 跟着 text-7 的【淡入区间】一起淡入（它的 A → H） */
-            start: { from: ".text-7", mark: "A" },
+            start: { from: ".text-6", mark: "A" },
             /* ★ 跟着 text-7 的【淡出区间】一起消失（它的 B → E），
                往上滑倒放时会对称地跟着亮回来 */
-            fadeOut: ".text-7"
+            fadeOut: ".text-6"
         },
 
         /* ---- 图标 10（title.mp4）—— text-10 淡入时出现，跟 text-10 一起消失 ----
@@ -139,14 +151,14 @@
            ★ 位置 / 大小在 3.css 的 .bug-icon-10 里（默认在文字下方、屏幕竖直 65% 处）。 */
         {
             cls: "bug-icon-10",
-            host: ".text-10",
+            host: ".text-9",
             src: "./editing.webm",
             name: "Title",
             pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-10 决定 */
             autoplay: false,                /* ★ 亮起来才播（见 createIconVideo / mediaLive） */
             loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
-            start: { from: ".text-10", mark: "A" },   /* 跟着 text-10 的淡入区间出现 */
-            fadeOut: ".text-10"                        /* 跟着 text-10 的淡出区间一起消失 */
+            start: { from: ".text-9", mark: "A" },   /* 跟着 text-10 的淡入区间出现 */
+            fadeOut: ".text-9"                        /* 跟着 text-10 的淡出区间一起消失 */
         },
 
         /* ---- 图标 11（answer.webm）—— 跟 text-11 同步淡入 / 淡出 ----
@@ -160,14 +172,14 @@
            ★ 位置 / 大小在 3.css 的 .bug-icon-11 里调（left / top / --icon-height）。 */
         {
             cls: "bug-icon-11",
-            host: ".text-11",
+            host: ".text-10",
             src: "./answer.webm",                    /* ★ 相对路径：和 index.html 同目录 */
             name: "Answer",
             pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-11 决定 */
             autoplay: false,                /* ★ 亮起来才播（不然进页面就播完了） */
             loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
-            start: { from: ".text-11", mark: "A" },   /* ★ text-11【淡入】时跟着淡入，时长同它 */
-            fadeOut: ".text-11"                        /* ★ text-11【淡出】时跟着消失 */
+            start: { from: ".text-10", mark: "A" },   /* ★ text-11【淡入】时跟着淡入，时长同它 */
+            fadeOut: ".text-10"                        /* ★ text-11【淡出】时跟着消失 */
         },
 
         /* ---- 图标 12（build.avif）—— text-13 淡入时出现，text-14 淡出之后消失 ----
@@ -317,10 +329,10 @@
     ];
 
     /* 没写 fadeOut 的图标统一在它的淡出区间里一起消失（默认 .text-6）；
-       写了 fadeOut 的各自认自己的宿主：图标 5 / 6 / 7 跟 .text-2、
-       图标 8 跟 .text-9、图标 9 跟 .text-7、图标 10 跟 .text-10、图标 11 跟 .text-11、
-       图标 12 跟 .text-14、图标 13 跟 .text-16、图标 14 跟 .text-18、
-       图标 15 / 16 / 17 / 18 跟 .text-21 */
+       写了 fadeOut 的各自认自己的宿主：图标 1 / 3 / 4 跟 .text-5（三只一起退场）、
+       图标 5 / 6 / 7 跟 .text-2、图标 8 跟 .text-9、图标 9 跟 .text-7、
+       图标 10 跟 .text-10、图标 11 跟 .text-11、图标 12 跟 .text-14、
+       图标 13 跟 .text-16、图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21 */
     const FADE_OUT_HOST = ".text-6";
 
     /* ======================= 飘动（图标“出现在页面里”的那段时间在飘） =======================
@@ -527,7 +539,9 @@
         }
 
         /* hover 显示的名字：没有名字的图标（比如图标 5 / 6）就不生成这个 span。
-           ★ 图标 1 / 3 / 4 的名字在 3.css 里被设成【斜体】（那三只就在 text-3 / text-4 / text-5 上）。 */
+           ★ 图标 1 / 3 / 4 的名字在 3.css 里被设成【斜体】。
+             这三只的出场：1 跟 text-4 一起淡入、3 在 text-4 淡出时淡入、
+             4 在 text-5 淡入之后淡入；三只都随 text-5 淡出。 */
         let label = null;
         if (cfg.label) {
             label = document.createElement("span");
@@ -675,17 +689,20 @@
        返回 { a, b, clock }
            a / b = 淡入窗口的两个端点（进度值，b > a）
            clock = 这段窗口该看哪个时钟（cur 或 freezePos）
-       ★ 图标 3 认的 text-4 是冻结组：它的 A/H 只在冻结播放期间才被走到，
-         而那时冻结组的时钟是 freezePos（1.js 的 render() 也是这么取），
-         所以这里必须把时钟一起算出来，不能一律用 cur，
-         否则 text-4 的 H 对应不到正确的时刻。 */
+       ★ 如果认的那段文字落在冻结组里（1.js 的 FREEZE_GROUPS），它的 A/H/B/E
+         只在冻结播放期间才被走到，而那时冻结组的时钟是 freezePos（1.js 的
+         render() 也是这么取），所以这里必须把时钟一起算出来，不能一律用 cur，
+         否则那些时刻会对应不到正确的进度。 */
     function resolveWindow(cfg, host) {
         /* 这一段窗口认哪一段文字当时钟：默认 host 自己，也可用 start.from 指定 */
         const fromItem = (cfg.start && cfg.start.from) ? findItem(cfg.start.from) : host;
         if (!fromItem) return null;
 
         const clock = clockOf(fromItem);
-        const mark = { A: fromItem.A, H: fromItem.H, E: fromItem.E };
+        /* 四个记号都能用：图标 1 用 A（跟着那段文字一起出现）、
+           图标 3 用 B（跟着 text-4 一起暗下去的时候淡入）、
+           图标 4 用 H（等 text-5 完全亮起来之后） */
+        const mark = { A: fromItem.A, H: fromItem.H, B: fromItem.B, E: fromItem.E };
         const at = (side, fallback) => {
             const spec = cfg[side];
             const key = (spec && spec.mark) || fallback;
@@ -697,7 +714,9 @@
             return (typeof v === "number" ? v : 0) + shift;
         };
 
-        /* 淡入起点：图标 1 = text-3 的 A（时间不变）、图标 4 = text-3 的 E（图标 2 已删）、图标 3 = text-4 的 H */
+        /* 淡入起点：图标 1 = text-4 的 A（跟着 text-4 一起出现）、
+           图标 3 = text-4 的 B（text-4 开始淡出的时候）、
+           图标 4 = text-5 的 H（text-5 完全淡入之后） */
         const a = at("start", "A");
 
         /* 淡入终点：显式写了 end 就用它，否则默认“从起点往后淡入 host 的淡入时长”，
@@ -1316,10 +1335,10 @@
                 op = easeOut((p - win.a) / (win.b - win.a));
             } else {
                 /* 淡入已经走完，之后一直亮着。
-                   ★ 唯一的例外：这一段的淡入算在冻结组的账上（图标 3 认的 text-4），
-                     冻结组演到头就停了 —— 要是淡入尾巴被切在 z1 外面，
-                     干脆把整条淡入曲线按 z1 收尾，收不干净的部分交给下面 (1 - outT) 收，
-                     免得图标在冻结演完时“啪”地闪一下才消失。 */
+                   ★ 唯一的例外：这一段的淡入算在冻结组的账上（起点认的那段文字在
+                      FREEZE_GROUPS 里时），冻结组演到头就停了 —— 要是淡入尾巴
+                      被切在 z1 外面，干脆把整条淡入曲线按 z1 收尾，收不干净的部分
+                      交给下面 (1 - outT) 收，免得图标在冻结演完时“啪”地闪一下才消失。 */
                 const wZ = win.fromItem && win.fromItem.freezeZone;
                 const wEnd = wZ ? (wZ.z1 - wZ.hit) : Infinity;
                 const bEnd = Math.min(win.b, wEnd);
@@ -1328,19 +1347,20 @@
                     : 1;
             }
 
-            /* 只要 text-6 开始淡出，三个一起暗下去（到 text-6 完全消失时它们也正好全没了） */
+            /* 按各自的淡出宿主淡出：图标 1 / 3 / 4 = text-5 开始淡出时一起暗下去
+               （到 text-5 完全消失时它们也正好全没了）；没写 fadeOut 的仍然跟 .text-6 */
             op *= 1 - outT;
 
             /* 页面停在冻结组中间、而这一组一次都没播过：整行不显示（见上面 stranded 说明） */
             if (stranded) op = 0;
 
-            /* ★ 冻结组里的图标（图标 3 / 8）：那一段文字还没轮到演、或页面停在组里
+            /* ★ 起点认的那段文字在冻结组里时：那一段还没轮到演、或页面停在组里
                还没开始播时，1.js 会把冻结文字整个藏起来（item.skipFrozen），
                图标不能自己单独亮着 —— 判断和 1.js 的 render() 保持一致：
                  · 正在播这一组 → 照常按 freezePos 算；
                  · 这一组已经播完（freezePos 停在 z1）→ 放行，交给下面 outT 收尾；
                  · 其它情况（还没轮到 / 刷新后被浏览器直接恢复到组后面）→ 先藏起来。
-               ★ 这条只对“起点认的是一段冻结文字”的图标生效，图标 1 / 2 / 4 不受影响。 */
+               ★ 现在 FREEZE_GROUPS 是空的（没有冻结文字），这条对所有图标都不生效。 */
             if (win.fromItem && win.fromItem.skipFrozen) {
                 const fz = win.fromItem.freezeZone;
                 const playing = !!(h.freezeActive && fz && h.frozenZone === fz);
