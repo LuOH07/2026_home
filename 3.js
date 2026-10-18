@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    /* ======================= 1. 十七个图标（图片 / 视频链接、出场点在这里改；编号 1、3~18，2 号已删） ======================= */
+    /* ======================= 1. 十五个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~18，2 号已删，12 / 13 号已删） ======================= */
     /* 图标 7（箭头）的淡入时长倍数：
        ico6 要等它【渐入完全结束】之后才出现，所以两处都引用这一个数，只改这里 */
     const ARROW_FADE_SCALE = 1.8;
@@ -182,86 +182,19 @@
             fadeOut: ".text-10"                        /* ★ text-11【淡出】时跟着消失 */
         },
 
-        /* ---- 图标 12（build.avif）—— text-13 淡入时出现，text-14 淡出之后消失 ----
-           ★ 这两句文字（.text-13 / .text-14）是【冻结组】（见 1.js 的 FREEZE_GROUPS），
-             页面在那两屏被钉住、改由滚轮推进，所以这只图标也跟着 freezePos 走：
-             往下滑亮起来，往上滑倒放时对称地暗回去，和文字完全同步。
-           ★ 出场 / 退场：
-               start   = text-13 的淡入起点（A）→ 跟 text-13 一起淡入；
-               fadeOut = text-14 → 在 text-14 的【淡出区间】（它的 B → E）里一起暗下去，
-                        也就是 text-14 完全消失时它正好也没了。
-               两句之间的停留（text-13 演完到 text-14 开始淡出）全程都亮着。
-           ★ 位置 / 大小在 3.css 的 .bug-icon-12 里调（默认放在文字下方）。
-           ★ 它没有 hover 名字 → 3.css 里另有 pointer-events: none，不挡底下文字。 */
-        {
-            cls: "bug-icon-12",
-            host: ".text-13",
-            src: "https://static.igem.wiki/teams/6059/wiki/home/build.avif",
-            name: "Build",
-            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-12 决定 */
-            /* ★ 跟着 text-13 的【淡入区间】一起淡入（它的 A → H） */
-            start: { from: ".text-13", mark: "A" },
-            /* ★ 跟着 text-14 的【淡出区间】一起消失（它的 B → E），倒放时对称亮回来 */
-            fadeOut: ".text-14"
-        },
-
-        /* ---- 图标 13（expand.webm）—— text-15 淡入时出现，text-16 淡出之后消失 ----
-           ★ 和图标 12 完全同一套用法，只是宿主换成下一组冻结文字
-             （.text-15 / .text-16，也在 1.js 的 FREEZE_GROUPS 里）：
-               start   = text-15 的淡入起点（A）→ 跟 text-15 一起淡入；
-               fadeOut = text-16 → 在 text-16 的【淡出区间】（它的 B → E）里一起暗下去，
-                        也就是 text-16 完全消失时它正好也没了。
-               两句之间的停留全程都亮着，往上滑倒放时对称地暗回去 / 亮回来。
-           ★ 素材用【相对路径】./expand.webm（和 index.html 放在同一个目录）。
-           ★ 它本身是视频（src 写成 .webm，第 2 节会自动用 <video> 建节点）：
-               autoplay: false → 不是一进页面就播，等这只图标随 text-15 亮起来才播；
-               loop: false     → 只播一次，播完就【定格在最后一帧】、不从头再来。
-               想让它一直循环：把下面 loop: false 改成 loop: true（或整行删掉，默认就是循环）。
-           ★ 图层：它在 .bug-icons 这个 z-index: 3 的画框里，而 text-15 / text-16 的
-              z-index 比 3 高（1.js 按出场顺序写的内联值），所以它【天然叠在文字下面】——
-              不需要、也不要给它单独写 z-index。
-           ★ 位置 / 大小在 3.css 的 .bug-icon-13 里调（默认在文字下方）。 */
-        {
-            cls: "bug-icon-13",
-            host: ".text-15",
-            src: "./expand.webm",                    /* ★ 相对路径：和 index.html 同目录 */
-            name: "Expand",
-            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-13 决定 */
-            autoplay: false,                /* ★ 亮起来才播（不然进页面就播完了） */
-            loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
-            /* ★ 跟着 text-15 的【淡入区间】一起淡入（它的 A → H） */
-            start: { from: ".text-15", mark: "A" },
-            /* ★ 跟着 text-16 的【淡出区间】一起消失（它的 B → E），倒放时对称亮回来 */
-            fadeOut: ".text-16"
-        },
-
-        /* ---- 图标 14（contain.webm）—— text-17 淡入时出现，text-18 淡出之后消失 ----
-           ★ 和图标 12 / 13 同一套用法，宿主是最后一组冻结文字
-             （.text-17 / .text-18，也在 1.js 的 FREEZE_GROUPS 里）：
-               start   = text-17 的淡入起点（A）→ 跟 text-17 一起淡入；
-               fadeOut = text-18 → 在 text-18 的【淡出区间】（它的 B → E）里一起暗下去，
-                        也就是 text-18 完全消失时它正好也没了。
-               两句之间的停留全程都亮着，往上滑倒放时对称地暗回去 / 亮回来。
-           ★ 素材用【相对路径】./contain.webm（和 index.html 放在同一个目录）。
-           ★ 它是视频（src 写成 .webm，第 2 节会自动用 <video> 建节点）：
-               autoplay: false → 等这只图标随 text-17 亮起来才播（不是一进页面就播）；
-               loop: false     → 只播一次，播完就【定格在最后一帧】。
-               想让它一直循环：把下面 loop: false 改成 loop: true（或整行删掉，默认就是循环）。
-           ★ 图层：它在 .bug-icons（z-index: 3）里，text-17 / text-18 的 z-index 更高，
-             所以【天然叠在文字下面】—— 不需要、也不要给它单独写 z-index。
-           ★ 位置 / 大小在 3.css 的 .bug-icon-14 里调。 */
+        /* ---- 图标 14（contain.webm）—— text-17 淡入时出现，text-18 淡出之后消失 ---- */
         {
             cls: "bug-icon-14",
-            host: ".text-17",
+            host: ".text-12",
             src: "./contain.webm",                   /* ★ 相对路径：和 index.html 同目录 */
             name: "Contain",
             pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-14 决定 */
             autoplay: false,                /* ★ 亮起来才播（不然进页面就播完了） */
             loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
             /* ★ 跟着 text-17 的【淡入区间】一起淡入（它的 A → H） */
-            start: { from: ".text-17", mark: "A" },
+            start: { from: ".text-12", mark: "A" },
             /* ★ 跟着 text-18 的【淡出区间】一起消失（它的 B → E），倒放时对称亮回来 */
-            fadeOut: ".text-18"
+            fadeOut: ".text-12"
         },
 
         /* ---- 图标 15 / 16 / 17 / 18（understand-1.avif）—— text-21 淡入时【四只一起】出现，
@@ -331,8 +264,9 @@
     /* 没写 fadeOut 的图标统一在它的淡出区间里一起消失（默认 .text-6）；
        写了 fadeOut 的各自认自己的宿主：图标 1 / 3 / 4 跟 .text-5（三只一起退场）、
        图标 5 / 6 / 7 跟 .text-2、图标 8 跟 .text-9、图标 9 跟 .text-7、
-       图标 10 跟 .text-10、图标 11 跟 .text-11、图标 12 跟 .text-14、
-       图标 13 跟 .text-16、图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21 */
+       图标 10 跟 .text-10、图标 11 跟 .text-11、
+       图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21
+       （图标 12 / 13 已删除，不再有它们的事） */
     const FADE_OUT_HOST = ".text-6";
 
     /* ======================= 飘动（图标“出现在页面里”的那段时间在飘） =======================
@@ -393,7 +327,7 @@
     const rand = (a, b) => a + Math.random() * (b - a);
     const len = d => Math.sqrt(d.x * d.x + d.y * d.y);
 
-    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十七个“图标位” =======================
+    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十五个“图标位” =======================
        每个图标是一个 .bug-icon-slot（定位用的盒子），里面放：
          · <img class="bug-icon">   —— 图片本身
          · <span class="bug-label">  —— hover 时才显示的名字（配了 label 才生成）
@@ -1467,7 +1401,7 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到全部图标（现在 17 只，含各自的飘动状态 n.drift）；
+       __bugIcons.nodes 能看到全部图标（现在 15 只，含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效
        （比如 DRIFT.on = false 关掉飘动，DRIFT.randomDir = true 让初始方向也随机）。 */
