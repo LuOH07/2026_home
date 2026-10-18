@@ -37,6 +37,17 @@ var VIDEO_GROUPS = {
         "./assets/gene_2.webm",
         "./assets/gene_2.webm"
     ],
+    /* ★ GeneWalk：gene-1 的【走路版】—— 和上面 gene-1 / gene-2 用的是同一个
+       gene_1.webm，但它是【单独的一个组】，所以：
+         · 原来静态摆着的 gene-1 / gene-2 一个都不动（原地不动、不消失）；
+         · 它自己跟着滚动走一条只有一段的路线，起点 / 终点写在 2.css 的
+           .genewalk-points > .genewalk-move-1 / .genewalk-move-2 里；
+         · 一开始就站在起点等着，走到终点就【消失】（往回滚到终点上面又出现）。
+       走动的逻辑和 TnpB_1 完全一样（见下面的 MOVE_GROUPS["genewalk-1"]）。
+       ★ 不想要它：把这一段删掉即可（2.css 里 genewalk 那一块也可以一起删）。 */
+    "GeneWalk": [
+        "./assets/gene_1.webm"
+    ],
     "TnpB": [
         "./assets/TnpB_1.webm",
         "./assets/TnpB_2.webm"
@@ -70,6 +81,7 @@ var VIDEO_GROUPS = {
 var VIDEO_NAMES = {
     "CRISPR": "CRISPR",
     "gene": "target gene",
+    "GeneWalk": "target gene",   /* 走路版 gene：和 gene-1 一样，hover 也显示 target gene */
     "TnpB": "TnpB"
 };
 
@@ -82,8 +94,9 @@ var VIDEO_CLASS = "bg-video";
    二、★★★ 移动（跟着滚动位置走的那些视频）—— 所有“移动”的代码都在这一节里 ★★★
 
    ★ 哪些视频要这么走，看下面的 MOVE_GROUPS：现在有
-       · tnpb-1    → TnpB_1
-       · crispr-3  → CRISPR 的第 3 个（走路那个）
+       · tnpb-1     → TnpB_1
+       · crispr-3   → CRISPR 的第 3 个（走路那个）
+       · genewalk-1 → GeneWalk_1（gene-1 的走路版：起点等 → 走到终点 → 消失）
      每一组各用一套点（也可以“借用”别组的点，见 MOVE_GROUPS 里的 use）；
      每一组还能挂动画视频（出场 / 终点），看下面的 MOVE_FX。
 
@@ -166,6 +179,23 @@ var MOVE_GROUPS = {
         box: "crispr3-points",
         countVar: "--crispr3-points",
         use: "tnpb-1"
+    },
+    /* ★ gene-1 的走路版（GeneWalk 组）：和 tnpb-1 一模一样的走动逻辑，
+       只是它只有【一段】路线 —— 起点在 2.css 的 .genewalk-move-1
+       （top: 42% / right: 9%），终点在 .genewalk-move-2（top: 49.7% / right: 21%）。
+       · 中心线还没到起点 → 就站在起点等着；
+       · 中心线扫过这一段 → 跟着中心线从起点走到终点；
+       · 走到终点 → 消失（vanishAtEnd，见下面的说明）；往回滚到终点上面又出现。
+       ★ 原来的 gene-1 / gene-2 不在这里 —— 它们原地不动，照旧静态摆着。 */
+    "genewalk-1": {
+        prefix: "genewalk-move-",
+        box: "genewalk-points",
+        countVar: "--genewalk-points",
+        /* ★ vanishAtEnd: true = 走到轨迹【最后一个点】（= 终点）就不显示了；
+           从上往下滚到终点 → 消失；再往回（往上）滚到终点上面 → 重新出现、
+           可以再走一遍（和 tnpb-1 的 finale 一样可以反复，只是它不播视频、直接收起来）。
+           不写这一项 = 走到终点就一直停在那儿（tnpb-1 / crispr-3 现在就是这样）。 */
+        vanishAtEnd: true
     }
 };
 
@@ -450,6 +480,8 @@ function makeMotionState(el) {
         appeared: false,                /* 出场动画是不是已经过了（每次刷新只播一次） */
         lastScreenY: null,              /* 上一帧第一个轨迹点在屏幕上的纵坐标（判断“刚进画面”） */
         visible: null,                  /* 当前显示状态（null = 还没设置过） */
+        vanishAtEnd: false,             /* ★ 走到轨迹最后一个点就消失（MOVE_GROUPS 里的 vanishAtEnd） */
+        arrived: false,                 /* ★ 现在是不是已经走到 / 走过终点了（vanishAtEnd 靠它决定藏不藏） */
         built: false,
         docX: 0,                        /* 视频在文档里的静态位置：换算 transform 位移用 */
         docY: 0
@@ -462,6 +494,10 @@ function buildMotionPath(state) {
     if (!spec) return;
 
     state.spec = spec;                          /* 这一组实际用的是哪套点（控制台调试用） */
+
+    /* ★ 走到终点就消失？（只有 MOVE_GROUPS 里写了 vanishAtEnd 的组才是） */
+    state.vanishAtEnd = !!spec.vanishAtEnd;
+    state.arrived = false;
 
     var segments = [];
     autoSegments(spec).forEach(function (seg) {  /* 段数由 2.css 决定 */
@@ -1082,6 +1118,9 @@ function canShowMotion(state) {
     if (state.appearFx && state.appearFx.active && state.appearFx.state === state) return false;
     if (state.endFx && state.endFx.active && state.endFx.state === state) return false;
     if (state.finaleFx && (state.finaleFx.active || state.finaleFx.held)) return false;
+    /* ★ vanishAtEnd（GeneWalk_1）：已经走到轨迹最后一个点 → 不再显示；
+       往回滚到终点上面，stepMotion() 会把 arrived 改回 false，它就又出现了。 */
+    if (state.vanishAtEnd && state.arrived) return false;
     return true;
 }
 
@@ -1116,6 +1155,10 @@ function setupStateFx(state) {
     (state.endFx && state.endFx.also ? state.endFx.also : []).forEach(setupFx);
 }
 
+/* ★ vanishAtEnd 用：判断“人已经走到轨迹最后一个点”的余量（px）。
+   和 FINALE_TRIGGER_EPS 一个思路（留 0.5px，免得正好卡在边界上来回闪）。 */
+var VANISH_EPS = 0.5;
+
 /* 推进一帧 —— 其实并没有动画在“推进”：
    这里只做一件事，就是按【当前滚动位置】把人摆到该在的地方。
    位置完全跟着滚动走，所以滚到哪儿人就停在哪儿，不做任何自动播放。
@@ -1134,6 +1177,7 @@ function stepMotion(state) {
         state.segIndex = -1;
         state.t = 0;
         state.parked = true;
+        state.arrived = false;
         commitMotion(state);
         showMotionNow(state);
         return;
@@ -1147,6 +1191,11 @@ function stepMotion(state) {
     var centerY = viewportCenterY() + state.overflow;
     var pos = motionPositionAt(state.segments, centerY);
     if (!pos) return;
+
+    /* ★ 走到了轨迹的【最后一个点】没有？（vanishAtEnd 的那些视频靠它决定藏不藏）
+       到了 / 过了 → true（canShowMotion 里就把它藏起来）；往回滚到它上面 → 又变回 false。 */
+    var endY = state.segments[state.segments.length - 1].to.y;
+    state.arrived = (state.vanishAtEnd && centerY >= endY - VANISH_EPS);
 
     /* ★ 两种动画都在这里判断（上一帧的中心线记在 state.lastCenterY 里，
        所以往上滑、跳着滑都不会误触发）：

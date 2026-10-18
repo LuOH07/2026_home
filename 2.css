@@ -298,6 +298,69 @@ body {
     z-index: 1;             
 }
 
+/* ============ gene-1 的走路版（GeneWalk_1 / .bg-video-wrap-genewalk-1） ============
+   ★ 和 gene-1 / gene-2 用的是同一个 gene_1.webm，但它是【另外加的一个视频】，
+     所以原来静态摆着的 gene-1 / gene-2 一个都不动、不会消失 —— 这里只是
+     “多加一段路径”。
+
+   走动的逻辑和 TnpB_1 完全一样（2.js 的 MOVE_GROUPS["genewalk-1"]），只有一段：
+     · 一开始就站在【起点】等着（中心线还没扫到起点时它就在那儿）；
+     · 中心线扫过这一段 → 跟着中心线从起点走到终点；
+     · 走到【终点】→ 消失（MOVE_GROUPS 里的 vanishAtEnd: true）；
+     · 往回（往上）滚到终点上面 → 又出现，可以再走一遍。
+
+   下面这条 top / right 是它“没被移动时”的位置（顺手写成起点，第一帧就不跳）：
+   真正的位置完全由下面的轨迹点决定，改这里的 top / right 对走动没有影响。
+   width / --rotate 跟 gene-1 保持一致（6vw / -8deg），走起来才和它一样大、一样斜。
+   ========================================================================== */
+.bg-video-wrap-genewalk-1 {
+    top: 42%;               /* 起点（仅初始值；真正的起点见 .genewalk-move-1） */
+    right: 9%;
+    width: 6vw;
+    --rotate: -8deg;
+    z-index: 2;             /* 和 gene-1 同层：压在底图 / falls 之上，文字之下 */
+    will-change: transform; /* 跟着滚动在动，提示浏览器 */
+}
+
+/* 位移由 2.js 每帧写进 transform，这条只是给个初始值 */
+.bg-video-wrap-genewalk-1[data-tnpb-move] {
+    transform: translate3d(0px, 0px, 0);
+}
+
+/* ---- GeneWalk 的轨迹点：只有【一段】（点 1 = 起点，点 2 = 终点） ----
+   写法和 tnpb-points 那套完全一样：top 相对底图高度，right 相对底图宽度。
+   ★ 要加段数：把 --genewalk-points 按偶数往上加，再往下补 .genewalk-move-N 的规则
+      （2.js 不用改，它会自己数出来）。删掉整块就等于这个视频不走路。 */
+.genewalk-points {
+    --genewalk-points: 2;
+    position: absolute;
+    top: var(--lead-in, 0px);   /* 和底图/内容一起被“引导段”往下推 */
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;       /* ★ 不接鼠标：和 .tnpb-points 一样，别把底下视频的 hover 挡掉 */
+}
+
+.genewalk-points > div {
+    position: absolute;
+    width: 0;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* 第 1 段起点：一开始就在这儿等着 */
+.genewalk-points > .genewalk-move-1 {
+    top: 42.9%;
+    right: 17%;
+}
+
+/* 第 1 段终点：走到这儿就消失 */
+.genewalk-points > .genewalk-move-2 {
+    top: 50%;
+    right: 16.1%;
+}
+
 /* ======================= TnpB 类 ======================= */
 
 /* --------------------------------------------------------------------------
