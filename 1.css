@@ -418,8 +418,8 @@ body.frozen-scroll .text-6 {
    —— 自动播放 / 手动播放过程中隐藏；页面加载时自动播放被拦、或播放结束定格在最后一帧时显示。 */
 .top-video-play {
     position: absolute;
-    left: 3.5%;
-    bottom: 8%;
+    left: 5%;
+    bottom: 15%;
     padding: 10px;
     border: 0;
     background: transparent;
@@ -473,7 +473,7 @@ body.frozen-scroll .text-6 {
 .top-video-scroll-hint {
     position: absolute;
     right: 3.5%;
-    bottom: 8%;
+    bottom: 15%;
     z-index: 1;
     width: clamp(26px, 2.8vw, 46px);
     height: clamp(26px, 2.8vw, 46px);
