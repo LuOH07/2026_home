@@ -55,9 +55,9 @@ body {
 }
 .text-1 {
     top: -1%;
-    left: 18%;
-    max-width: 40%;
-    font-size: 44px;
+    left: 8%;
+    max-width: 60%;
+    font-size: 60px;
 }
 .text-2 {
     top: 2%;
@@ -413,14 +413,24 @@ body.frozen-scroll .text-6 {
 }
 
 /* 播放按钮：靠【视频左下角】的“侧三角形”（指向右的实心三角，没有圆圈），颜色 465E77
-   —— 内缩量和右下角的提示箭头用同一组（left / bottom 3.5% / 8%），左右视觉对齐；
-   —— 盒子只包住三角形（padding 就是可点击热区，约 83×88），不再是一个大圆；
-   —— 自动播放 / 手动播放过程中隐藏；页面加载时自动播放被拦、或播放结束定格在最后一帧时显示。 */
+   —— 内缩量和右下角的提示箭头用同一组（left / bottom 5% / 15%），左右视觉对齐；
+   —— 盒子只包住三角形（padding 就是可点击热区），不再是一个大圆；
+   —— 自动播放 / 手动播放过程中隐藏；页面加载时自动播放被拦、或播放结束定格在最后一帧时显示；
+   —— ★ 尺寸跟着【页面宽度】等比缩放，不再写死 px：
+        视频是 16:9，它的高度本来就随宽度变，所以三角也全部用 vw（+ 按比例算的 calc），
+        任何屏幕宽度下它相对视频的大小都完全一样（基准取 1440 宽，正好还是原来那 68×56）。
+        想让它整体更大 / 更小：只改下面的 --play-h 一个值即可；
+        想让手机上的点击热区有个下限（纯 vw 时 375 宽只有十几像素）：
+        把 --play-h 改成 max(30px, 4.72vw)。 */
 .top-video-play {
+    --play-h: 4.72vw;                            /* 三角总高 = 上下两个 border 之和（≈1440 宽时的 68px） */
+    --play-w: calc(var(--play-h) * 56 / 68);     /* 三角底宽 = 左 border，保持原来的 56:68 比例 */
+    --play-pad: calc(var(--play-h) * 10 / 68);   /* 可点击热区（原来固定的 10px padding） */
+
     position: absolute;
     left: 5%;
     bottom: 15%;
-    padding: 10px;
+    padding: var(--play-pad);
     border: 0;
     background: transparent;
     appearance: none;
@@ -445,13 +455,16 @@ body.frozen-scroll .text-6 {
 }
 
 /* 侧三角形（指向右 = 播放）：border 画的实心三角，尖朝右，颜色 465E77。
-   margin-left 把三角的视觉重心拉回按钮中心（三角占宽 = border-left，重心偏左）。 */
+   ★ 尺寸全部由 .top-video-play 上的 --play-h / --play-w 推出来（随页面宽度走），这里不写 px：
+     上下一半 + 一半 = 总高；左 border 就是底宽。
+   margin-left 把三角的视觉重心拉回按钮中心（三角占宽 = border-left，重心偏左）。
+   原来是 7px / 56px 宽 = 0.125，这里按同一个比例缩放。 */
 .top-video-play-icon {
     width: 0;
     height: 0;
-    margin-left: 7px;
+    margin-left: calc(var(--play-w) * 7 / 56);
     border-style: solid;
-    border-width: 34px 0 34px 56px;
+    border-width: calc(var(--play-h) / 2) 0 calc(var(--play-h) / 2) var(--play-w);
     border-color: transparent transparent transparent #465E77;
 }
 
