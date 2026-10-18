@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    /* ======================= 1. 十九个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~22，2 号已删，12 / 13 号已删） ======================= */
+    /* ======================= 1. 二十个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~23，2 号已删，12 / 13 号已删） ======================= */
     /* ============ ico5 / ico7 / ico6 的出场时刻（三只都挂在 text-1 上） ============
        text-1 = "Compact is only the" + <br> + "BEGINNING"，它自己有四个时刻（见 1.js）：
            A ──淡入(0.6s)── H ──停留(3s)── B ──淡出(0.6s)── E
@@ -107,7 +107,7 @@
         {
             cls: "bug-icon-5",
             host: ".text-1",
-            src: "https://static.igem.wiki/teams/6059/wiki/home/crispr.avif",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/crispr-1.avif",
             name: "CRISPR",
             pin: true,                      /* ★ 不飘动：位置由 3.css 决定 */
             fadeOut: ".text-2",             /* ★ text-2 完全消失时一起消失 */
@@ -119,7 +119,7 @@
         {
             cls: "bug-icon-6",
             host: ".text-1",
-            src: "https://static.igem.wiki/teams/6059/wiki/home/tnpb.avif",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/tnpb-3.avif",
             name: "TnpB",
             pin: true,                      /* ★ 不飘动：位置由 3.css 决定 */
             fadeOut: ".text-2",             /* ★ text-2 完全消失时一起消失 */
@@ -132,7 +132,7 @@
         {
             cls: "bug-icon-7",
             host: ".text-1",
-            src: "https://static.igem.wiki/teams/6059/wiki/home/arrow.avif",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/arrow-1.avif",
             name: "Arrow",
             pin: true,                      /* ★ 不飘动：位置默认由下面的 between 自动算 */
             fadeOut: ".text-2",             /* ★ 和图标 5 / 6 一起消失（text-2 完全消失时） */
@@ -454,16 +454,53 @@
                  点它就让视频从第一帧重新播（逻辑见 replayOverlay）。
                ★ 两个都不能删：hold 少了会在播完后收起来，replay 少了就没有那颗按钮。 */
             video: { src: "./model.mp4", hold: true, replay: true }
+        },
+
+        /* ---- 图标 23（tool.webm）—— 跟 text-11 同步淡入 / 淡出 ----
+           ★ 素材用【相对路径】./tool.webm（和 index.html 放在同一个目录）。
+           ★ 用法和图标 10 / 11 / 20 一样：只播一次、播完就【定格在最后一帧】——
+                · autoplay: false → 不跟着进页面就播，等它随 text-11 亮起来才播；
+                · loop: false     → 不循环，走到头就停住。
+              想让它像图标 19（expand.webm）那样【一直循环】：把下面 autoplay / loop
+              这两行删掉即可（不写 = 默认自动播 + 循环），别的一个字都不用改。
+           ★ 出场 / 退场：
+                start   = text-11 的淡入起点（A）→ 跟着 text-11 一起淡入；
+                fadeOut = ".text-11" → 在 text-11 的【淡出区间】（B → E）里一起淡出，
+                          text-11 完全消失时它正好也没了；
+                往上滑倒放时会对称地跟着亮回来。
+           ★ 图层：仍在 .bug-icons 这个 z-index: 3 的画框里，而 text-11 的内联
+              z-index 比 3 高，所以它【天然在文字下面】—— 不要给它单独写 z-index。
+           ★ 位置 / 大小在 3.css 的 .bug-icon-23 里调（left / top / --icon-height）。
+           ★ 它没有 hover 名字 → 3.css 里另有 pointer-events: none，不挡底下文字。 */
+        {
+            cls: "bug-icon-23",
+            host: ".text-11",
+            src: "./tool.webm",                      /* ★ 相对路径：和 index.html 同目录 */
+            name: "Tool",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-23 决定 */
+            /* ★★ 图层：它在文字【上面】★★
+               这一只不走 .bug-icons（z-index: 3）那一层，而是挂到 3.js 另建的
+               .bug-icons-top（z-index: 11）里 —— 于是这段视频压在 text-11（内联 z-index 11）
+               上面、又在 text-12 及之后（≥12）下面。效果就是：文字从小弹出时，
+               先被视频里的机器挡住，长大之后才从视频里“冒”出来压到最前面。
+               想改回“视频在文字下面”：删掉这一行即可。 */
+            topLayer: true,
+            autoplay: false,                /* ★ 亮起来才播（不然进页面就播完了） */
+            loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
+            /* ★ 跟着 text-11 的【淡入区间】一起淡入（它的 A → H），时长和它一样 */
+            start: { from: ".text-11", mark: "A" },
+            /* ★ 跟着 text-11 的【淡出区间】一起消失（它的 B → E） */
+            fadeOut: ".text-11"
         }
     ];
 
     /* 没写 fadeOut 的图标统一在它的淡出区间里一起消失（默认 .text-6）；
        写了 fadeOut 的各自认自己的宿主：图标 1 / 3 / 4 跟 .text-5（三只一起退场）、
        图标 5 / 6 / 7 跟 .text-2、图标 8 跟 .text-9、图标 9 跟 .text-7、
-       图标 10 跟 .text-10、图标 11 跟 .text-11、
+       图标 10 跟 .text-10、图标 11 跟 .text-10、
        图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21、
        图标 19 跟 .text-16、图标 20 跟 .text-14、图标 21 跟 .text-19、
-       图标 22 跟 .text-19
+       图标 22 跟 .text-19、图标 23 跟 .text-11
        （图标 12 / 13 已删除，不再有它们的事） */
     const FADE_OUT_HOST = ".text-6";
 
@@ -525,7 +562,7 @@
     const rand = (a, b) => a + Math.random() * (b - a);
     const len = d => Math.sqrt(d.x * d.x + d.y * d.y);
 
-    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十九个“图标位” =======================
+    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 二十个“图标位” =======================
        每个图标是一个 .bug-icon-slot（定位用的盒子），里面放：
          · <img class="bug-icon">   —— 图片本身
          · <span class="bug-label">  —— hover 时才显示的名字（配了 label 才生成）
@@ -550,6 +587,21 @@
     const row = document.createElement("div");
     row.className = "bug-icons";
     row.setAttribute("aria-hidden", "true");     /* 纯装饰，读屏器跳过 */
+
+    /* ★ 图标 23 的【专属图层】（需求：这段视频的图层要在 text-11 上面）★★
+       .bug-icons 整层是 z-index: 3，所以里面的图标怎么调都只能待在文字【下面】——
+       一只子元素是逃不出父级那层 z-index 的，这就是“视频盖不住文字”的原因。
+       所以给 23 号单开一层 .bug-icons-top（样式在 3.css）：
+         · 位置 / 大小 / pointer-events 和 .bug-icons 一模一样（铺满视口、fixed、不吃鼠标）；
+         · 唯一区别是 z-index = 11 —— 正好压在 text-11（内联 z-index 也是 11）上面，
+           又低于 text-12 及之后的文字（≥12），不会影响后面那些句子；
+         · 只有 ICONS 里写了 topLayer: true 的图标（现在只有 23 号）才会被放进这一层，
+           其余图标照旧待在 z-index: 3 的那一层里，永远在文字下面。
+       ★ 想让它回到“在文字下面”：把 ICONS 里 ico23 的 topLayer: true 删掉即可
+         （或者改 3.css 里 .bug-icons-top 的 z-index，改回 3 就等于不单独分层了）。 */
+    const topRow = document.createElement("div");
+    topRow.className = "bug-icons-top";
+    topRow.setAttribute("aria-hidden", "true");
 
     /* ---- 图标素材：图片用 <img>，视频用 <video> ----
        ★ 为什么不能一律用 <img>：<img> 只会去“解码一张图”，把 .webm / .mp4
@@ -728,7 +780,9 @@
             }
         }
 
-        row.appendChild(slot);
+        /* ★ 写了 topLayer 的（现在只有 23 号这条视频）挂到【文字上面】那一层去，
+           其余图标照旧挂在 z-index: 3 的 row 里（永远在文字下面），见上面 topRow 的说明。 */
+        (cfg.topLayer ? topRow : row).appendChild(slot);
 
         return {
             cfg,
@@ -822,6 +876,9 @@
     function mount() {
         if (!document.body) return false;
         if (!row.isConnected) document.body.appendChild(row);
+        /* ★ 文字上面那一层也要挂上（图标 23 在里面）：
+           它排在 row 后面挂，所以和 text-11 打平时（都 11）靠 DOM 顺序压住文字。 */
+        if (!topRow.isConnected) document.body.appendChild(topRow);
         return true;
     }
 
@@ -1682,8 +1739,10 @@
         movers.forEach(n => { bounceWalls(n); fixSpeed(n); driftPaint(n); });
     }
 
-    /* 有没有图标正在飘（没有就不用自己排帧了） */
+    /* 有没有图标正在飘（没有就不用自己排帧了）
+       ★ 图标 5 / 6 的“呼吸 + 微动”也走这个 rAF 循环，所以亮着它们时也要继续排帧。 */
     function driftActive() {
+        if (PULSE.on && nodes.some(n => n.pulse && n.pulse.live)) return true;
         return !!DRIFT.on && nodes.some(n => n.drift && n.drift.vis);
     }
 
@@ -1707,6 +1766,10 @@
            不能每个图标各调一次 —— 那样同一帧会被推进多次，碰撞也会重复解。 */
         driftStep(dt);
 
+        /* ★ 图标 5 / 6 的原地呼吸 + 随机微动：和飘动同一条时间基准（dt），同一个循环，
+           这样页面停住不滚的时候它们也还在轻轻动。 */
+        pulseStep(dt);
+
         if (driftActive()) {
             driftRaf = requestAnimationFrame(driftTick);
         } else {
@@ -1719,6 +1782,232 @@
         if (driftRaf !== null || !driftActive()) return;
         driftLast = 0;
         driftRaf = requestAnimationFrame(driftTick);
+    }
+
+    /* ======================= 3.4 图标 5 / 6：原地“呼吸” + 随机微动 =======================
+       这两只是在 3.css 里钉死位置的（pin: true），不参与上面那套台球飘动。
+       需求：让它们【就在原地】略微放大缩小（呼吸），并且在一小块范围里随机游走。
+
+       做法：
+         · 呼吸：每只自己一个随机周期 / 相位，scale = 1 ± PULSE.scale，慢慢来回；
+         · 随机游走：每隔 1~3 秒在【椭圆】里随机挑一个目标点，然后平滑跟过去 ——
+           所以是“悠着飘”，不会一格一格地跳；椭圆（横向半径 > 纵向）看起来像浮着；
+         · 位移 / 缩放都写进 slot 的 inline transform，但【接在 CSS 原来的 transform 后面】：
+             图标 5 的 CSS transform 是 none；
+             图标 6 是 translateX(-50%)（水平居中用的）——
+           直接写 transform 会把 ico6 的居中弄丢，所以先把它读出来缓存成 base，
+           每帧再拼成 base + translate(偏移) + scale(缩放)。
+         · 只在图标亮着的时候推进（update() 每帧写 st.live），暗下去就停、也不写 DOM。
+       ★ 想调：改下面 PULSE 里那几个数；想让别的图标也这样，把它的类名加进 cls 即可。
+       ★ 这两只同时还是图标 7（箭头）的定位参考（placeBetween 每帧量它们的盒子）：
+         所以它们微动时，箭头会在下一次 update()（也就是下一次滚动）重新对齐到两只中间；
+         偏移最多十几像素、箭头本身 100px 高，这点差异看不出来 —— 不用特殊处理。
+       ========================================================================== */
+    const PULSE = {
+        on: true,
+        /* 要这个效果的图标（类名 → true）。现在只有 5 / 6 号 */
+        cls: { "bug-icon-5": true, "bug-icon-6": true },
+        scale: 0.035,        /* 呼吸幅度：±3.5%（想更明显 0.06，想几乎看不出 0.015） */
+        periodMin: 2.6,      /* 呼吸周期（秒）：每只在 [min,max] 里各取一个，两只不会同步 */
+        periodMax: 4.2,
+        radius: 14,          /* 随机游走的水平半径（px）—— 想走远一点就调大 */
+        radiusY: 9,          /* 竖直半径小一点，看起来是“浮着”而不是“跑掉” */
+        retargetMin: 1.2,    /* 每隔 1.2 ~ 2.6 秒换一个目标点（秒） */
+        retargetMax: 2.6,
+        follow: 0.05         /* 逼近目标的快慢：0.05 ≈ 每秒走完 95%；调小更黏、调大更灵 */
+    };
+
+    let pulseT = 0;          /* 自己的时间轴（秒）：只用来推呼吸相位 */
+
+    /* 一只图标的初始状态（每只的呼吸相位 / 周期都是随机的，刷新也不一样） */
+    function makePulse() {
+        return {
+            base: null,                          /* 缓存 CSS 自带的 transform（见上面说明） */
+            x: 0, y: 0,                          /* 当前偏移（px） */
+            tx: 0, ty: 0,                        /* 目标偏移（px） */
+            next: 0,                             /* 下一次换目标的时间点（pulseT 秒） */
+            phase: Math.random() * Math.PI * 2,  /* 呼吸初相：两只不同步 */
+            w: (Math.PI * 2) / rand(PULSE.periodMin, PULSE.periodMax),
+            live: false                          /* 现在亮着吗（update() 每帧写） */
+        };
+    }
+
+    nodes.forEach(n => { if (n.cfg && PULSE.cls[n.cfg.cls]) n.pulse = makePulse(); });
+
+    /* CSS 里原本的 transform（computed 会变成 matrix）—— 只读一次，之后用缓存 */
+    function pulseBase(n) {
+        const st = n.pulse;
+        if (st.base !== null) return st.base;
+        /* ★ 读之前先把自己上一帧写的那串摘掉：
+           否则 computed 拿到的是“base + 偏移 + 缩放”，会被当成新的 base，越叠越远。 */
+        n.slot.style.transform = "";
+        const t = getComputedStyle(n.slot).transform;
+        st.base = (!t || t === "none") ? "" : t + " ";
+        return st.base;
+    }
+
+    /* CSS 的 transform 变了（窗口缩放 / 素材加载完，ico6 的宽度一变 translateX(-50%) 就不同）
+       → 丢掉缓存，下一帧重新读一次 */
+    function pulseInvalidate() {
+        nodes.forEach(n => {
+            if (!n.pulse) return;
+            n.pulse.base = null;
+        });
+    }
+    window.addEventListener("resize", pulseInvalidate);
+    nodes.forEach(n => {
+        if (!n.pulse || !n.el) return;
+        n.el.addEventListener(n.isVideo ? "loadedmetadata" : "load", pulseInvalidate);
+    });
+
+    /* 每帧推进：呼吸 + 随机游走，然后画到 DOM */
+    function pulseStep(dt) {
+        if (!PULSE.on) return;
+        pulseT += dt;
+
+        nodes.forEach(n => {
+            const st = n.pulse;
+            if (!st || !st.live) return;         /* 没亮着：不推进、不写 DOM */
+
+            /* ---- 随机游走：到点了就换一个椭圆内的目标点 ---- */
+            if (pulseT >= st.next) {
+                const a = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random());     /* 开方 → 点在椭圆里分布均匀 */
+                st.tx = Math.cos(a) * r * PULSE.radius;
+                st.ty = Math.sin(a) * r * PULSE.radiusY;
+                st.next = pulseT + rand(PULSE.retargetMin, PULSE.retargetMax);
+            }
+
+            /* 平滑逼近目标：每帧走近 follow% 的剩余距离（换算过 dt，60Hz 以外的帧率也一致） */
+            const k = 1 - Math.pow(1 - PULSE.follow, dt * 60);
+            st.x += (st.tx - st.x) * k;
+            st.y += (st.ty - st.y) * k;
+
+            /* ---- 呼吸：每只自己的相位 / 周期 ---- */
+            const s = 1 + PULSE.scale * Math.sin(st.phase + pulseT * st.w);
+
+            n.slot.style.transform =
+                pulseBase(n) +
+                "translate(" + st.x.toFixed(2) + "px, " + st.y.toFixed(2) + "px) " +
+                "scale(" + s.toFixed(4) + ")";
+        });
+    }
+
+    /* ======================= 3.5 text-11 的出场：从视频里“弹”到最终位置 =======================
+       需求：text-11 不再只是“原地淡入”，而是【从图标 23 那段视频（tool.webm）内部，
+       一个很小的字块】一边淡入、一边长大，同时移到它最终的位置（1.js 算好的锚线位置）。
+       淡出【完全不动】：走完这一段之后，这里就再也不碰它，回到 1.js 原来的原地淡出。
+
+       做法（为什么这么写）：
+         · 文字的位置 / 透明度平时全归 1.js 的 render() 管，它每帧写
+           `el.style.transform = translate(0px, dy)`；
+         · 3.js 的 update() 是包在 1.js 的 render() 外面跑的（见文件末尾 hook()），
+           所以这里执行时，文字已经是 1.js 写好的“最终位置”；
+         · 于是只要在【淡入这一段】把 1.js 那一串 transform 【再接上一段】
+           translate + scale 就行 —— 接在它后面，所以不会盖掉 / 打乱 1.js 的定位；
+         · 1.js 下一帧会重新写 transform，追加的那段自然消失，不会越叠越多。
+
+       ★ 起点在哪里、一开始多大：不在这个文件里写死，而是去 3.css 的 .text-11 改
+            --pop-x / --pop-y   ：起点（文字中心）在【图标 23 的视频盒子】里的位置，% 相对视频
+            --pop-scale         ：起点大小 = 最终字号的多少倍
+         百分比是相对【视频盒子】的，所以视频挪到哪儿、放大缩小，弹出的起点都跟着走。
+       ★ 弹出速度：下面的 span —— 占【淡入窗口】的倍数（1 = 和淡入同时弹到位）。 */
+    const TEXT_POP = {
+        text: ".text-11",              /* 要加这段出场的文字 */
+        icon: "bug-icon-23",           /* 它从哪个图标的视频盒子里弹出来 */
+        /* 弹出动画的时长 = text-11 的淡入窗口 × span：
+           ★ 现在是 0.6 —— 比上一版（3）【快 5 倍】，几乎是一下子“窜”出来就到位了。
+           1    = 淡入走完时正好弹到位；
+           0.6  = 比淡入还早弹到位（弹完时文字才 94% 不透明）；
+           想更干脆就调小（0.4），想慢一点就调大（1.5 / 3）。 */
+        span: 0.6
+    };
+
+    /* 弹出用的缓动：easeInOut cubic（先慢 → 中间快 → 最后收住）。
+       ★ 为什么不用和淡入同款的 easeOut：素材的淡入窗口只有 0.5 秒上下，
+         easeOut 在前 0.3 秒就已经走完 70%，看起来就是“直接淡入、稍微放大一点”；
+         easeInOut 能让字先“很小、几乎不动”地待一下，再明显长大 —— 才像弹出来。 */
+    const popEase = t => (t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+    /* 读 CSS 变量里的数字（--pop-scale 这种）：读不到 / 不是数字就用兜底值 */
+    function popNum(cs, name, dflt) {
+        const v = parseFloat(cs.getPropertyValue(name));
+        return isFinite(v) ? v : dflt;
+    }
+
+    /* 读 CSS 变量里的长度（--pop-x 这种）：% 按 ref 换算成 px，其它单位当 px 用 */
+    function popLen(cs, name, ref, dfltRatio) {
+        const raw = String(cs.getPropertyValue(name) || "").trim();
+        const v = parseFloat(raw);
+        if (!isFinite(v)) return ref * dfltRatio;
+        if (raw.slice(-1) === "%") return ref * v / 100;
+        return v;
+    }
+
+    /* 把这一帧该追加的 transform 接在 1.js 写好的那一串后面。
+       ★ 为什么要记住上一帧接了什么：正常情况下 1.js 每帧都会把 transform 重置成它自己的，
+         这里只是防止“没有 1.js 重绘的那一帧”（比如兜底 rAF）把同一段接两遍。 */
+    function popAppend(el, add) {
+        let base = el.style.transform || "";
+        const prev = el.__popAdd;
+        if (prev && base.slice(-prev.length) === prev) base = base.slice(0, -prev.length);
+        if (!base || base === "none") base = "";
+        el.style.transform = base + add;
+        el.__popAdd = add;
+    }
+
+    /* 每帧调用：只有落在“弹出窗口”里才动 text-11，其它时间一个字都不改 */
+    function textPopUpdate() {
+        const it = findItem(TEXT_POP.text);
+        if (!it) return;
+        const n = nodes.find(x => x.cfg && x.cfg.cls === TEXT_POP.icon);
+        if (!n) return;
+
+        const p = clockOf(it);
+        const a = it.A;
+        /* 弹出窗口的终点：淡入窗口 × span，但绝不超过【开始淡出】那一刻（it.B） */
+        const end = Math.min(a + (it.H - it.A) * TEXT_POP.span, it.B);
+        /* 还没露头 / 已经弹到位 / 已经在淡出了 → 全部交回 1.js，这里不碰 */
+        if (!(p > a) || p >= end || p >= it.E) return;
+
+        const el = it.el;
+        if (!el || el.style.visibility === "hidden") return;
+
+        const vr = n.slot.getBoundingClientRect();       /* 视频盒子（它就是要弹出来的那个洞） */
+        if (!vr.width || !vr.height) return;
+
+        /* ★ 必须在这里量：此刻元素的 transform 还是 1.js 刚写的那一串（只平移、没缩放），
+           所以量到的就是“最终位置”，可以直接拿来算起点到终点的位移。 */
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+
+        const cs = getComputedStyle(el);
+        const w = r.width;
+        const h = r.height;
+        const s0 = clamp(popNum(cs, "--pop-scale", 0.14), 0.02, 1);
+        const tx = vr.left + popLen(cs, "--pop-x", vr.width, 0.5);
+        const ty = vr.top + popLen(cs, "--pop-y", vr.height, 0.5);
+
+        /* 缓动用 popEase（easeInOut）：先慢、中间快、最后收住，见上面 popEase 的说明 */
+        const e = popEase(clamp01((p - a) / Math.max(1e-6, end - a)));
+        const s = s0 + (1 - s0) * e;
+
+        /* 文字中心：从视频盒子里的那一点，缓动移到它自己的最终中心 */
+        const cx = r.left + w / 2;
+        const cy = r.top + h / 2;
+        const px = tx + (cx - tx) * e;
+        const py = ty + (cy - ty) * e;
+
+        /* 1.css 给 .text-box 写的是 transform-origin: 0 0（以左上角缩放），
+           所以缩放之后要自己把左上角算回去，才能让“中心”落在上面那个点上。 */
+        const dx = px - (w * s) / 2 - r.left;
+        const dy = py - (h * s) / 2 - r.top;
+
+        popAppend(el,
+            " translate(" + dx.toFixed(2) + "px, " + dy.toFixed(2) + "px)" +
+            " scale(" + s.toFixed(4) + ")");
     }
 
     /* ======================= 4. 每帧算图标的透明度 ======================= */
@@ -1836,6 +2125,10 @@
                  这样 1.js 多调几次 render() 也不会让图标多飞几步。 */
             const live = op > 0.02;
 
+            /* ★ 图标 5 / 6 的“呼吸 + 随机微动”：亮灭状态也在这记一笔，
+               暗下去 pulseStep 就不再推进它们（见 PULSE / pulseStep）。 */
+            if (n.pulse) n.pulse.live = live;
+
             /* ★ 视频图标（ICONS 里 src 写成 .webm / .mp4 的那几个）：
                只在这只图标亮着的时候解码播放，暗下去就暂停，省 CPU / 电量。
                ★ 写了 toggle 的（图标 14）不走这一套：它由开关控制，见 mediaOrSwitch。 */
@@ -1861,6 +2154,15 @@
 
         /* 全部全透明就把整个画框收起来，省一点合成开销（位置由上面的 left / top 决定） */
         row.style.visibility = anyVisible ? "visible" : "hidden";
+
+        /* ★ text-11 的“从视频里弹出来”：必须放在最后 ——
+           这时 1.js 已经把文字画到最终位置（transform / opacity 都写完了），
+           这里只是在它的淡入那一段再叠一层 translate + scale（见上面 TEXT_POP）。 */
+        try {
+            textPopUpdate();
+        } catch (err) {
+            console.warn("[home] text-11 出场动画出错：", err);
+        }
     }
 
     /* ======================= 5. 挂到 1.js 的渲染循环上 =======================
@@ -1916,16 +2218,20 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到全部图标（现在 19 只，含各自的飘动状态 n.drift）；
+       __bugIcons.nodes 能看到全部图标（现在 20 只，含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.timeline 是 ico5 / ico7 的出场时刻表（4.js 读它来定 BEGINNING 的出场点）；
        __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效
-       （比如 DRIFT.on = false 关掉飘动，DRIFT.randomDir = true 让初始方向也随机）。 */
+       （比如 DRIFT.on = false 关掉飘动，DRIFT.randomDir = true 让初始方向也随机）；
+       __bugIcons.PULSE 是图标 5 / 6 的“呼吸 + 随机微动”参数
+       （PULSE.on = false 关掉，PULSE.scale / radius 改幅度，下一帧就生效）。 */
     window.__bugIcons = {
         update,
         nodes,
         row,
+        topRow,
         DRIFT,
+        PULSE,
         timeline: TIMELINE,
         get outDone() { return outStateOf(FADE_OUT_HOST).done; }
     };

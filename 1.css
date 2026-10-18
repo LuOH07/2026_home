@@ -96,9 +96,9 @@ body::-webkit-scrollbar {
 }
 .text-3 {
     top: 7%;
-    left: 12%;
-    max-width: 45%;
-    line-height: 2;
+    left: 3%;
+    max-width: 60%;
+    line-height: 2.5;
     font-size: 44px;
 }
 .text-4 {
@@ -146,7 +146,7 @@ body::-webkit-scrollbar {
 .text-11 {
     top: 38%;
     left: 14%;
-    max-width: 45%;
+    max-width: 60%;
     font-size: 44px;
 }
 .text-12 {
@@ -456,7 +456,10 @@ body.frozen-scroll .text-6 {
         任何屏幕宽度下它相对视频的大小都完全一样（基准取 1440 宽，正好还是原来那 68×56）。
         想让它整体更大 / 更小：只改下面的 --play-h 一个值即可；
         想让手机上的点击热区有个下限（纯 vw 时 375 宽只有十几像素）：
-        把 --play-h 改成 max(30px, 4.72vw)。 */
+        把 --play-h 改成 max(30px, 4.72vw)。
+   —— 三角本身常驻一个“呼吸”式的略微放大缩小（1 ⇄ 1.06，见下面的 topVideoPlayPulse），
+      鼠标 hover 时外层再加 scale(1.12)，两者各自作用在不同元素上、不冲突；
+      系统关掉动效时呼吸停止（hover 手感保留）。 */
 .top-video-play {
     --play-h: 4.72vw;                            /* 三角总高 = 上下两个 border 之和（≈1440 宽时的 68px） */
     --play-w: calc(var(--play-h) * 56 / 68);     /* 三角底宽 = 左 border，保持原来的 56:68 比例 */
@@ -501,6 +504,33 @@ body.frozen-scroll .text-6 {
     border-style: solid;
     border-width: calc(var(--play-h) / 2) 0 calc(var(--play-h) / 2) var(--play-w);
     border-color: transparent transparent transparent #465E77;
+
+    /* ★ 呼吸式“略微放大缩小”（提示这里可以点 / 可以重播）：
+       只动【三角本身】，不动外层 button —— 外层 :hover 已经写了 transform: scale(1.12)，
+       动画的 transform 会把它覆盖掉；挂在内层，两层是各自的元素，天然相乘（1.06 × 1.12）。
+       比例是纯相对值（百分比 scale），任何屏宽下相对大小都一样；
+       默认 transform-origin 就是这条三角的边框盒中心，放大缩小不会往一边偏。 */
+    transform-origin: 50% 50%;
+    animation: topVideoPlayPulse 2.4s ease-in-out infinite;
+}
+
+/* 1 ⇄ 1.06：幅度只“略微”，像呼吸一样，不抢画面。想更大 / 更小只改这里的两个 1.06。 */
+@keyframes topVideoPlayPulse {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.06);
+    }
+}
+
+/* 系统关掉动效时不呼吸（hover 的手感保留） */
+@media (prefers-reduced-motion: reduce) {
+    .top-video-play-icon {
+        animation: none;
+        transform: none;
+    }
 }
 
 /* 播放中（.is-playing 由 1.js 在 play() 后加上）：藏起播放按钮。
@@ -517,14 +547,25 @@ body.frozen-scroll .text-6 {
    —— 它是 <button>：点一下 = 页面下拉到“视频底部贴住视口顶部”（1.js 的 scrollPastTopVideo）。
       没出现时 pointer-events: none（不挡滚动）；出现后只吃点击，滚轮照样冒泡给 window。
    —— 上下浮动是“提示可以往下滑”；系统关掉动效时自动停止（见下方 media 查询）。
+   —— ★ 大小 / 距离全部写成【相对值】，这一块没有一处 px 是“大小”：
+        宽高 5.6vw = 原来 clamp(26px, 2.8vw, 46px) 的两倍。视频是 16:9、高度本来
+        就随宽度变，所以箭头改成纯 vw 之后，任何屏宽下它占视频的比例都恒定
+        （基准 1440 宽：5.6vw ≈ 80.6px，正好是原来 2.8vw 的两倍）；
+        right 3.5% / bottom 15% 是相对【视频盒子】的百分比距离，跟着视频一起缩；
+        上下浮动幅度也按箭头自身边长算（--hint-bob = 0.15 × 边长），不写死像素；
+        焦点描边的偏移 / 圆角同样按边长算，换屏宽不会变形。
+        想整体再大 / 再小：只改下面 --hint-size 一个值（它是唯一的尺寸入口）。
    ========================================================================== */
 .top-video-scroll-hint {
+    --hint-size: 5.6vw;                        /* 箭头边长（正方形）= 原来的 2 倍 */
+    --hint-bob: calc(var(--hint-size) * 0.15); /* 上下浮动幅度：跟着箭头边长走（≈ 原来 6px 的两倍） */
+
     position: absolute;
     right: 3.5%;
     bottom: 15%;
     z-index: 1;
-    width: clamp(26px, 2.8vw, 46px);
-    height: clamp(26px, 2.8vw, 46px);
+    width: var(--hint-size);
+    height: var(--hint-size);
     padding: 0;
     border: 0;
     background: transparent;
@@ -552,8 +593,9 @@ body.frozen-scroll .text-6 {
 
 .top-video-wrap.is-ended .top-video-scroll-hint:focus-visible {
     outline: 2px solid #465E77;
-    outline-offset: 4px;
-    border-radius: 6px;
+    /* 偏移 / 圆角也按箭头边长算，换屏宽时描边和箭头仍然同比例 */
+    outline-offset: calc(var(--hint-size) * 0.1);
+    border-radius: calc(var(--hint-size) * 0.15);
 }
 
 .top-video-scroll-hint svg {
@@ -570,7 +612,8 @@ body.frozen-scroll .text-6 {
         transform: translateY(0);
     }
     50% {
-        transform: translateY(6px);
+        /* 浮动距离 = --hint-bob（0.15 × 箭头边长），不写死像素 */
+        transform: translateY(var(--hint-bob));
     }
 }
 

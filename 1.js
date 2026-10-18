@@ -88,7 +88,9 @@ const ANCHOR_RATIO = 0.4;
 const ANCHOR_OVERRIDES = [
     { sel: ".text-1",  top: 0.3 },   /* 70% 高度 → 距顶 30% */
     { sel: ".text-2",  top: 0.3 },   /* 70% 高度 → 距顶 30% */
+    { sel: ".text-3",  top: 0.3 },  /* 65% 高度 → 距顶 35% */
     { sel: ".text-10", top: 0.3 },   /* 70% 高度 → 距顶 30% */
+    { sel: ".text-11", top: 0.2 },   /* 70% 高度 → 距顶 30% */
     { sel: ".text-12", top: 0.3 },   /* 70% 高度 → 距顶 30% */
     { sel: ".text-15", top: 0.2 },   /* 80% 高度 → 距顶 20% */
     { sel: ".text-16", top: 0.2 },   /* 80% 高度 → 距顶 20% */
