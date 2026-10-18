@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    /* ======================= 1. 十七个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~20，2 号已删，12 / 13 号已删） ======================= */
+    /* ======================= 1. 十八个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~21，2 号已删，12 / 13 号已删） ======================= */
     /* ============ ico5 / ico7 / ico6 的出场时刻（三只都挂在 text-1 上） ============
        text-1 = "Compact is only the" + <br> + "BEGINNING"，它自己有四个时刻（见 1.js）：
            A ──淡入(0.6s)── H ──停留(3s)── B ──淡出(0.6s)── E
@@ -380,6 +380,35 @@
             start: { from: ".text-13", mark: "A" },
             /* ★ text-14【淡出】时跟着消失（它的 B → E），往上滑倒放时会对称亮回来 */
             fadeOut: ".text-14"
+        },
+
+        /* ---- 图标 21（model.webm）—— text-17 淡入时出现，text-19 淡出时消失 ----
+           ★ 素材用【相对路径】./model.webm（和 index.html 放在同一个目录）。
+           ★ 只播一次、播完就【定格在最后一帧】（和图标 10 / 11 / 20 一个用法）：
+               · autoplay: false —— 不跟着进页面就播，等它随 text-17 亮起来才播；
+               · loop: false     —— 不循环，走到头就停住。
+             一次性视频不会因为暗下去就暂停（否则滚走了永远走不到结尾），
+             已经播完再滚回来会从头再演一遍（见 mediaLive）。
+           ★ 横跨三段文字：从 text-17 的【淡入起点】（A）一直亮到 text-19 的
+             【淡出区间】（B → E）—— 中间 text-17 淡出、text-18 / text-19 依次上来的
+             那几段都保持全亮，也就是“text-17 出现，text-19 没了才收”。
+             往上滑倒放时会对称地亮回来。
+           ★ 图层：仍在 .bug-icons 这个 z-index: 3 的画框里，而 text-17 / 18 / 19
+             的内联 z-index 都比 3 高，所以它【天然在文字下面】。
+           ★ 位置 / 大小在 3.css 的 .bug-icon-21 里调（right / top / --icon-height）。
+           ★ 它没有 hover 名字 → 3.css 里另有 pointer-events: none，不挡底下文字。 */
+        {
+            cls: "bug-icon-21",
+            host: ".text-17",
+            src: "./",                     /* ★ 相对路径：和 index.html 同目录 */
+            name: "Model",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-21 决定 */
+            autoplay: false,                /* ★ 亮起来才播（不然进页面就播完了） */
+            loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
+            /* ★ 跟着 text-17 的【淡入区间】一起淡入（它的 A → H） */
+            start: { from: ".text-17", mark: "A" },
+            /* ★ 跟着 text-19 的【淡出区间】一起消失（它的 B → E） */
+            fadeOut: ".text-19"
         }
     ];
 
@@ -388,7 +417,7 @@
        图标 5 / 6 / 7 跟 .text-2、图标 8 跟 .text-9、图标 9 跟 .text-7、
        图标 10 跟 .text-10、图标 11 跟 .text-11、
        图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21、
-       图标 19 跟 .text-16、图标 20 跟 .text-14
+       图标 19 跟 .text-16、图标 20 跟 .text-14、图标 21 跟 .text-19
        （图标 12 / 13 已删除，不再有它们的事） */
     const FADE_OUT_HOST = ".text-6";
 
@@ -450,7 +479,7 @@
     const rand = (a, b) => a + Math.random() * (b - a);
     const len = d => Math.sqrt(d.x * d.x + d.y * d.y);
 
-    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十七个“图标位” =======================
+    /* ======================= 2. 建 DOM：一个铺满屏幕的容器 + 十八个“图标位” =======================
        每个图标是一个 .bug-icon-slot（定位用的盒子），里面放：
          · <img class="bug-icon">   —— 图片本身
          · <span class="bug-label">  —— hover 时才显示的名字（配了 label 才生成）
@@ -1731,7 +1760,7 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到全部图标（现在 17 只，含各自的飘动状态 n.drift）；
+       __bugIcons.nodes 能看到全部图标（现在 18 只，含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.timeline 是 ico5 / ico7 的出场时刻表（4.js 读它来定 BEGINNING 的出场点）；
        __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效
