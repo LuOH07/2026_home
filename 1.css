@@ -134,7 +134,7 @@ body::-webkit-scrollbar {
 .text-9 {
     top: 30%;
     left: 14%;
-    max-width: 45%;
+    max-width: 60%;
     font-size: 44px;
 }
 .text-10 {
@@ -206,20 +206,15 @@ body::-webkit-scrollbar {
     max-width: 40%;
     font-size: 44px;
 }
-.text-21 {
-    top: 81%;
-    right: 8%;
+
+.text-22 {
+    top: 83%;
+    right: 10%;
     max-width: 45%;
     font-size: 44px;
 }
-.text-22 {
-    top: 84%;
-    right: 10%;
-    max-width: 60%;
-    font-size: 44px;
-}
 .text-23 {
-    top: 91%;
+    top: 89%;
     right: 10%;
     max-width: 60%;
     font-size: 44px;

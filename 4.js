@@ -17,6 +17,8 @@
          “Host”      → <span class="host">      （单独放大到 128px，见 4.css）
         text-6：
          “Not”       → <span class="not">       （单独放大到 128px，见 4.css）
+        text-9：
+         “cut”（第一个） → <span class="cut9">  （单独放大 + 原地上下蹦，见 4.css）
         text-11：
          “Small” 的 S / “TnpB-based” 的 T / “Innovative” 的 I /
          “Nuclease” 的 N / “Genome” 的 G
@@ -24,9 +26,14 @@
                        （首字母单独放大成“白心 + #465e11 描边”，见 4.css）
         text-13：
          “BUILD”     → <span class="build13">   （单独放大，字号旋钮 --build13-size 见 4.css）
+        text-15：
+         “EXPAND”    → <span class="expand15">  （单独放大，字号旋钮 --expand15-size 见 4.css）
+        text-17：
+         “MODEL”     → <span class="model17">   （单独放大，字号旋钮 --model17-size 见 4.css）
       其余文字（text-1 的 “ is only the”、text-3 的 “Genome editing gets … beyond”、
       text-6 的 “But small does … mean flexible.”、text-11 里除这五个字母以外的所有字、
-      text-13 的 “Establish the Editing Tools”）
+      text-13 的 “Establish the Editing Tools”、text-15 的 “Broaden the Targeting Toolbox”、
+      text-17 的 “From Data to Mechanism”）
       原样保留，一个字符都不改。
     ② 驱动 “BEGINNING” 的出场（等 ico7 箭头的渐入走完 → 弹出并淡入 → 缩回原大小），
       并把“缩完”那一刻报给 3.js —— ico6 要等它演完才出现。
@@ -39,6 +46,25 @@
        正好跟文字淡出同时收尾。
        （像素云 / 白光都由 4.js 生成，跳动幅度旋钮 --tnt-bob 在 4.css，
          同样由滚轮逐帧驱动、可倒放。）
+    ⑤ 给 text-6 这一句单独加一个动效：它【淡出】的时候，整句跟着往左滑出去
+       （默认页面宽度的 5%，距离旋钮 --t6-shift 在 4.css 的 .text-6 上），
+       滑完停在那儿，之后照常淡出；同样由滚轮逐帧驱动、可以倒放。
+       计时从“完全出现”（H）往后算，不从结尾倒推 —— 见下面 “text-6：完全出现后整句往左移” 那一段。
+    ⑥ text-9 这一句单独左端对齐（4.css 的 .text-9），并把句子里【第一个】“cut”
+       放大、让它在原地一直上下蹦 —— 纯 CSS animation，不需要逐帧驱动；
+       放大程度 / 蹦的幅度 / 蹦的速度三个旋钮都在 4.css 的 .text-9 .cut9 里。
+       另外【点一下这个词】会让这一句配套的视频（3.js 的图标 10：editing.webm）
+       从头再播一遍，选择器 / 做法见下面 “text-9：点一下第一个 cut …” 那一段。
+    ⑦ 等 text-9 自己的视频播完第一遍之后，另一段视频 gene.webm 从上方飞进来、
+       边飞边淡入、在空中转一圈，落在 “where” 的正上方并一直循环播放；
+       整段随滚轮推进 / 倒放，到这一句淡出时跟着一起淡掉。
+       旋钮见下面 “text-9：gene.webm 从上方飞进来” 那一段的 GENE9_* 变量
+       和 4.css 的 .text-9 .gene9（--gene9-w / --gene9-gap / --gene9-dx）。
+
+    ⑧ 把 text-20 的【四句话】拆成四个独立的块（<span class="t20-line t20-p1"> … t20-p4），
+       让每一句都能单独调静态位置 —— 位置旋钮在 4.css 里：
+       --t20-p1-x / --t20-p1-y … --t20-p4-x / --t20-p4-y（默认 0 = 完全保持现在的样子）。
+       文字、字号、颜色、居中方式、出场动效全都不变，见下面 “text-20：把四句话拆成四个块” 那一段。
 
    ★ 为什么在 JS 里包、而不是改 index.html：
      index.html 是“文案文件”，保持它一个字都不动；
@@ -86,6 +112,22 @@
         { word: "not", cls: "not" }                /* → 4.css 的 .text-6 .not */
     ];
 
+    /* text-9 那句（“An editor can cut well / and still be unable to cut where we need it.”）
+       里的【第一个】“cut”：包一层自己的类，字号 + 上下蹦的旋钮都在 4.css 的 .text-9 .cut9
+       （--cut9-size / --cut9-bob / --cut9-bob-sec）。
+       ★ 这句里有两个 “cut”，wrapWord 只包【第一次出现】的那一个（就是 “can cut well” 里那个），
+         第二个 “cut” 以及其余文字一个字符都不动。
+       ★ 跳动是纯 CSS animation（不需要滚轮驱动、也不会被 1.js 的 transform 覆盖），
+         所以这里只负责“套钩子”，没有对应的逐帧动画代码。
+       另外把 “where” 也包一层（.where9）：它只当【定位锚点】，
+       让飞进来的 gene.webm 能贴在它正上方（见 4.css 的 .text-9 .where9 / .gene9，
+       飞行动画在下面的 “text-9：gene.webm 从上方飞进来” 那一段）。 */
+    var HOST9 = ".text-9";
+    var TARGETS9 = [
+        { word: "cut",   cls: "cut9" },             /* → 4.css 的 .text-9 .cut9 */
+        { word: "where", cls: "where9" }            /* → 4.css 的 .text-9 .where9（只当锚点） */
+    ];
+
     /* text-11 那句（“Small TnpB-based Innovative Nuclease toolkit for bacterial Genome editing.”）
        里五个词的【首字母】单独放大成“白心 + #465e11 描边”（样式见 4.css 的 .text-11 .init-11）：
          Small 的 S / TnpB-based 的 T / Innovative 的 I / Nuclease 的 N / Genome 的 G
@@ -112,6 +154,23 @@
     var HOST13 = ".text-13";
     var TARGETS13 = [
         { word: "build", cls: "build13" }          /* → 4.css 的 .text-13 .build13 */
+    ];
+
+    /* text-15 那句（“EXPAND<br>Broaden the Targeting Toolbox”）里的 “EXPAND”：
+       和 text-13 的 BUILD 完全同一套做法 —— 单独包一层，只为给它一个字号旋钮
+       （--expand15-size，见 4.css）。原文大写会原样保留。
+       ★ 同样是 flex column 里的一个独立块，放大不会把下面那行挤歪。 */
+    var HOST15 = ".text-15";
+    var TARGETS15 = [
+        { word: "expand", cls: "expand15" }        /* → 4.css 的 .text-15 .expand15 */
+    ];
+
+    /* text-17 那句（“MODEL<br>From Data to Mechanism”）里的 “MODEL”：
+       和 BUILD / EXPAND 同一套 —— 单独包一层，只为给它一个字号旋钮
+       （--model17-size，见 4.css）。原文大写会原样保留。 */
+    var HOST17 = ".text-17";
+    var TARGETS17 = [
+        { word: "model", cls: "model17" }          /* → 4.css 的 .text-17 .model17 */
     ];
 
     /* 把 host 里【第一次出现的整词 word】包成 <span class="cls">，
@@ -277,6 +336,10 @@
         var host6 = document.querySelector(HOST6);
         if (host6) TARGETS6.forEach(function (t) { wrapWord(host6, t.word, t.cls); });
 
+        /* text-9：只包第一个 “cut”，样式（放大 + 原地上下蹦）在 4.css 的 .text-9 .cut9 */
+        var host9 = document.querySelector(HOST9);
+        if (host9) TARGETS9.forEach(function (t) { wrapWord(host9, t.word, t.cls); });
+
         /* text-11：五个词的第一个字母各自包一层（白心 + #465e11 描边，见 4.css） */
         var host11 = document.querySelector(HOST11);
         if (host11) INITIALS11.forEach(function (t) { wrapInitial(host11, t.word, t.cls); });
@@ -284,9 +347,176 @@
         /* text-13：“BUILD” 单独包一层，字号旋钮在 4.css 的 .text-13 .build13 */
         var host13 = document.querySelector(HOST13);
         if (host13) TARGETS13.forEach(function (t) { wrapWord(host13, t.word, t.cls); });
+
+        /* text-15：“EXPAND” 单独包一层，字号旋钮在 4.css 的 .text-15 .expand15 */
+        var host15 = document.querySelector(HOST15);
+        if (host15) TARGETS15.forEach(function (t) { wrapWord(host15, t.word, t.cls); });
+
+        /* text-17：“MODEL” 单独包一层，字号旋钮在 4.css 的 .text-17 .model17 */
+        var host17 = document.querySelector(HOST17);
+        if (host17) TARGETS17.forEach(function (t) { wrapWord(host17, t.word, t.cls); });
     }
 
     apply();
+
+    /* ======================================================================
+       text-20：把四句话拆成四个“块”，让每一句都能单独调静态位置
+       ----------------------------------------------------------------------
+       index.html 里这一句是（四行用 <br> 隔开）：
+           Our platform allows<br>More targets<br>More functions<br>More understanding
+       四行挤在同一个 flex 列里（1.css 的 .text-box 是 flex column），
+       只能整块跟着 .text-20 走，没法各自挪。
+
+       这里只做一件事：把每一行各包进一个 <span class="t20-line t20-p1"> … t20-p4，
+       文字一个字符都不改、顺序不变、字号 / 颜色 / 居中方式也全不动
+       （原来的 <br> 换成“块的分界”，本来就只是断行，视觉上一模一样）。
+
+       每一块的静态位置在 4.css 里各有 2 个数：
+           --t20-p1-x / --t20-p1-y    …   --t20-p4-x / --t20-p4-y
+       单位是「页面宽 / 高的 %」（1 = 1vw / 1vh），默认是 0
+       → 一进来和现在完全相同，只改那几个数就能单独挪某一句。
+
+       ★ 只 transform 平移、不参与布局：挪动不会推挤别的行、也不会改变
+         .text-20 的高度（1.js 的 layout() 量到的仍是原来那个高度）。
+       ★ 1.js 每帧写的是 .text-20 自己的 inline transform（把整句钉在锚线上），
+         这里动的是它【里面】的块，两套 transform 互不干扰。
+       ★ 已经拆过（有 .t20-line）就直接跳过：刷新 / 重跑都安全。
+       ====================================================================== */
+    var HOST20 = ".text-20";
+
+    (function splitText20() {
+        var host = document.querySelector(HOST20);
+        if (!host || host.querySelector(".t20-line")) return;     /* 已经拆过：不动 */
+
+        /* 按 <br> 分块：每个 <br> 之前的内容算一块（文本节点原样搬，不 trim、不合并） */
+        var buckets = [[]];
+        Array.prototype.slice.call(host.childNodes).forEach(function (node) {
+            if (node.nodeType === 1 && node.nodeName === "BR") {
+                buckets.push([]);                                  /* 遇到 <br> = 分块边界 */
+                return;
+            }
+            buckets[buckets.length - 1].push(node);
+        });
+
+        /* 去掉“空块”（连续 <br> / 收尾 <br> 造成的那种）—— 现在这句正好四块 */
+        buckets = buckets.filter(function (nodes) {
+            return nodes.some(function (node) {
+                return node.nodeType !== Node.TEXT_NODE || node.nodeValue.trim() !== "";
+            });
+        });
+        if (!buckets.length) return;
+
+        /* 先清空，再把每一块装进自己的 <span>（原来的节点只是换个父亲，文字没动） */
+        while (host.firstChild) host.removeChild(host.firstChild);
+
+        buckets.forEach(function (nodes, i) {
+            var line = document.createElement("span");
+            line.className = "t20-line t20-p" + (i + 1);           /* → 4.css 的位置旋钮 */
+            nodes.forEach(function (node) { line.appendChild(node); });
+            host.appendChild(line);
+        });
+    })();
+
+    /* ======================================================================
+       text-20：每句里点名的那一个（几个）字母单独放大
+       ----------------------------------------------------------------------
+       需求（按原句逐句对上）：
+         “Our platform allows”    → 最后一个 s
+         “More targets”           → 第一个 t
+         “More functions”         → i
+         “More understanding”     → 第一个 n 和最后一个 g（原文都是小写，原样保留）
+
+       这里只把【点名的那几个字符】各包成 <span class="t20-big t20-big-x">，
+       句子里其余的字一个都不动（仍是 44px / #324561 / impact / 居中）。
+
+       ★ 大小旋钮在 4.css：每个字母一个数，另有一个“五个一起缩放”的倍数
+            .text-20 .t20-big-s { --t20-big-size: … }   “allows” 的 s
+            .text-20 .t20-big-t { --t20-big-size: … }   “targets” 的 t
+            .text-20 .t20-big-i { --t20-big-size: … }   “functions” 的 i
+            .text-20 .t20-big-n { --t20-big-size: … }   “understanding” 的第一个 n
+            .text-20 .t20-big-g { --t20-big-size: … }   “understanding” 最后一个 g
+          五个一起放大 / 缩小：改 .text-20 上的 --t20-big-scale（1 = 原样）。
+       ★ 和前后字母的间距：4.css 的 --t20-big-gap（后面）/ --t20-big-gap-before（前面），
+         也可以只给某一个字母单独调（在它自己那条里覆盖）。
+
+       ★ 一句话里有两处（现在 “understanding” 的 n 和 g）也在【同一趟】里切开 ——
+         一次把整词切成 词头 / 大字① / 中间 / 大字② / 词尾，所以两个字母都放得下，
+         不会因为“第一次切开后整词就找不到了”而漏掉第二个。
+       ★ at 里的位置从 0 数（0 = 词的第一个字母），"last" = 这个词的最后一个字母；
+         大小写不敏感地找词，span 里保留原文的写法。
+       ★ 已经包过（这一行里已有 .t20-big）就跳过：刷新 / 重跑都安全。
+       ====================================================================== */
+    var T20_LETTERS = [
+        { line: "t20-p1", word: "allows",        at: ["last"], cls: "t20-big-s" },              /* allows 的 s（最后一个） */
+        { line: "t20-p2", word: "targets",       at: [0],       cls: "t20-big-t" },              /* targets 的 t（第一个） */
+        { line: "t20-p3", word: "functions",     at: [5],       cls: "t20-big-i" },              /* functions 的 i */
+        { line: "t20-p4", word: "understanding", at: [1, "last"],
+          cls: ["t20-big-n", "t20-big-g"] },                                                        /* understanding 的第一个 n + 最后一个 g */
+    ];
+
+
+    /* 把 lineEl 里【第一次出现的整词 word】的 at 指定的那几个字符包成 .t20-big：
+         前文 / 大字① / 中间 / 大字② / 后文 …，一次切好，文字一个字符都不改。 */
+    function wrapLetters20(lineEl, word, at, cls) {
+        if (!lineEl || lineEl.querySelector(".t20-big")) return;     /* 没有这一行 / 已经包过 */
+
+        /* 要包的字符位置（词内第几个，从 0 数；"last" = 最后一个），和各自的类名成对排好 */
+        var spots = at.map(function (pos, j) {
+            return {
+                pos: pos === "last" ? word.length - 1 : (pos < 0 ? word.length + pos : pos),
+                cls: Array.isArray(cls) ? (cls[j] || cls[0]) : cls
+            };
+        }).sort(function (a, b) { return a.pos - b.pos; });
+
+        var wordChar = /[A-Za-z0-9_-]/;
+        var nodes = Array.prototype.slice.call(lineEl.childNodes);
+
+        for (var n = 0; n < nodes.length; n++) {
+            var node = nodes[n];
+            if (node.nodeType !== Node.TEXT_NODE) continue;
+
+            var text = node.nodeValue;
+            var start = text.toLowerCase().indexOf(word.toLowerCase());
+            if (start < 0) continue;
+
+            /* 整词判定：词前 / 词后不能紧挨着字母、数字、下划线、连字符 */
+            if (start > 0 && wordChar.test(text.charAt(start - 1))) continue;
+            var next = text.charAt(start + word.length);
+            if (next && wordChar.test(next)) continue;
+
+            var frag = document.createDocumentFragment();
+            var cursor = start;                       /* 已经搬走的最后一个字符之后的位置 */
+
+            spots.forEach(function (spot) {
+                var abs = start + spot.pos;
+                if (abs > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, abs)));
+
+                var span = document.createElement("span");
+                span.className = "t20-big " + spot.cls;   /* → 4.css 的字号旋钮 */
+                span.textContent = text.charAt(abs);      /* ← 原样保留大小写 */
+                frag.appendChild(span);
+
+                cursor = abs + 1;
+            });
+            if (cursor < start + word.length) {
+                frag.appendChild(document.createTextNode(text.slice(cursor, start + word.length)));
+            }
+
+            lineEl.insertBefore(document.createTextNode(text.slice(0, start)), node);
+            lineEl.insertBefore(frag, node);
+            lineEl.insertBefore(document.createTextNode(text.slice(start + word.length)), node);
+            lineEl.removeChild(node);
+            return;
+        }
+    }
+
+    (function bigLettersText20() {
+        var host = document.querySelector(HOST20);
+        if (!host) return;
+        T20_LETTERS.forEach(function (t) {
+            wrapLetters20(host.querySelector("." + t.line), t.word, t.at, t.cls);
+        });
+    })();
 
     /* ======================================================================
        text-3：harder 的“撑开” + “Familiar Host”的 TNT 爆炸（纯滚轮驱动，能随滚轮倒放）
@@ -625,6 +855,395 @@
         });
 
         requestAnimationFrame(frameHarder);
+    }
+
+    /* ======================================================================
+       text-6：完全出现后整句“往左移”（纯滚轮驱动，能随滚轮倒放）
+       ----------------------------------------------------------------------
+       需求：这一句（“But small does NOT mean flexible.”）【完全出现】之后，再往下滑一点滚轮，
+             整句就开始往左挪一段（默认页面宽度的 5%，距离 = 4.css 的 .text-6 的 --t6-shift），
+             挪完就停在那儿，之后照常淡出。
+
+       时间轴（和 1.js 同一套进度单位，秒 = 进度 / window.__home.rate）：
+          A ──淡入── H ──再滑 T6_DELAY_SEC 秒── ★开始左移──T6_MOVE_SEC 秒── ★移完──停住── B ──淡出── E
+
+       ★ 计时是【从“完全出现”那一刻（H）往后算】的，不从结尾（B / E）倒推 ——
+          所以它完全出现后，滚轮再往下滑一点点就开始动，跟淡出没有关系。
+       ★ 移动用 easeOut 曲线（先快后慢），走完就停在 --t6-shift 那个位置上，
+          之后一直到淡出都保持这个位置（淡出是原地淡出，不再移动）；
+       ★ 往上滚就倒着来：先退回原位，再继续倒着演这一句（和页面完全同步）。
+       ★ 淡入 / 刚出现那一小段、以及完全消失之后一律回原位（--t6-u = 0）：
+          这样它在窗口外是干干净净的“原位置”，不会影响 1.js 量到的任何东西。
+
+       ★ 两个时间旋钮都在下面：
+           T6_DELAY_SEC  完全出现后【还要再滑多少滚轮】才开始（秒；1 秒 ≈ 1000 delta ≈ 滚轮 10 下）
+           T6_MOVE_SEC   往左走完全程用多久（秒）
+         想出现后立刻动 → T6_DELAY_SEC = 0；想一动就到位 → T6_MOVE_SEC 调小（0.35）。
+
+       ★ 为什么这里只写 --t6-u、位移交给 4.css 去算：
+         1.js 每帧都往 .text-6 上写 inline transform（把它钉在锚线上），
+         这里再写 transform 会被覆盖掉；4.css 用的是独立的 translate 属性，
+         两者叠加、互不干扰（详见 4.css 里 .text-6 那段注释）。
+       ★ 不增删任何 DOM、不改字号、不动布局：只是每帧写一个自定义属性。
+       ====================================================================== */
+
+    var T6_DELAY_SEC = 0.35;    /* ← 完全出现后【再滑多少滚轮】才开始左移（秒；0 = 立刻开始） */
+    var T6_MOVE_SEC  = 0.9;     /* ← 往左走完全程用多久（秒） */
+
+    var t6El = document.querySelector(HOST6);
+    if (t6El) {
+        var t6Cur = null;       /* 上一帧写进 --t6-u 的值；null = 还没写过 */
+        var t6Last = null;      /* 上一帧的页面进度：页面没动就不重算 */
+
+        var t6Ease = function (t) { return 1 - Math.pow(1 - t, 3); };
+        var t6Clamp01 = function (v) { return v < 0 ? 0 : (v > 1 ? 1 : v); };
+
+        function paintT6(u) {
+            if (u === t6Cur) return;
+            t6Cur = u;
+            t6El.style.setProperty("--t6-u", String(u));
+        }
+
+        function frameT6() {
+            requestAnimationFrame(frameT6);
+
+            var home = window.__home;
+            if (!home) return;
+            if (home.cur === t6Last) return;            /* 页面没动：不做事 */
+            t6Last = home.cur;
+
+            var it = itemOf(t6El);                      /* resize 会重建 items，所以每帧找 */
+            var rate = home.rate;
+            if (!it || !(rate > 0)) { paintT6(0); return; }
+
+            var p = home.cur;
+            if (p <= it.A || p >= it.E) { paintT6(0); return; }   /* 窗口外：交还原位 */
+
+            /* ★ 从“完全出现”（H）往后算 —— 不从结尾倒推 */
+            var t = (p - it.H) / rate;                            /* 完全出现之后过了几秒 */
+            if (t <= T6_DELAY_SEC) { paintT6(0); return; }        /* 刚出现那一小段：原地不动 */
+
+            var u = t6Ease(t6Clamp01((t - T6_DELAY_SEC) / Math.max(1e-6, T6_MOVE_SEC)));
+            paintT6(Number(u.toFixed(4)));
+        }
+
+        window.addEventListener("resize", function () {
+            t6Last = null;      /* 下一帧按新的 H 重算一次（距离走 vw，会自动跟着窗口缩放） */
+        });
+
+        requestAnimationFrame(frameT6);
+    }
+
+    /* ======================================================================
+       text-9：点一下第一个 “cut” → 让这一句对应的视频从头再播一遍
+       ----------------------------------------------------------------------
+       需求：点了 text-9 里那个放大的 “cut” 之后，这一句配套的视频重新播放。
+
+       ★ 视频是谁：3.js 的图标 10（ICONS 那一条里 host: ".text-9"、src: "./editing.webm"），
+         它建出来的结构是
+             <div class="bug-icon-slot bug-icon-10 is-pinned">
+                 <video class="bug-icon" …>
+         所以下面用 ".bug-icon-10 video" 找它 —— 只认【text-9 这一句】的那一段视频，
+         别的图标 / 别的视频一概不动。想换成另一段：只改 CUT9_VIDEO 这一行。
+       ★ 为什么必须写 currentTime = 0：这段素材是“只播一次、播完定格在最后一帧”
+         （3.js 里 autoplay: false / loop: false）。它已经播完的时候直接 play() 什么都不会发生，
+         所以先把它拨回第 0 秒，才有“重新播放”的效果；正在播的时候点，就是从头重播。
+       ★ metadata 还没到下时写 currentTime 会抛异常 → 用 try/catch 包住，
+         真抛了就先 play()，等浏览器自己把进度接上（3.js 的 mediaLive 也会补一次 play）。
+       ★ 可点范围：.text-box 是 pointer-events: none（整句都点不到），
+         4.css 里只给 .cut9 开了 pointer-events: auto + cursor: pointer ——
+         所以只有这个词能点，句子其余部分、页面滚轮、文字选择都不受影响。
+       ★ 没视频（3.js 没加载 / 图标 10 被删了）就静默什么都不做，不会报错；
+         也不会重复绑（dataset 打标记），4.js 被重复执行也只会绑一次。
+       ====================================================================== */
+    var CUT9_VIDEO = ".bug-icon-10 video";   /* ← 点 “cut” 之后要重播的那段视频（3.js 的图标 10） */
+
+    var cut9El = document.querySelector(".text-9 .cut9");
+    if (cut9El && !cut9El.dataset.cut9Replay) {
+        cut9El.dataset.cut9Replay = "1";            /* ★ 只绑一次 */
+
+        cut9El.addEventListener("click", function (e) {
+            var v = document.querySelector(CUT9_VIDEO);
+            if (!v) return;
+
+            e.preventDefault();                     /* 别触发页面里别的默认行为 */
+
+            /* ① 拨回开头（已经播完、定格在最后一帧的时候必须这一步） */
+            try { v.currentTime = 0; } catch (err) { /* metadata 还没到，忽略 */ }
+
+            /* ② 再播。静音 + playsinline 在 3.js 建节点时就设好了，所以浏览器不会拦这次 play() */
+            var p = v.play();
+            if (p && typeof p.catch === "function") p.catch(function () {});
+        });
+    }
+
+    /* ======================================================================
+       text-9：gene.webm 从【屏幕顶边的右侧】飞进来 → 在半路空中转一圈 → 落在 “where” 正上方
+       ----------------------------------------------------------------------
+       需求：这一句自己的视频（3.js 的图标 10：editing.webm）播完【第一遍】之后，
+             另一段视频 gene.webm 从顶边的右侧飞入、同时淡入，
+             在【半路空中】像过山车那样绕一个完整的圈，然后落在 “where” 的正上方；
+             之后一直循环播放；鼠标悬停在它上面会淡出名字 “gene”（颜色 / 字体跟随正文）；
+             整段由滚轮驱动（往上滚原样倒放），到这一句淡出时跟着一起淡掉。
+
+       时间轴（和 1.js 同一套进度单位，秒 = 进度 / window.__home.rate）：
+          A ──淡入── H ──────── 停留 ──────── B ──淡出── E
+          └ 图标 10 的视频开始播                    └ 这句淡出（gene 跟着一起淡）
+
+       起点 = A + 视频时长 × rate
+          · 3.js 里图标 10 是 “text-9 一开始淡入就播”（start: { from: ".text-9", mark: "A" }），
+            所以“播完第一遍”落在进度 A + 时长 上；时长每帧从那个 <video> 上读
+            （读不到就退回 GENE9_VIDEO_SEC），所以换了素材也不用改这里。
+          · ★ 为什么用进度算、而不是听视频的 ended 事件：
+            这一段要能随滚轮【倒放】。ended 是真实时间的一次性事件，往回滚它不会复位，
+            整段就再也放不了了（和 BEGINNING / TNT 同样的取舍：时间归 1.js 的进度）。
+          · 代价：如果滚得比视频播得还快，飞入会“提前”开始 —— 这是滚轮驱动的必然结果；
+            想让它永远等真实播放结束，就只能放弃可倒放。
+
+       落地：视频是 “where” 那个 <span> 的绝对定位子元素（4.css 的 .text-9 .gene9-wrap），
+         所以“正上方”这件事由 CSS 保证（left: 50% + 负 margin 居中、bottom: 100% + gap），
+         这里一个像素都不量 —— 窗口缩放 / 字体晚加载都不会错位。
+
+       ★ 路线 = 三段（这才是“半路空中转”的关键）：
+            ① 0 → GENE9_LOOP_AT      ：从右上角俯冲到【半路的回环入口】；
+            ② 回环入口 → 再花 GENE9_LOOP_DUR ：在原地绕一个完整的圆（过山车大回环）；
+            ③ 剩下的行程              ：从回环出口落到 where 正上方，慢慢收住。
+         回环入口 = 进入点 → 落点 这条直线上的 GENE9_LOOP_AT 处，所以它天生在【半路】，
+         而不是贴着落点转（以前是贴着落点转的，这次按要求挪到半路空中）。
+         旋钮：
+           GENE9_FROM_VW / GENE9_FROM_VH  进入点（右 / 上，都是相对落点的距离）
+           GENE9_LOOP_AT                  回环在哪：0 = 刚进来就绕，1 = 贴着落点绕（默认 0.62 = 半路偏下）
+           GENE9_LOOP_DUR                 绕一圈占整段行程的比例（默认 0.18）
+           GENE9_LOOP_R_VH                回环半径（回环总高 = 2×它；用 vh 折成 px，保证是正圆）
+           GENE9_SPINS                    绕几圈（1 = 一个回环；2 = 连转两圈）
+         把 GENE9_LOOP_R_VH 调成 0 = 退回“纯斜线俯冲”，没有回环。
+
+       ★ hover 名字 “gene”：外壳 landing 之后 4.js 给它加 .is-landed，
+         CSS 里 .gene9-wrap.is-landed:hover .gene9-name 就把名字淡出来；
+         名字的颜色 / 字体 / 字距全部 inherit（= 完全跟随正文 .text-box），
+         只有字号是 4.css 里 --gene9-name-size 那一个旋钮。
+
+       ★ 这里只写 inline transform / opacity（不动布局、不增删节点）：
+           - 淡出不用管：视频在 .text-9 里面，1.js 给整句写 opacity 时会自动带上它，
+             所以“视频和 text9 一起淡出”是免费的。
+           - transform 也只能写在视频自己身上：1.js 每帧写 transform 的是 .text-box 父盒。
+       ★ 视频只在“已经飞进来”的那段时间里 play()，窗口外 / 还没开始就 pause()，
+         不白解码（和 3.js 的 mediaLive 是同一个理由）。
+       ====================================================================== */
+
+    var GENE9_SRC       = "./gene.webm";   /* ← 要飞进来的视频（相对 index.html 的路径） */
+    var GENE9_FLY_SEC   = 2.2;             /* ← 飞入 + 回环 + 落位总共用多少秒（越小越快） */
+    var GENE9_SPINS     = 1;               /* ← 回环绕几圈：1 = 一个完整的大回环，2 = 连绕两圈 */
+    var GENE9_LOOP_R_VH = 7;               /* ← 回环半径（vh；回环总高 = 2×这个数，0 = 不要回环） */
+    var GENE9_LOOP_AT   = 0.62;            /* ← 回环在半路的哪个位置：0 = 刚进来就绕，1 = 贴着落点绕 */
+    var GENE9_LOOP_DUR  = 0.18;            /* ← 绕一圈占整段行程的比例（0.18 = 近两成时间在绕圈） */
+    var GENE9_FROM_VW   = 42;              /* ← 进入点离落点【往右】多远（vw；0 = 正上方） */
+    var GENE9_FROM_VH   = 46;              /* ← 进入点离落点【往上】多高（vh） */
+    var GENE9_GROW      = 0.82;            /* ← 起步时多大（1 = 一路上都是原大小；0.82 = 由小飞到大） */
+    var GENE9_FADE_U    = 0.32;            /* ← 行程的前百分之多少里完成淡入（0→1） */
+    var GENE9_MIN_FLY   = 0.5;             /* ← 万一窗口太短，飞入也至少保留这么多秒 */
+    var GENE9_FIT       = 0.8;             /* ← 飞入最多占“从起点到开始淡出”这段时间的多少 */
+    var GENE9_VIDEO_SEC = 3.852;           /* ← 读不到 text-9 视频时长时的兜底（editing.webm ≈ 3.85 秒） */
+    var GENE9_NAME      = "gene";          /* ← hover 时显示的名字 */
+
+    var gene9Host = document.querySelector(".text-9");
+    var gene9Word = gene9Host && gene9Host.querySelector(".where9");
+    var gene9Wrap = null;      /* 外壳：飞行 / 淡入 / hover 都作用在它身上 */
+    var gene9 = null;          /* 里面那段视频 */
+    var gene9NameEl = null;    /* hover 才出现的名字 */
+
+    /* 结构（建一次，之后只改样式；已经建过就不再建）：
+         <span class="where9">
+             where
+             <span class="gene9-wrap">          ← 绝对定位 + 飞行动画
+                 <video class="gene9">          ← 视频本体
+                 <span class="gene9-name">gene  ← hover 名字（颜色 / 字体继承正文）
+             </span>
+         </span> */
+    if (gene9Word && !gene9Word.querySelector(".gene9-wrap")) {
+        gene9Wrap = document.createElement("span");
+        gene9Wrap.className = "gene9-wrap";
+
+        gene9 = document.createElement("video");
+        gene9.className = "gene9";
+        gene9.muted = true;
+        gene9.defaultMuted = true;
+        gene9.autoplay = false;              /* ★ 不自动播：什么时候播由下面的逐帧循环决定 */
+        gene9.loop = true;                   /* ★ 一直循环播放 */
+        gene9.playsInline = true;
+        gene9.setAttribute("muted", "");
+        gene9.setAttribute("playsinline", "");
+        gene9.setAttribute("webkit-playsinline", "");   /* 老 iOS 认这个前缀 */
+        gene9.setAttribute("preload", "auto");
+        gene9.setAttribute("disablepictureinpicture", "");
+        gene9.setAttribute("aria-hidden", "true");      /* 纯装饰，读屏器跳过 */
+        gene9.controls = false;              /* ★ 绝不能出现 controls 属性，否则会画出一条控制条 */
+        gene9.src = GENE9_SRC;
+
+        /* 素材没放对 / 浏览器不支持这种编码 → 记一笔，之后不再 play()，也不报一屏错。
+           （页面照旧运行，只是看不到这段飞进来的视频。） */
+        gene9.addEventListener("error", function () {
+            gene9.__broken = true;
+            gene9.style.opacity = "0";
+        });
+
+        gene9Wrap.appendChild(gene9);
+
+        gene9NameEl = document.createElement("span");
+        gene9NameEl.className = "gene9-name";
+        gene9NameEl.textContent = GENE9_NAME;
+        gene9NameEl.setAttribute("aria-hidden", "true");   /* 只是 hover 提示，读屏器跳过 */
+        gene9Wrap.appendChild(gene9NameEl);
+
+        gene9Word.appendChild(gene9Wrap);
+    }
+
+    if (gene9 && gene9Host) {
+        /* text-9 自己的那段视频（3.js 的图标 10）：只用它来量“播完一遍要多久” */
+        var gene9SourceVideo = document.querySelector(".bug-icon-10 video");
+
+        var gene9Last = null;       /* 上一帧的页面进度：页面没动就不重算 */
+        var gene9Painted = null;    /* 上一帧写进去的 u；null = 还没写过 */
+        var gene9Playing = false;   /* 现在是不是在播（用来只在必要的时候 play / pause） */
+
+        /* 这段视频的时长（秒）：优先问真实的 <video>，拿不到就用兜底常数 */
+        function gene9VideoSec() {
+            var d = gene9SourceVideo && gene9SourceVideo.duration;
+            return (isFinite(d) && d > 0) ? d : GENE9_VIDEO_SEC;
+        }
+
+        function gene9Play(on) {
+            if (gene9.__broken) return;               /* 素材加载失败就别再 play() 了 */
+            if (on === gene9Playing) return;
+            gene9Playing = on;
+            if (on) {
+                var p = gene9.play();
+                if (p && typeof p.catch === "function") p.catch(function () {});
+            } else {
+                try { gene9.pause(); } catch (err) { /* 还没加载好，忽略 */ }
+            }
+        }
+
+        /* u：0 = 还在起点（看不见），1 = 已经落位。
+           这里只做插值 —— 每一帧都从 cur 重新算，所以往上滚会原样倒着飞回去。 */
+        function gene9Paint(u) {
+            if (u === gene9Painted) return;
+            gene9Painted = u;
+
+            var iw = window.innerWidth;
+            var ih = window.innerHeight;
+
+            if (!(u > 0)) {
+                /* 还没开始 / 窗口外：收在起点（右上角、透明），并停下解码 */
+                gene9Wrap.style.opacity = "0";
+                gene9Wrap.style.transform =
+                    "translate(" + (GENE9_FROM_VW * iw / 100).toFixed(2) + "px, " +
+                    (-GENE9_FROM_VH * ih / 100).toFixed(2) + "px)" +
+                    " rotate(0deg) scale(" + GENE9_GROW + ")";
+                gene9Wrap.classList.remove("is-landed");   /* 飞回去就不该还能 hover */
+                gene9Play(false);
+                return;
+            }
+
+            gene9Play(true);                                   /* 飞进来了：开始（或继续）循环播 */
+
+            /* ================= 飞行轨迹：三段 = 俯冲 → 半路空中回环 → 落位 =================
+               ★ “半路空中转”就是这么来的：回环的入口 G 取在【进入点 → 落点】直线的
+                 GENE9_LOOP_AT 处，所以圈是在半路上画出来的，而不是贴着落点。
+               ★ 回环本身是“中心点沿着圆走一圈”（不是原地自转）：
+                     θ 从 0 走到 360°（GENE9_SPINS 圈就是 720°、1080°），
+                     位置 = 圆心 + 半径 × (方向)，于是画出一个真正的立体回环。
+               ★ 回环必须是【正圆】：vh / vw 是两个长度单位，1vh ≠ 1vw，
+                 一个用 vh 一个用 vw 画出来就是扁椭圆 —— 所以里面全部折成 px 再算。
+               ★ 回环角度用 smoothstep 推进（两头慢、中间快）：进环 / 出环都不“卡”。
+               ★ 落地那一段也用 smoothstep：从回环里甩出来之后慢慢收住，像真的“落”下来。 */
+            var at  = Math.min(0.85, Math.max(0.2, GENE9_LOOP_AT));   /* 回环入口 */
+            var dur = Math.min(0.7, Math.max(0.05, GENE9_LOOP_DUR));  /* 绕一圈用掉的比例 */
+            if (at + dur > 0.95) dur = Math.max(0.05, 0.95 - at);
+            var rest = 1 - (at + dur);                                /* 最后落位那一段 */
+
+            /* 三个点（都相对落点，px）：进入点 E、回环入口 G、落点 (0,0) */
+            var ex = GENE9_FROM_VW * iw / 100;
+            var ey = -GENE9_FROM_VH * ih / 100;
+            var gx = ex * (1 - at);
+            var gy = ey * (1 - at);
+
+            var x, y, rot, sc;
+
+            if (u < at) {
+                /* ① 俯冲：从右上角冲到半路的回环入口 */
+                var e1 = 1 - Math.pow(1 - u / at, 3);              /* easeOutCubic：先冲后收 */
+                x = ex + (gx - ex) * e1;
+                y = ey + (gy - ey) * e1;
+                rot = 0;
+                sc = GENE9_GROW + (1 - GENE9_GROW) * e1;
+            } else if (u < at + dur) {
+                /* ② 回环：在半路空中绕完整一个圆（圆心在入口正上方一个半径处） */
+                var t2 = (u - at) / dur;
+                var s = t2 * t2 * (3 - 2 * t2);                    /* smoothstep */
+                var th = 2 * Math.PI * GENE9_SPINS * s;            /* 回环角度（弧度） */
+                var r = GENE9_LOOP_R_VH * ih / 100;                /* 半径折成 px = 正圆 */
+                x = gx - r * Math.sin(th);
+                y = gy + r * (Math.cos(th) - 1);
+                rot = 360 * GENE9_SPINS * s;                       /* 边走边转，绕完正好回正 */
+                sc = 1;
+            } else {
+                /* ③ 落位：从回环出口落到 where 正上方（smoothstep 慢慢收住） */
+                var t3 = rest > 1e-6 ? Math.min(1, Math.max(0, (u - at - dur) / rest)) : 1;
+                var e3 = t3 * t3 * (3 - 2 * t3);
+                x = gx * (1 - e3);
+                y = gy * (1 - e3);
+                rot = 360 * GENE9_SPINS;
+                sc = 1;
+            }
+
+            var op = Math.min(1, u / GENE9_FADE_U);                /* 边飞边淡入 */
+
+            gene9Wrap.style.transform =
+                "translate(" + x.toFixed(2) + "px, " + y.toFixed(2) + "px)" +
+                " rotate(" + rot.toFixed(2) + "deg)" +
+                " scale(" + sc.toFixed(3) + ")";
+            gene9Wrap.style.opacity = op.toFixed(3);
+
+            /* ★ 只有真正落位之后才挂 .is-landed ——
+                 飞的过程中外壳不接鼠标（免得它在半空抢走鼠标 / 挡住下面的字），
+                 落定之后才允许 hover 出名字（样式见 4.css）。 */
+            gene9Wrap.classList.toggle("is-landed", u >= 0.999);
+        }
+
+        function frameGene9() {
+            requestAnimationFrame(frameGene9);
+
+            var home = window.__home;
+            if (!home) return;
+            if (home.cur === gene9Last) return;         /* 页面没动：不做事 */
+            gene9Last = home.cur;
+
+            var it = itemOf(gene9Host);                 /* resize 会重建 items，所以每帧找 */
+            var rate = home.rate;
+            if (!it || !(rate > 0)) { gene9Paint(0); return; }
+
+            var p = home.cur;
+            if (p <= it.A || p >= it.E) { gene9Paint(0); return; }   /* 窗口外：收起来 */
+
+            /* ① 起点：这一句的视频播完第一遍那一刻 */
+            var startP = it.A + gene9VideoSec() * rate;
+            if (startP >= it.B) { gene9Paint(0); return; }  /* 这句太短，等不到就干脆不飞 */
+
+            /* ② 飞多久：默认 GENE9_FLY_SEC 秒，但必须在“开始淡出”之前落地 */
+            var avail = (it.B - startP) / rate;
+            var flySec = Math.min(GENE9_FLY_SEC, Math.max(GENE9_MIN_FLY, avail * GENE9_FIT));
+
+            /* ③ 换算成 0→1 的行程（外面夹一下，窗口两端就是 0 / 1） */
+            var u = (p - startP) / (flySec * rate);
+            gene9Paint(u < 0 ? 0 : (u > 1 ? 1 : u));
+        }
+
+        window.addEventListener("resize", function () {
+            gene9Last = null;          /* 下一帧按新的 A / B / 时长重算一次 */
+        });
+
+        requestAnimationFrame(frameGene9);
     }
 
     /* ======================================================================
