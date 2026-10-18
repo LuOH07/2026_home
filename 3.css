@@ -1,5 +1,5 @@
 /* ==========================================================================
-   3.css —— 十六个图标的大小与位置（编号 1、3~11、14~19；2 / 12 / 13 号已删）
+   3.css —— 十七个图标的大小与位置（编号 1、3~11、14~20；2 / 12 / 13 号已删）
              1 b-subtilis / 3 p-putida / 4 e-coli-1（会飘动）
              5 crispr / 6 tnpb / 7 arrow / 8 ctac / 9 tnpb-1 / 10 title / 11 answer
              14 suicide（text-17 淡入时出现、text-18 淡出之后消失，在文字下方；
@@ -7,6 +7,7 @@
              15/16/17/18 understand（text-21 淡入时四只一起出现、跟 text-21 一起淡出，会飘动）
                                       （钉在屏幕上，不飘动）
              19 expand（text-15 淡入时出现、text-16 淡出时消失，一直循环播放，在文字下方）
+             20 standing（text-13 淡入时出现、text-14 淡出时消失，只播一次、停在最后一帧）
    ★ 12 build / 13 expand 已按需求整条删除（图标与视频效果都没了），文字不受影响。
    ★ 19 号是后来重新加的 expand 视频（expand.webm，循环播放），和旧的 13 号不是同一条。
    ========================================================================== */
@@ -454,7 +455,7 @@ video.bug-icon {
 .bug-icon-19 {
     --icon-height: 550px;               /* ← 视频高度（宽度自动 ≈ height × 1.59） */
     left: auto;                         /* ★ 必须：清掉 .bug-icon-slot 兜底的 left: 25% */
-    right: 4%;                          /* ← 贴屏幕右边（想留白改 3% / 5%） */
+    right: 6%;                          /* ← 贴屏幕右边（想留白改 3% / 5%） */
     top: 80%;                           /* ← 竖直位置（盒子中点） */
     bottom: auto;
     filter: opacity(1);
@@ -463,6 +464,36 @@ video.bug-icon {
 
 /* 它没有 hover 名字 → 亮着的时候也别接鼠标（盖掉 .is-live 的 pointer-events: auto） */
 .bug-icon-slot.bug-icon-19.is-live {
+    pointer-events: none;
+}
+
+/* ============================================================================
+   图标 20（standing.webm）—— text-13 淡入时出现、text-14 淡出时消失
+   ----------------------------------------------------------------------------
+   ★ 只播一次、播完定格在最后一帧（3.js 里 autoplay: false + loop: false）。
+   ★ 位置 = 【贴着屏幕右边】（和 19 号一个写法）：水平用 right，竖直用 top 定中点。
+        right        ：距屏幕【右边】的百分比 —— 想留白多一点就调大
+        top          ：盒子【中点】距屏幕上边的百分比
+        --icon-height：视频高度（宽度按比例自动；standing.webm 是 2842×2302 ≈ 1.23:1，
+                       即 width ≈ height × 1.23）
+     ★ 为什么必须写 left: auto：.bug-icon-slot 的兜底是 left: 25%，
+       不清掉它，盒子会被 left 拽到左半边，right 就不生效了。
+     ★ 为什么 transform 只剩 translateY(-50%)：横向已经由 right 定死，
+       再写 translateX(-50%) 会把盒子整体左移半个宽（画面看起来就偏左了）。
+   ★ 图层：在 .bug-icons（z-index: 3）里，text-13 / text-14 的内联 z-index 更高，
+     所以它【一定在文字下面】—— 不要给它单独写 z-index。
+   ============================================================================ */
+.bug-icon-20 {
+    --icon-height: 1200px;               /* ← 视频高度（宽度自动 ≈ height × 1.23 = 592px） */
+    left: auto;                         /* ★ 必须：清掉 .bug-icon-slot 兜底的 left: 25% */
+    right: -10%;                          /* ★ 贴屏幕右边（想留白多一点改 4% / 6%） */
+    top: 52%;                           /* ← 竖直位置（盒子中点） */
+    bottom: auto;
+    transform: translateY(-50%);        /* ★ 只做竖直居中，横向交给 right */
+}
+
+/* 它没有 hover 名字 → 亮着的时候也别接鼠标，免得挡住底下文字 */
+.bug-icon-slot.bug-icon-20.is-live {
     pointer-events: none;
 }
 
@@ -513,5 +544,9 @@ video.bug-icon {
     /* expand.webm 也跟着收小 */
     .bug-icon-19 {
         --icon-height: 90px;
+    }
+    /* standing.webm 也跟着收小 */
+    .bug-icon-20 {
+        --icon-height: 110px;
     }
 }
