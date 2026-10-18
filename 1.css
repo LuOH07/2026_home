@@ -19,6 +19,14 @@
     font-style: normal;
     font-display: swap;
 }
+/* 右侧宝剑进度条旁边那个 “TOP” 用的字体（与 description 页 .scroll-back-to-top 同一套） */
+@font-face {
+    font-family: 'The artist sans';
+    src: url('https://static.igem.wiki/teams/6059/wiki/font/made-theartist-sans-personal-use.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
 * {
     margin: 0;
     padding: 0;
@@ -548,5 +556,101 @@ body.frozen-scroll .text-6 {
 @media (prefers-reduced-motion: reduce) {
     .top-video-scroll-hint {
         animation: none;
+    }
+}
+
+/* ==========================================================================
+   11. 右侧宝剑进度条（宝剑 = 滑块 / 剑旁 TOP = 回到顶部）
+   ==========================================================================
+   结构（两件元素都由 1.js 第 11 节创建，页面 HTML 不用写）：
+       <div class="scroll-sword-wrap">              ← 容器：整组唯一固定悬浮的东西
+           <img class="scroll-sword">               ← 剑：容器里的正常内容
+           <div class="scroll-back-to-top">TOP</div> ← TOP：相对容器绝对定位
+       </div>
+   1.js 只给【容器】写 top（进度 → 整组的位置），剑和 TOP 之间的相对位置
+   全部由本节控制 —— 想挪 TOP 只改它自己的 --top-label-x / --top-label-y，
+   它是容器的子元素，所以永远跟着剑一起走。
+
+   互动（逻辑在 1.js 第 11 节）：拖剑 = 拖页面；点剑身 = 跳到对应进度；
+   点 TOP = 回到页面顶部。
+   ========================================================================== */
+
+/* ---------- 11.1 容器（滑块本体，只有它固定在视口里） ---------- */
+.scroll-sword-wrap {
+    --sword-top-min: 10vh;    /* 进度 0% 时宝剑的上沿 */
+    --sword-top-max: 80vh;    /* 进度 100% 时宝剑的上沿（两者之差 = 剑的滑动行程） */
+    --sword-height: 20vh;     /* 宝剑的长短 */
+    --sword-right: 0px;       /* 离右边界多远 */
+    --sword-shift: 40%;       /* 在 right 的基础上再往右推多少（> 0 就是露出半截） */
+
+    position: fixed;
+    top: var(--sword-top-min);   /* 初始值：1.js 一跑起来就由它接管 top */
+    right: var(--sword-right);
+    width: max-content;          /* 宽度 = 剑的宽度（TOP 是绝对定位，不参与撑宽） */
+    z-index: 90;                 /* 压在本页所有内容之上（文字内联 z-index 最多几十） */
+    transform: translateX(var(--sword-shift));
+    will-change: top;            /* 滚动时每帧都在改 top，单独提一层合成 */
+    pointer-events: none;        /* 容器本身不挡鼠标，只有剑和 TOP 各自打开 */
+}
+
+/* ---------- 11.2 宝剑 ---------- */
+.scroll-sword {
+    display: block;
+    height: var(--sword-height);
+    width: auto;
+    object-fit: contain;
+    pointer-events: auto;     /* 要能点 / 能拖 */
+    cursor: grab;             /* 按住剑 = 拖页面 */
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.scroll-sword:active,
+.scroll-sword.dragging {
+    cursor: grabbing;
+}
+
+/* ---------- 11.3 剑旁的 TOP（回到顶部） ----------
+   writing-mode: vertical-rl → 文字竖排，立着贴在剑旁边，和 description 页一致。
+   位置相对【容器】给（容器宽度 = 剑宽、容器高度 = 剑高），所以它跟着剑一起走。
+   想挪字号 / 位置只改下面这两个变量：
+       --top-label-x  文字右边缘相对容器左沿的位置（正数往右压到剑上，负数离开剑）
+       --top-label-y  文字中心在剑高上的位置（0% = 剑顶，50% = 正中，100% = 剑底） */
+.scroll-back-to-top {
+    --top-label-x: 50%;
+    --top-label-y: 60%;
+
+    position: absolute;
+    left: var(--top-label-x);
+    top: var(--top-label-y);
+    z-index: 2;                    /* 压在这把剑之上 */
+    transform: translate(-100%, -50%);
+    transition: filter 0.2s ease;
+
+    /* ★ 原来的绿色荧光（#1d9695 字 + rgba(136,216,177,.6) 泛光）已换掉：
+       字色改成正文色 #465E77，hover 那圈泛光仍是 #95c3f1。 */
+    color: #465E77;
+    font-family: 'The artist sans', -apple-system, sans-serif;
+    font-size: 40px;
+    line-height: 1.6;
+    writing-mode: vertical-rl;
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.scroll-back-to-top:hover {
+    filter: drop-shadow(0 0 6px rgba(149, 195, 241, 0.6));
+}
+
+/* ---------- 11.4 窄屏隐藏 ----------
+   手机 / 竖屏窄屏整组不显示（与 description 页第 8.3 节同一套做法）。
+   1.js 写的是内联 top，压不过 !important，所以窄屏照样不显示。 */
+@media (max-width: 820px) {
+    .scroll-sword-wrap,
+    .scroll-sword,
+    .scroll-back-to-top {
+        display: none !important;
     }
 }

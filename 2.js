@@ -4,6 +4,21 @@
    ========================================================================== */
 
 var VIDEO_GROUPS = {
+    /* ★ falls：铺在【底图之上、所有 ico / 文字之下】的那个循环播放的背景视频
+       （相对路径 ./falls.webm，和 index.html 放在同一个目录）。
+
+       · 位置 / 大小全在 2.css 的 .bg-video-wrap-falls-1 里调
+         （top = 相对底图高度、left = 相对底图宽度、width = 相对底图宽度）；
+       · 它写在 VIDEO_GROUPS 的【第一个】，也就是最先插进 <body> ——
+         DOM 顺序最靠前，所以 z-index 同层（0）时永远被后面那些 ico 视频盖住，
+         正好是“底图之上、ico 之下”；再往上的文字（1.js，z-index ≥ 1）/
+         图标（3.js 的 .bug-icons，z-index 3）也都在它上面；
+       · 循环（autoplay + loop + muted）由下面 mount() 统一设好，这里不用管；
+       · VIDEO_NAMES 里【故意没有】"falls" —— 所以它不接鼠标、不会 hover 出名字，
+         也不挡图标 / 文字的 hover 和滚轮（pointer-events 保持 none）。 */
+    "falls": [
+        "./falls.webm"
+    ],
     /* ★ 数组位置 = 序号，对应 2.css 里的 .bg-video-wrap-crispr-<序号>：
        第 1 格 → crispr-1（出场动画）、第 2 格 → crispr-2、第 3 格 → crispr-3（走路）、
        第 4 格 → crispr-4（终点动画）。

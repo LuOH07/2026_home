@@ -1473,3 +1473,312 @@ topVideoHint.addEventListener("click", scrollPastTopVideo);
 
 /* 所有监听都挂好后再自动开播，避免片头刚播完那一下没有 ended 收尾 */
 autoplayTopVideo();
+
+/* ============================ 11. 右侧宝剑进度条 ============================
+   仿照 description 页的那套装饰（description.css 第 7 节 + description.js
+   第 3 / 7 节）搬过来，并按需求【去掉了剑鞘】：
+
+     · 宝剑自己 = 滑块：页面往下滚，剑从 --sword-top-min 滑到 --sword-top-max，
+       滑到底正好是页面底部；往上滚就倒着滑。
+       （原页面是“剑 = 轨道、剑鞘 = 滑块”，现在只剩宝剑，就让它自己走。）
+     · 剑旁的文字：TOP（原来是 BACK TO TOP），点它回页面顶部。
+     · 颜色：原来的绿色荧光 #1d9695 字 / 绿色 drop-shadow 换成
+       字色 #465E77（正文色）+ hover 泛光 #95c3f1。
+     · 剑的素材：https://static.igem.wiki/teams/6059/wiki/home/sword.avif
+
+   互动（都挂在这一把剑上）：
+     · 按住剑上下拖 = 拖页面：鼠标走过的距离正好等于剑走过的距离（1px 换 1px）；
+     · 点剑身（没拖动过）= 跳到对应进度，算法与 description 页一致
+       （剑身上沿 20% 以下那段算有效行程，点得越靠下跳得越靠后）；
+     · 点 TOP = 平滑回到页面顶部。
+   为了区分“点”和“拖”，按下后先不动页面，鼠标移动超过 DRAG_THRESHOLD 才算拖。
+
+   元素由本段动态创建（index.html 不用改）：
+       <div class="scroll-sword-wrap" id="scrollSwordWrap">               容器（唯一 fixed）
+           <img class="scroll-sword" id="scrollSword">                    宝剑（滑块）
+           <div class="scroll-back-to-top" id="scrollBackToTop">TOP</div> 回到顶部
+       </div>
+   ★ 本段只给【容器】写 top；剑与 TOP 之间的相对位置全交给 1.css 第 11 节
+     （TOP 用 --top-label-x / --top-label-y 相对容器定位），本段不再给 TOP 算坐标。
+
+   ★ 本页的滚动位置是 tick() 每帧自己 scrollTo 出来的（见第 8 节），
+     直接改滚动位置会被下一帧覆盖，所以拖动 / 点击都走本页自己的通道
+     （和点视频右下角那个箭头一样）：
+         autoScroll = true;  target = 目标进度;  startLoop();
+     autoScroll 期间滚动事件只重绘、不回写进度，页面就会平滑地滚过去。
+
+   ★ 进度区间（和原页面一一对应）：
+     原页面拿主卡片 .main-container 的顶边当“轨道起点”；
+     这一页没有卡片，就用【顶部视频的下沿】（= 底图与全部内容的顶端）当起点：
+       页面滚到 startScroll = 内容顶端 - 剑的起点 时，剑正好滑到 --sword-top-min；
+       之后剑从 --sword-top-min 走到 --sword-top-max，走完 = 页面底部。
+     起点之前（还在看标题视频）剑跟着内容顶端一起往上滑进视口，
+     和原页面“卡片还没到 10vh 时剑跟着卡片顶边走”完全一样。
+
+   想调剑的大小 / 位置：只改 1.css 第 11 节里的 CSS 变量（本段会自动读），
+   不用动这里的任何一行。
+   ========================================================================== */
+(function () {
+    'use strict';
+
+    /* ---- 11.1 素材与文字：想换图 / 改字只动这两行 ---- */
+    const SWORD_SRC = 'https://static.igem.wiki/teams/6059/wiki/home/sword.avif';
+    const LABEL_TEXT = 'TOP';
+
+    /* 拖动判定阈值（px）：按下后鼠标移动超过它才算“拖”，否则松手就当“点”
+       （手抖一两像素不会被当成拖动，点按依然能跳进度） */
+    const DRAG_THRESHOLD = 4;
+
+    /* 窄屏不显示（断点与 1.css 第 11.3 节、description 页的 820px 一致） */
+    const narrowViewport = window.matchMedia('(max-width: 820px)');
+    const isNarrow = () => narrowViewport.matches;
+
+    /* ---- 11.2 造容器 + 两件元素（页面上已有同 id 的元素就复用它，不重复建）----
+       结构：容器 .scroll-sword-wrap 里放剑和 TOP。
+       ★ 容器是唯一“按滚动写 top”的东西；剑在容器里正常流动、TOP 相对容器绝对定位，
+         两者之间的位置全由 CSS（--top-label-x / --top-label-y）控制，
+         所以 TOP 天生跟着剑走，本段不用再给它算坐标。 */
+    let wrap = document.getElementById('scrollSwordWrap');
+    if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.id = 'scrollSwordWrap';
+        wrap.className = 'scroll-sword-wrap';
+        document.body.appendChild(wrap);
+    }
+
+    const sword = document.getElementById('scrollSword') || (function () {
+        const img = document.createElement('img');
+        img.id = 'scrollSword';
+        img.className = 'scroll-sword';
+        img.src = SWORD_SRC;
+        img.alt = 'Sword Scroll Thumb';
+        img.setAttribute('aria-hidden', 'true');
+        /* 浏览器默认的“拖图片”会和拖页面打架，直接关掉 */
+        img.addEventListener('dragstart', (e) => e.preventDefault());
+        return img;
+    })();
+
+    let label = document.getElementById('scrollBackToTop');
+    if (!label) {
+        label = document.createElement('div');
+        label.id = 'scrollBackToTop';
+        label.className = 'scroll-back-to-top';
+        label.textContent = LABEL_TEXT;
+        label.title = '回到顶部';
+    }
+
+    /* 剑和 TOP 都挂进容器（顺序即叠放顺序：剑在下、TOP 在上） */
+    if (sword.parentNode !== wrap) wrap.appendChild(sword);
+    if (label.parentNode !== wrap) wrap.appendChild(label);
+
+    /* ---- 11.3 从 1.css 的 CSS 变量里读几何参数 ----
+       认得的单位：px（可以省略）/ vh / vw / rem；其它写法（含 %）按 px 用。 */
+    function cssPx(el, prop, fallback) {
+        let raw = '';
+        try {
+            raw = getComputedStyle(el).getPropertyValue(prop).trim();
+        } catch (err) {
+            raw = '';
+        }
+        const m = /^(-?\d*\.?\d+)\s*(px|vh|vw|rem)?$/.exec(raw);
+        if (!m) return fallback;
+
+        const n = parseFloat(m[1]);
+        if (!isFinite(n)) return fallback;
+
+        if (m[2] === 'vh') return window.innerHeight * n / 100;
+        if (m[2] === 'vw') return document.documentElement.clientWidth * n / 100;
+        if (m[2] === 'rem') {
+            const rootFont = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+            return n * rootFont;
+        }
+        return n;
+    }
+
+    const geo = { swordTopMin: 0, swordTopMax: 0 };
+
+    function readGeometry() {
+        geo.swordTopMin = cssPx(wrap, '--sword-top-min', window.innerHeight * 0.10);
+        geo.swordTopMax = cssPx(wrap, '--sword-top-max', window.innerHeight * 0.40);
+
+        /* 终点必须在起点下面；写反了 / 写成相等的就退回 30vh 的行程 */
+        if (!(geo.swordTopMax > geo.swordTopMin)) {
+            geo.swordTopMax = geo.swordTopMin + window.innerHeight * 0.30;
+        }
+    }
+
+    /* “轨道起点”：顶部视频的下沿（底图 / 全部内容的顶端）。
+       以后换掉或删掉顶部视频也不用改这里 —— 找不到就从页面顶端算。 */
+    function contentTop() {
+        const video = document.querySelector('.top-video-wrap');
+        if (!video) return 0;
+        return video.offsetTop + video.offsetHeight;
+    }
+
+    function bounds() {
+        const targetTop = geo.swordTopMin;
+        const top = contentTop();
+        const maxScroll = pageMaxScroll();
+        /* 剑“到起点”的那一屏：内容顶端来到视口 --sword-top-min 处 */
+        const startScroll = Math.min(Math.max(top - targetTop, 0), maxScroll);
+
+        return {
+            targetTop,
+            contentTop: top,
+            maxScroll,
+            startScroll,
+            scrollRange: Math.max(maxScroll - startScroll, 1)
+        };
+    }
+
+    /* 让本页自己的滚动机制把页面送到 dest（和 scrollPastTopVideo 是同一套：
+       autoScroll 期间，滚动事件只重绘、不回写 cur / target）。 */
+    function scrollToPage(dest) {
+        autoScroll = true;
+        freezeArmed = false;      /* 这一路不是滚轮输入：别在中途误触发冻结区 */
+        target = clamp(introLen() + dest, 0, maxProgress());
+        startLoop();
+    }
+
+    /* ---- 11.4 按滚动位置摆好整组（只动容器） ----
+       进度 0~100% 对应 --sword-top-min ~ --sword-top-max。
+       ★ 剑和 TOP 都挂在容器里，所以这里只写容器的 top 一个值 ——
+         TOP 相对容器定位（见 1.css 第 11.3 节），自动跟着剑一起走。 */
+    function updatePosition() {
+        const { targetTop, contentTop: top, startScroll, scrollRange } = bounds();
+        const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+        if (scrollY < startScroll) {
+            /* 还没滚过标题视频：整组跟着内容顶端一起在屏幕上往上滑 */
+            wrap.style.top = `${top - scrollY}px`;
+        } else {
+            /* 到起点之后：按进度从 --sword-top-min 滑到 --sword-top-max */
+            const progress = clamp((scrollY - startScroll) / scrollRange, 0, 1);
+            wrap.style.top = `${geo.swordTopMin + progress * (geo.swordTopMax - geo.swordTopMin)}px`;
+        }
+    }
+
+    /* ---- 11.5 拖剑 = 拖页面；没拖动就松手 = 点剑跳进度 ----
+       鼠标沿剑的行程（--sword-top-max − --sword-top-min）移动多少，
+       剑就走多远、页面就滚多少 —— 也就是剑永远跟手。
+       按下后先不动页面，超过 DRAG_THRESHOLD 才当拖动，避免“想点一下跳进度”
+       被手抖的两像素吃掉。 */
+    let dragging = false;
+    let moved = false;
+    let dragStartY = 0;
+    let dragLatestY = 0;
+    let dragStartScroll = 0;
+    let dragBounds = null;
+    let dragRafId = null;
+    /* 按下那一刻记下的“点在剑上的位置”，松手判定为“点”时用它算跳转 */
+    let pressOffset = 0;
+    let pressHeight = 0;
+
+    sword.addEventListener('mousedown', (e) => {
+        if (e.button !== 0 || isNarrow()) return;
+
+        const rect = sword.getBoundingClientRect();
+
+        dragging = true;
+        moved = false;
+        dragStartY = dragLatestY = e.clientY;
+        dragStartScroll = window.scrollY || 0;
+        dragBounds = bounds();
+        pressOffset = e.clientY - rect.top;
+        pressHeight = rect.height;
+
+        document.documentElement.style.scrollBehavior = 'auto';
+        sword.classList.add('dragging');
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!dragging || !dragBounds) return;
+        dragLatestY = e.clientY;
+
+        /* 还没超过阈值：先什么都不做（这次按下可能只是“点一下”） */
+        if (!moved) {
+            if (Math.abs(dragLatestY - dragStartY) <= DRAG_THRESHOLD) return;
+            moved = true;
+        }
+
+        if (dragRafId !== null) return;
+        dragRafId = requestAnimationFrame(() => {
+            dragRafId = null;
+            if (!dragging || !dragBounds) return;
+
+            const travel = Math.max(1, geo.swordTopMax - geo.swordTopMin);
+            const scrollDelta = ((dragLatestY - dragStartY) / travel) * dragBounds.scrollRange;
+            scrollToPage(clamp(dragStartScroll + scrollDelta, 0, dragBounds.maxScroll));
+        });
+    });
+
+    /* withClick：松手时没拖动过，就按“点了一下剑身”跳进度；
+       鼠标移出窗口（mouseleave）时传 false，只取消拖动、不跳转。 */
+    function endPress(withClick) {
+        if (!dragging) return;
+
+        const wasDrag = moved;
+        const b = dragBounds;
+        const offset = pressOffset;
+        const height = pressHeight;
+
+        dragging = false;
+        moved = false;
+        dragBounds = null;
+        if (dragRafId !== null) {
+            cancelAnimationFrame(dragRafId);
+            dragRafId = null;
+        }
+
+        document.documentElement.style.scrollBehavior = '';
+        sword.classList.remove('dragging');
+        document.body.style.userSelect = '';
+
+        if (!withClick || wasDrag || !b || !(height > 0)) return;
+
+        /* 点剑身 = 跳到对应进度：算法与 description 页一致 ——
+           剑身上沿 20% 以下那段算有效行程（50% 高度），点得越靠下，跳得越靠后。 */
+        const minClickOffset = height * 0.2;
+        const effectiveRange = Math.max(1, height * 0.5);
+        const progress = clamp((offset - minClickOffset) / effectiveRange, 0, 1);
+        scrollToPage(clamp(b.startScroll + progress * b.scrollRange, 0, b.maxScroll));
+    }
+
+    window.addEventListener('mouseup', () => endPress(true));
+    window.addEventListener('mouseleave', () => endPress(false));
+
+    /* ---- 11.6 点 TOP = 回到页面顶部 ----
+       走本页的滚动机制（设 target = 0 让 tick 平滑推进），不直接 window.scrollTo。 */
+    label.addEventListener('click', () => {
+        autoScroll = true;
+        freezeArmed = false;
+        target = 0;
+        startLoop();
+    });
+
+    /* ---- 11.7 监听 & 初始化 ----
+       滚动 / 尺寸变化都要重摆一次；图片晚到时（拿不到宽度）也要补一次。 */
+    function refresh() {
+        readGeometry();
+        updatePosition();
+    }
+
+    window.addEventListener('scroll', updatePosition, { passive: true });
+    window.addEventListener('resize', refresh, { passive: true });
+    narrowViewport.addEventListener('change', refresh);
+    sword.addEventListener('load', updatePosition);
+
+    refresh();
+    /* 图片若走缓存、刚才没触发 load，下一帧再补一次（此时尺寸才是真的） */
+    requestAnimationFrame(updatePosition);
+
+    /* 只读调试接口：控制台 __swordTrack.bounds 看当前的进度区间，
+       __swordTrack.refresh() 手动重摆一次。 */
+    window.__swordTrack = {
+        get bounds() { return bounds(); },
+        get geometry() { return geo; },
+        refresh
+    };
+})();
