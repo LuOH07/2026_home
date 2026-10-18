@@ -22,8 +22,11 @@
          “Nuclease” 的 N / “Genome” 的 G
                      → <span class="init-11 init-s"> 这样的五个小盒子
                        （首字母单独放大成“白心 + #465e11 描边”，见 4.css）
+        text-13：
+         “BUILD”     → <span class="build13">   （单独放大，字号旋钮 --build13-size 见 4.css）
       其余文字（text-1 的 “ is only the”、text-3 的 “Genome editing gets … beyond”、
-      text-6 的 “But small does … mean flexible.”、text-11 里除这五个字母以外的所有字）
+      text-6 的 “But small does … mean flexible.”、text-11 里除这五个字母以外的所有字、
+      text-13 的 “Establish the Editing Tools”）
       原样保留，一个字符都不改。
     ② 驱动 “BEGINNING” 的出场（等 ico7 箭头的渐入走完 → 弹出并淡入 → 缩回原大小），
       并把“缩完”那一刻报给 3.js —— ico6 要等它演完才出现。
@@ -99,6 +102,16 @@
         { word: "Innovative", cls: "init-i" },     /* → I */
         { word: "Nuclease",   cls: "init-n" },     /* → N */
         { word: "Genome",     cls: "init-g" }      /* → G */
+    ];
+
+    /* text-13 那句（“BUILD<br>Establish the Editing Tools”）里的 “BUILD”：
+       单独包一层，只为了给它一个自己的字号旋钮（--build13-size，见 4.css）。
+       ★ 这句的 .text-box 是 flex column，包出来的 <span> 会变成一个独立的 flex item，
+         和原来那个匿名块一模一样，所以排版不变 —— 只是 “BUILD” 这个块能单独放大。
+       ★ 原文是大写，wrapWord 不区分大小写、并且原样保留大小写，所以不会变成 “Build”。 */
+    var HOST13 = ".text-13";
+    var TARGETS13 = [
+        { word: "build", cls: "build13" }          /* → 4.css 的 .text-13 .build13 */
     ];
 
     /* 把 host 里【第一次出现的整词 word】包成 <span class="cls">，
@@ -267,6 +280,10 @@
         /* text-11：五个词的第一个字母各自包一层（白心 + #465e11 描边，见 4.css） */
         var host11 = document.querySelector(HOST11);
         if (host11) INITIALS11.forEach(function (t) { wrapInitial(host11, t.word, t.cls); });
+
+        /* text-13：“BUILD” 单独包一层，字号旋钮在 4.css 的 .text-13 .build13 */
+        var host13 = document.querySelector(HOST13);
+        if (host13) TARGETS13.forEach(function (t) { wrapWord(host13, t.word, t.cls); });
     }
 
     apply();

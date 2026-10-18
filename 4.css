@@ -247,7 +247,7 @@
 /* 五个首字母共用的那套样式 */
 .text-11 .init-11 {
     --init11-size: 96px;             /* ← 首字母字号（这句其余的字仍是 44px） */
-    --init11-outline: 4px;           /* ← 描边粗细：描在字外面的那一圈（颜色见下一行） */
+    --init11-outline: 6px;           /* ← 描边粗细：描在字外面的那一圈（颜色见下一行） */
     --init11-outline-color: #465e77; /* ← 描边颜色（想换颜色只改这一个值） */
     --init11-gap: 8px;              /* ← ★首字母和【后面】字母之间空多宽（写 px 是固定宽度；写 em 会跟着 --init11-size 缩放） */
     --init11-gap-before: 16px;       /* ← ★首字母和【前面】那个词之间再加多宽（词间那个空格之外，另加的） */
@@ -312,4 +312,17 @@
    不然第一行会被推得比下面几行靠右，看起来像没居中。 */
 .text-11 > .init-word:first-of-type .init-11 {
     margin-left: 0;
+}
+
+/* ---------------------- text-13：“BUILD” 单独放大 ---------------------- */
+/* 只放大这一个词：下面那行 “Establish the Editing Tools” 仍是 44px，颜色 / 位置都不动。
+   ★ 这句的 .text-box 是 flex column，“BUILD”（4.js 包成 <span class="build13">）
+     仍然是一个独立的块（flex item），所以放大它只是把这一个块变高，不会把下面那行挤歪。
+   ★ --build13-size 是【唯一】的字号旋钮：只改这一个数就能整体缩放这个词。 */
+.text-13 .build13 {
+    --build13-size: 128px;         /* ← 只改这一个数就行（这句原本是 44px） */
+
+    display: block;               /* 它本来就是块（flex item），这里写清楚，方便理解 */
+    font-size: var(--build13-size);
+    line-height: 0.5;            /* 放大后默认行高会把这一行撑得太高，收一点 */
 }
