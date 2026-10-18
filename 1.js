@@ -36,14 +36,9 @@ const COMPONENT_TIMING = [];
    ★ 它们的时长仍然取 0.1 那套，不单独设；下面几个旋钮只管“冻结这段怎么演”
      （撞线判定的实现在 1.js 的 updateZoneArms / zoneToStart，不在这两个文件里配）。 */
 const FREEZE_GROUPS = [
-    [".text-4", ".text-5", ".text-6"],
-    [".text-8", ".text-9"],
-    [".text-13", ".text-14"],
-    [".text-15", ".text-16"],
-    [".text-17", ".text-18"],
-    [".text-27", ".text-28", ".text-29"],
-    [".text-32", ".text-33"]
+    [" "],
 ];
+/*已不需要（悲）*/
 
 /* 冻结期间：滚轮 delta → 文字进度的倍率。
    1 = 和页面滚动同速（整段 3 句要滑约 900px 才放完，比较慢）；调大 = 同样距离走得更快。

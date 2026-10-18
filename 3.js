@@ -12,7 +12,7 @@
             host: ".text-3",
             src: "./2.webm",                 /* ★ 视频素材：自动用 <video muted autoplay loop> 建节点 */
             name: "Bacillus subtilis",
-            label: "B.subtilis",
+            label: "B. subtilis",
             /* 出场时间不变：text-3 一淡入就跟着淡入，时长 = text-3 的淡入区间 */
             start: { from: ".text-3", mark: "A" }
         },
@@ -21,7 +21,7 @@
             host: ".text-5",
             src: "https://static.igem.wiki/teams/6059/wiki/home/p-putida.avif",
             name: "Pseudomonas putida",
-            label: "P.putida",
+            label: "P. putida",
             /* text-4【完全淡入】之后才开始淡入；时长仍然和图标 1 一样 */
             start: { from: ".text-4", mark: "H" }
         },
@@ -30,7 +30,7 @@
             host: ".text-4",
             src: "https://static.igem.wiki/teams/6059/wiki/home/e-coli-1.avif",
             name: "Escherichia coli (2)",
-            label: "E.coli",
+            label: "E. coli",
             /* text-3【完全淡出】之后才开始淡入（mark: E），时长仍然和图标 1 一样
                （以前它和图标 2 同时出场，现在 2 号已删，这一段只剩它） */
             start: { from: ".text-3", mark: "E" }

@@ -72,121 +72,123 @@ body {
     font-size: 44px;
 }
 .text-4 {
-    top: 15%;
-    left: 12%;
+    top: 11%;
+    left: 13%;
     max-width: 45%;
     font-size: 44px;
 }
 .text-5 {
-    top: 15%;
-    left: 12%;
+    top: 14%;
+    left: 13%;
     max-width: 45%;
     font-size: 44px;
 }
 .text-6 {
-    top: 15%;
-    left: 12%;
+    top: 19%;
+    left: 17%;
     max-width: 45%;
     font-size: 44px;
 }
 .text-7 {
-    top: 15%;
-    left: 15%;
-    max-width: 60%;
+    top: 23%;
+    left: 12%;
+    max-width: 50%;
     font-size: 44px;
 }
 .text-8 {
-    top: 25%;
-    left: 10%;
+    top: 26%;
+    left: 14%;
     max-width: 45%;
     font-size: 44px;
 }
 .text-9 {
-    top: 25%;
-    left: 10%;
+    top: 31%;
+    left: 14%;
     max-width: 45%;
     font-size: 44px;
 }
 .text-10 {
-    top: 27%;
-    left: 15%;
+    top: 36%;
+    left: 13%;
     max-width: 45%;
     font-size: 44px;
 }
 .text-11 {
-    top: 31%;
-    left: 30%;
+    top: 41%;
+    left: 12%;
     max-width: 45%;
     font-size: 44px;
 }
+
 .text-12 {
-    top: 35%;
-    left: 15%;
+    top: 54%;
+    right: 20%;
     max-width: 40%;
     font-size: 44px;
 }
 .text-13 {
-    top: 43%;
-    left: 15%;
-    max-width: 45%;
+    top: 57%;
+    right: 10%;
+    max-width: 40%;
     font-size: 44px;
 }
 .text-14 {
-    top: 43%;
-    left: 15%;
+    top: 61%;
+    right: 15%;
     max-width: 45%;
     font-size: 44px;
 }
 
 .text-15 {
-    top: 47%;
-    left: 15%;
-    max-width: 45%;
+    top: 64%;
+    right: 10%;
+    max-width: 40%;
     font-size: 44px;
 }
 
 .text-16 {
-    top: 47%;
-    left: 15%;
+    top: 68%;
+    right: 10%;
     max-width: 45%;
     font-size: 44px;
 }
 .text-17 {
-    top: 50%;
-    left: 15%;
-    max-width: 45%;
+    top: 71%;
+    right: 10%;
+    max-width: 40%;
     font-size: 44px;
 }
 .text-18 {
-    top: 50%;
-    left: 10%;
-    max-width: 55%;
+    top: 74%;
+    right: 10%;
+    max-width: 40%;
     font-size: 44px;
 }
 .text-19 {
-    top: 53%;
-    right: 25%;
+    top: 78%;
+    right: 20%;
     max-width: 40%;
     font-size: 44px;
 }
 .text-20 {
-    top: 56%;
-    right: 10%;
+    top: 81%;
+    right: 8%;
     max-width: 45%;
     font-size: 44px;
 }
 .text-21 {
-    top: 59%;
+    top: 84%;
     right: 10%;
-    max-width: 40%;
+    max-width: 60%;
     font-size: 44px;
 }
 .text-22 {
-    top: 62%;
+    top: 91%;
     right: 10%;
-    max-width: 45%;
+    max-width: 60%;
     font-size: 44px;
 }
+/*
 .text-23 {
     top: 65%;
     right: 10%;
@@ -252,7 +254,7 @@ body {
     right: 10%;
     max-width: 45%;
     font-size: 44px;
-}
+}*/
 /* ==========================================================================
    色块（rect）部分已整体注释掉：index.html 里的 .rect-box 元素、
    1.js 里的色块逻辑也一并注释了。需要恢复时把这一整块取消注释即可。
