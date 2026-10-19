@@ -3,29 +3,30 @@
    --------------------------------------------------------------------------
    桌面版的 1.js ~ 4.js 一个字节都不动。这个文件只干三件事，而且都只在手机断点里生效：
 
-     1. 页尾接续的底图（对应 5.css 第 6 节）
-        手机上的底图只有 1900px 上下，整页可滚动行程太短，
+     1. 页尾接续的一段【纯白】（对应 5.css 第 6 节）
+        手机上 1.js 写死的 body 高度只有 1900px 上下，整页可滚动行程太短，
         1.js 把 22 段文字依次演一遍的时间轴塞进去，只能把每段压到几十像素 ——
         表现就是"滚一点点进度就到底了，字还一段段没看完"。
-        这里按屏幕把"还要再接多长底图"算出来写进 --m5-blank（5.css 的 body::after
-        读它，并用 repeat-y 一张接一张铺满），把【文档可滚动行程】补到
-        TARGET_SCROLL 这么长；顺便把底图地址交给 CSS（--m5-map），
-        接续段和正片用的就是同一张图、同一套缩放。
+        这里按屏幕把"还要在下面再接多长"算出来写进 --m5-blank（5.css 的 body::after
+        读它，只留一段纯白、不铺任何图），把【文档可滚动行程】补到
+        TARGET_SCROLL 这么长。
+        ★ 移动端没有底图了（5.css 第 1 节把 body 的底图整块关掉，
+          2.css / 2.js 的背景层也一起下场），所以这里只算长度、不再传图。
 
      2. 把 22 段文字"摊开"到这段行程上（第 4 节，本文件最核心的一段）
-        光接底图还不够：1.js 的规则是"滚到这段文字 CSS top 那一屏它就出场"，
-        而 top 是底图高度的百分比 —— 手机上底图只有 1943px，
+        光接空白还不够：1.js 的规则是"滚到这段文字 CSS top 那一屏它就出场"，
+        而 top 是 body 高度的百分比 —— 手机上 body 只有 1943px，
         22 个百分比全挤在 0~1950px 里，于是三四句话同时压在同一条锚线上，
-        后面接的那几张底图反而滚不到（最远进度只到最后一句话的结尾）。
+        后面接的那段空白反而滚不到（最远进度只到最后一句话的结尾）。
         所以这里按整页行程给每段文字重算一个 top，让它们从头到尾排开：
-        一段文字一段行程，滚到底 = 最后一句演完 = 接续的底图正好铺完。
+        一段文字一段行程，滚到底 = 最后一句演完 = 接的空白正好走完。
 
      3. 宝剑进度条（对应 5.css 第 2 节）
         PC 上那把剑（= 滚动进度）在手机上也保留：位置由 1.js 按 scrollY 自己算，
         CSS 只负责把它调短、往右挪。本文件不碰它。
 
    ★ 断点必须和 5.css 顶部那条媒体查询一模一样（改要一起改）。
-   ★ 想调"整页多长 / 再接几张底图"：只改下面的 TARGET_SCROLL。
+   ★ 想调"整页多长 / 再留多长白"：只改下面的 TARGET_SCROLL。
    ========================================================================== */
 
 (function () {
@@ -37,19 +38,22 @@
        为什么按它算要接多长，而不是写死一个高度：
          · 22 段文字、每段 4.2 秒的窗口，要摊开得能看清，整页行程需要 6000px 上下
            （桌面 1440 宽时正好是 ~6400px，这一页在桌面上就是这么走的）；
-         · 手机上底图本身只有 ~1900px，只够 1/3 —— 差的这部分用"再接几张底图"补上。
-       所以"行程"在任何屏幕尺寸下都差不多，而底图该多高就多高。
+         · 手机上 1.js 写死的 body 本身只有 ~1900px，只够 1/3 —— 差的这部分
+           用"页尾再接一段纯白"补上（5.css 的 body::after）。
+       所以"行程"在任何屏幕尺寸下都差不多，而 body 该多高就多高。
        想更慢 / 更长：调大（8000 更从容）；想更短：调小（5000 更紧凑）。 */
     var TARGET_SCROLL = 6200;
 
-    /* 底图原始尺寸（和 1.js 的 updateBodyHeight / 2.css 的 --map-w 一致：
-       map-5.avif 是 803 × 4000）。用来算"底图在当前屏宽下有多高"。 */
+    /* body 尺寸比例（和 1.js 的 updateBodyHeight / 2.css 的 --map-w 一致：
+       map-5.avif 是 803 × 4000，1.js 照这个比例写死 body 高度）。
+       ★ 移动端已经不显示底图了，但 body 高度仍然是 1.js 按这个比例写的，
+         所以文字 / 图标的百分比参照系不变，这里只是拿它算 body 有多高。 */
     var MAP_W = 803;
     var MAP_H = 4000;
 
     /* 顶部标题视频 title.mp4 是 1280 × 720 → 高度 = 屏宽 × 9/16。
-       底图被这段视频的高度（2.css 的 --lead-in）往下推了这么多，
-       所以"整页真正的下沿" = 视频高 + 底图高。 */
+       正文被这段视频的高度（2.css 的 --lead-in）往下推了这么多，
+       所以"整页真正的下沿" = 视频高 + body 高。 */
     var VIDEO_RATIO = 9 / 16;
 
     /* 断点：必须和 5.css 顶部那条 @media 完全一致 */
@@ -66,13 +70,15 @@
         return mq.matches;
     }
 
-    /* 当前屏宽（用 clientWidth：和 1.js 量底图高度用的是同一个值；
+    /* 当前屏宽（用 clientWidth：和 1.js 量 body 高度用的是同一个值；
        本页隐藏了系统滚动条，所以它等于窗口宽度） */
     function viewWidth() {
         return root.clientWidth || window.innerWidth || 0;
     }
 
-    /* 底图在当前屏宽下的显示高度（= 1.js 写进 body 的那个高度） */
+    /* 1.js 按底图比例写进 body 的那个高度（= 页宽 × 4000 ÷ 803）。
+       ★ 底图在移动端已经不画了，但这个高度还在、也还要用：
+         它是所有按 % 定位的东西的参照系，也是算"还要接多长白"的基数。 */
     function mapHeight() {
         return viewWidth() * MAP_H / MAP_W;
     }
@@ -83,8 +89,8 @@
     }
 
     /* ---- 保险：5.css 没被引入时自己补一个 ----
-       移动端效果一半在 5.css（字号 / 居中 / 图标中线 / 接续底图的高度）、
-       一半在本文件（接续长度 / 文字摊开 / 底图地址），两个都要 index.html 引入。
+       移动端效果一半在 5.css（字号 / 居中 / 图标中线 / 页尾白段的高度）、
+       一半在本文件（白段长度 / 文字摊开），两个都要 index.html 引入。
        万一只引了 5.js（或者顺序写错、路径写错），这里补一个 <link> 指向同目录的
        5.css，免得出现"字放大了但没居中"这种半截状态。
        ★ 已经引过 5.css 就什么都不做，不会重复加载。 */
@@ -101,14 +107,16 @@
         document.head.appendChild(link);
     }
 
-    /* ======================= 2. 页尾接续的底图 ======================= */
+    /* ======================= 2. 页尾接续的一段纯白 =======================
+       ★ 移动端没有底图了（5.css 第 1 节把 1.js 写在 body 上的底图整块关掉，
+         2.css 的 structure 层和 2.js 的背景视频也一起 display: none），
+         所以这段只接"高度"、不接任何图：5.css 的 body::after 拿 --m5-blank
+         留一段和 body 同色的纯白。这里也不再往 CSS 传图片地址 / 铺图周期。 */
 
-    /* 接续长度 = 目标行程 + 视口高 − 底图高 − 视频高。
-       （文档可滚动行程 = 文档总高 − 视口高 = 视频高 + 底图高 + 接续长 − 视口高，
+    /* 接续长度 = 目标行程 + 视口高 − body 高 − 视频高。
+       （文档可滚动行程 = 文档总高 − 视口高 = 视频高 + body 高 + 接续长 − 视口高，
          让它等于 TARGET_SCROLL 就解出下面这个式子。）
-       ★ 5.css 的 body::after 把这段高度拿去 repeat-y 铺底图：一张、两张……
-         最后一张不足一张就只露出上半截，页面末尾正好是它被切断的地方。
-       ★ 算出来是负数（屏幕特别高、底图特别高）就不接：0 = 不需要再接。 */
+       ★ 算出来是负数（屏幕特别高）就不接：0 = 不需要再接。 */
     function blankLength() {
         var vh = window.innerHeight || root.clientHeight || 0;
         return Math.max(0, TARGET_SCROLL + vh - mapHeight() - leadInHeight());
@@ -131,70 +139,21 @@
         return true;
     }
 
-    /* ---- 把底图地址交给 CSS（--m5-map）----
-       1.js 顶上有一个 const BG_URL = "…/map-5.avif"，页面的底图就是它。
-       接续段必须用【同一张图】，所以这里直接读它，读不到再用同一个地址兜底
-       （这样以后 1.js 换底图，接续段自动跟着换，不用改两处）。
-       ★ 顶层的 const 不是 window 的属性，而且它没初始化时 typeof 也会抛错，
-         所以整段包在 try 里。 */
-    var MAP_URL_FALLBACK = "https://static.igem.wiki/teams/6059/wiki/home/map-5.avif";
-
-    function mapUrl() {
-        try {
-            if (typeof BG_URL === "string" && BG_URL) return BG_URL;
-        } catch (err) { /* 1.js 还没跑 / 被改名：用兜底地址 */ }
-        return MAP_URL_FALLBACK;
-    }
-
-    function applyMap() {
-        if (!isMobile()) {
-            var cleared = false;
-            if (root.style.getPropertyValue("--m5-map")) {
-                root.style.removeProperty("--m5-map");
-                cleared = true;
-            }
-            if (root.style.getPropertyValue("--m5-tile")) {
-                root.style.removeProperty("--m5-tile");
-                cleared = true;
-            }
-            return cleared;
-        }
-
-        var changed = false;
-
-        var val = 'url("' + mapUrl() + '")';
-        if (root.style.getPropertyValue("--m5-map") !== val) {
-            root.style.setProperty("--m5-map", val);
-            changed = true;
-        }
-
-        /* --m5-tile = 一张底图铺开后的高度（= body 高度 = 屏宽 × 4000 ÷ 803）。
-           5.css 用它给每张交接处画一条 2px 白线，盖掉底图自带的那条 1px 灰边；
-           周期必须和实际铺出来的高度完全一致，否则白线会一张一张跑偏。 */
-        var tile = Math.round(mapHeight()) + "px";
-        if (root.style.getPropertyValue("--m5-tile") !== tile) {
-            root.style.setProperty("--m5-tile", tile);
-            changed = true;
-        }
-
-        return changed;
-    }
-
     /* ======================= 4. 把 22 段文字"摊开"到整页行程上 =======================
        为什么必须做这一步（本文件最核心的一段）：
-         1.js 的规则是"每段文字在滚到它 CSS top 那一屏时出场"（top 是相对底图高度的 %）。
-         桌面上底图有 7173px 高，22 句话的 top 摊在 0~6400px 里，正好一段一段来；
-         手机上底图只有 1943px，这 22 个 % 全挤在 0~1950px 里，
+         1.js 的规则是"每段文字在滚到它 CSS top 那一屏时出场"（top 是相对 body 高度的 %）。
+         桌面上 body 有 7173px 高，22 句话的 top 摊在 0~6400px 里，正好一段一段来；
+         手机上 body 只有 1943px，这 22 个 % 全挤在 0~1950px 里，
          而每段文字的窗口（淡入 0.6s + 停留 3s + 淡出 0.6s）却要占 250px 上下 ——
          于是相邻三、四句同时出现在同一条锚线上（字压字），
-         而页面下面接的那几张底图根本滚不到（1.js 的最远进度只到最后一句话的结尾）。
+         而页面下面接的那段空白根本滚不到（1.js 的最远进度只到最后一句话的结尾）。
        做法：
          手机断点里，按【当前屏宽下的总行程】重新给每段文字算一个 top，
          让它们从头到尾均匀排开（第一段在顶部视频下面，最后一段正好在页面底部收尾），
          再请 1.js 重排一次。这样：
            · 每句话单独占一段行程，不会互相压在一起；
            · 可滚动行程被完整用满 —— 滚到底 = 最后一句演完，进度正好走完；
-           · 那 4000 多 px 的"接续底图"就变成了段与段之间的呼吸，而不是滚不到的死区。
+           · 那 4000 多 px 的"页尾白段"就变成了段与段之间的呼吸，而不是滚不到的死区。
        ★ 只改 .text-box 的 inline top（等于"它什么时候出场"），
          屏幕上文字的竖直位置仍然由 1.js 钉在锚线上，一个字都没挪。 */
 
@@ -204,7 +163,7 @@
     }
 
     /* 当前屏宽下，"整页最多能滚多少像素"（= 1.js 的 pageMaxScroll()）：
-       顶部视频 + 底图 + 页尾空白 − 视口高。
+       顶部视频 + body 高度 + 页尾白段 − 视口高。
        ★ 空白是按 TARGET_SCROLL 反推的，所以正常情况下它就等于 TARGET_SCROLL。 */
     function currentLimit() {
         var vh = window.innerHeight || root.clientHeight || 0;
@@ -293,11 +252,11 @@
     /* ======================= 5. 应用 / 监听 ======================= */
 
     /* 一次性应用（needRelayout：这一轮要不要请 1.js 重排）
-       ★ 顺序很重要：先把空白 / 剑 / 文字的 top 全部写好，最后再让 1.js 量一次，
-         它量到的就是新布局（1.js 的 layout 只读当前 DOM，不会反过来改 top）。 */
+       ★ 顺序很重要：先把白段长度 / 文字的 top 全部写好，最后再让 1.js 量一次，
+         它量到的就是新布局（1.js 的 layout 只读当前 DOM，不会反过来改 top）。
+       ★ 移动端没有底图，所以这里不再有"把图片地址交给 CSS"那一步。 */
     function apply(needRelayout) {
         applyBlank();
-        applyMap();
         applyTextTops();
         if (needRelayout) refineTextTops();
     }
@@ -313,10 +272,11 @@
 
     /* ---- 等 1.js 真正量过一次 ----
        1.js 是"底图 onload + 字体就绪"之后才 layout() 的，时机比 window.load 晚
-       （底图是它自己 new Image() 加载的，不会拖住 window.load）。
+       （底图是它自己 new Image() 加载的，不会拖住 window.load；
+          ★ 移动端虽然不画这张图了，1.js 仍旧会加载它来量尺寸，所以这一步照旧要等）。
        所以拿它量到的数据校正 top 这件事，得等它出现：
          有 items 了 → 校一次；还没有 → 200ms 后再看（最多 ~30 秒，之后交给 resize）。
-       ★ 底图是远端的 avif，网络慢的时候十几秒都有可能，所以这里给的时间比较宽；
+       ★ 那张图在远端的 CDN 上，网络慢的时候十几秒都有可能，所以这里给的时间比较宽；
          校一次就停（不重复跑），平时完全感觉不到。 */
     var waitTries = 0;
     function waitForHome() {
@@ -329,7 +289,7 @@
     }
 
     /* 初始化：脚本在 body 末尾执行，body / 宝剑容器（1.js 建的）都已经在了。
-       这一轮只写"第一版"（接续底图的长度 + 底图地址 + 文字 top 的目标值），
+       这一轮只写"第一版"（页尾白段的长度 + 文字 top 的目标值），
        1.js 第一遍 layout 就会按它排；真正的校正交给 waitForHome / load。 */
     ensureStylesheet();
     apply(false);
@@ -357,8 +317,8 @@
 
     /* ======================= 6. 调试接口（只读） ======================= */
 
-    /* 控制台里 __m5 可以看当前算出来的接续长度 / 行程，方便对着调 TARGET_SCROLL：
-         __m5.blank       现在接在多后面（= 再接多长底图，px）
+    /* 控制台里 __m5 可以看当前算出来的白段长度 / 行程，方便对着调 TARGET_SCROLL：
+         __m5.blank       现在页尾白段有多长（px）
          __m5.scroll      当前文档的可滚动行程（px）
          __m5.target      目标行程（px）
          __m5.layouts     5.js 请 1.js 重排过几次
@@ -367,7 +327,6 @@
         get blank() { return Math.round(parseFloat(root.style.getPropertyValue("--m5-blank")) || 0); },
         get scroll() { return Math.max(0, root.scrollHeight - window.innerHeight); },
         get target() { return TARGET_SCROLL; },
-        get map() { return root.style.getPropertyValue("--m5-map"); },
         get mobile() { return isMobile(); },
         get layouts() { return layoutCount; },
         reapply: function () { waitTries = 0; apply(true); }
