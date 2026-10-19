@@ -1524,8 +1524,8 @@ autoplayTopVideo();
    仿照 description 页的那套装饰（description.css 第 7 节 + description.js
    第 3 / 7 节）搬过来，并按需求【去掉了剑鞘】：
 
-     · 宝剑自己 = 滑块：页面往下滚，剑从 --sword-top-min 滑到 --sword-top-max，
-       滑到底正好是页面底部；往上滚就倒着滑。
+     · 宝剑自己 = 滑块：页面往下滚，剑从「0.5 个剑长」滑到「4 个剑长」
+       （= 行程 3.5 个剑长），滑到底正好是页面底部；往上滚就倒着滑。
        （原页面是“剑 = 轨道、剑鞘 = 滑块”，现在只剩宝剑，就让它自己走。）
      · 剑旁的文字：TOP（原来是 BACK TO TOP），点它回页面顶部。
      · 颜色：原来的绿色荧光 #1d9695 字 / 绿色 drop-shadow 换成
@@ -1556,13 +1556,15 @@ autoplayTopVideo();
    ★ 进度区间（和原页面一一对应）：
      原页面拿主卡片 .main-container 的顶边当“轨道起点”；
      这一页没有卡片，就用【顶部视频的下沿】（= 底图与全部内容的顶端）当起点：
-       页面滚到 startScroll = 内容顶端 - 剑的起点 时，剑正好滑到 --sword-top-min；
-       之后剑从 --sword-top-min 走到 --sword-top-max，走完 = 页面底部。
+       页面滚到 startScroll = 内容顶端 - 剑的起点 时，剑正好滑到起点（= 0.5 个剑长）；
+       之后剑从起点走到终点（= 4 个剑长），走完 = 页面底部。
      起点之前（还在看标题视频）剑跟着内容顶端一起往上滑进视口，
-     和原页面“卡片还没到 10vh 时剑跟着卡片顶边走”完全一样。
+     和原页面“卡片还没到起点时剑跟着卡片顶边走”完全一样。
 
-   想调剑的大小 / 位置：只改 1.css 第 11 节里的 CSS 变量（本段会自动读），
-   不用动这里的任何一行。
+   想调剑的大小 / 位置：只改 1.css 第 11 节的四个变量
+   （剑长 --sword-height / 起点倍数 --sword-start-ratio /
+     行程倍数 --sword-travel-ratio / 往右推多少 --sword-shift），
+   本段会自动读，不用动这里的任何一行。
    ========================================================================== */
 (function () {
     'use strict';
@@ -1618,14 +1620,19 @@ autoplayTopVideo();
     if (label.parentNode !== wrap) wrap.appendChild(label);
 
     /* ---- 11.3 从 1.css 的 CSS 变量里读几何参数 ----
-       认得的单位：px（可以省略）/ vh / vw / rem；其它写法（含 %）按 px 用。 */
+       ★ 约定（1.css 第 11 节）：整组的大小和位置 = 「剑长」的倍数，不再写 vh。
+           --sword-height        剑长本身（CSS 里可以写 vh / min() / clamp() / calc()）
+           --sword-start-ratio   进度 0%   时剑顶距视口顶 = 剑长 × 这个数
+           --sword-travel-ratio  进度 100% 时剑顶再往下走 = 剑长 × 这个数
+       所以这里【只量剑的实际渲染高度】，再乘这两个倍数：
+         · 不解析 --sword-height，以后它在 CSS 里改成 min(20vh, 260px) 也能用；
+         · JS 算的 top 和 CSS 用 calc() 算的初始 top 走同一个算式（剑长 × 倍数），
+           所以剑一被 JS 接手不会"跳一下"；
+         · 屏幕怎么变、是不是手机，只要剑长定了，整组的旅程就跟着等比缩放。
+       ★ 兼容老写法：两个倍数没写时，仍然去读旧的 --sword-top-min / --sword-top-max
+         （px / vh / vw / rem 都认）。 */
     function cssPx(el, prop, fallback) {
-        let raw = '';
-        try {
-            raw = getComputedStyle(el).getPropertyValue(prop).trim();
-        } catch (err) {
-            raw = '';
-        }
+        const raw = cssRaw(el, prop);
         const m = /^(-?\d*\.?\d+)\s*(px|vh|vw|rem)?$/.exec(raw);
         if (!m) return fallback;
 
@@ -1641,15 +1648,54 @@ autoplayTopVideo();
         return n;
     }
 
-    const geo = { swordTopMin: 0, swordTopMax: 0 };
+    /* 读自定义属性的原样字符串（算不出来 / 没写就是空字符串） */
+    function cssRaw(el, prop) {
+        try {
+            return getComputedStyle(el).getPropertyValue(prop).trim();
+        } catch (err) {
+            return '';
+        }
+    }
+
+    /* 纯数字变量（倍数）：只认 0.5 / 3.5 这种，没写或写错就返回 fallback */
+    function cssNum(el, prop, fallback) {
+        const m = /^(-?\d*\.?\d+)$/.exec(cssRaw(el, prop));
+        if (!m) return fallback;
+        const n = parseFloat(m[1]);
+        return isFinite(n) ? n : fallback;
+    }
+
+    /* 剑多长（px）：直接量渲染高度 —— 唯一的"真实尺寸"来源。
+       图片还没加载完 / 断点刚切过来量出来可能是 0，就用 CSS 声明的值兜底。 */
+    function swordHeightPx() {
+        const rect = sword.getBoundingClientRect();
+        if (rect.height > 0) return rect.height;
+        return cssPx(wrap, '--sword-height', window.innerHeight * 0.20);
+    }
+
+    /* geo.swordTopMin / swordTopMax 就是"进度 0% / 100% 时剑顶的 top（px）" */
+    const geo = { swordHeight: 0, swordTopMin: 0, swordTopMax: 0 };
 
     function readGeometry() {
-        geo.swordTopMin = cssPx(wrap, '--sword-top-min', window.innerHeight * 0.10);
-        geo.swordTopMax = cssPx(wrap, '--sword-top-max', window.innerHeight * 0.40);
+        const h = swordHeightPx();
+        geo.swordHeight = h;
 
-        /* 终点必须在起点下面；写反了 / 写成相等的就退回 30vh 的行程 */
+        const startRatio = cssNum(wrap, '--sword-start-ratio', NaN);
+        const travelRatio = cssNum(wrap, '--sword-travel-ratio', NaN);
+
+        if (isFinite(startRatio) && isFinite(travelRatio)) {
+            /* 新写法（1.css 第 11 节当前用的）：位置 = 剑长的倍数 */
+            geo.swordTopMin = h * startRatio;
+            geo.swordTopMax = geo.swordTopMin + h * travelRatio;
+        } else {
+            /* 老写法兼容：CSS 直接给了 --sword-top-min / --sword-top-max */
+            geo.swordTopMin = cssPx(wrap, '--sword-top-min', h * 0.5);
+            geo.swordTopMax = cssPx(wrap, '--sword-top-max', geo.swordTopMin + h * 3.5);
+        }
+
+        /* 终点必须在起点下面；写反了 / 写成相等的，就退回"3.5 个剑长"的行程 */
         if (!(geo.swordTopMax > geo.swordTopMin)) {
-            geo.swordTopMax = geo.swordTopMin + window.innerHeight * 0.30;
+            geo.swordTopMax = geo.swordTopMin + h * 3.5;
         }
     }
 
@@ -1665,7 +1711,7 @@ autoplayTopVideo();
         const targetTop = geo.swordTopMin;
         const top = contentTop();
         const maxScroll = pageMaxScroll();
-        /* 剑“到起点”的那一屏：内容顶端来到视口 --sword-top-min 处 */
+        /* 剑“到起点”的那一屏：内容顶端来到视口 top = 0.5 个剑长 处 */
         const startScroll = Math.min(Math.max(top - targetTop, 0), maxScroll);
 
         return {
@@ -1687,7 +1733,9 @@ autoplayTopVideo();
     }
 
     /* ---- 11.4 按滚动位置摆好整组（只动容器） ----
-       进度 0~100% 对应 --sword-top-min ~ --sword-top-max。
+       进度 0~100% 对应 geo.swordTopMin ~ geo.swordTopMax，
+       而这两个值 = 剑长 × 0.5 和 剑长 × 4（见 11.3 的 readGeometry），
+       所以整组的旅程永远是"3.5 个剑长"，和屏幕多高、是 PC 还是手机无关。
        ★ 剑和 TOP 都挂在容器里，所以这里只写容器的 top 一个值 ——
          TOP 相对容器定位（见 1.css 第 11.3 节），自动跟着剑一起走。 */
     function updatePosition() {
@@ -1698,14 +1746,14 @@ autoplayTopVideo();
             /* 还没滚过标题视频：整组跟着内容顶端一起在屏幕上往上滑 */
             wrap.style.top = `${top - scrollY}px`;
         } else {
-            /* 到起点之后：按进度从 --sword-top-min 滑到 --sword-top-max */
+            /* 到起点之后：按进度从起点（0.5 个剑长）滑到终点（4 个剑长） */
             const progress = clamp((scrollY - startScroll) / scrollRange, 0, 1);
             wrap.style.top = `${geo.swordTopMin + progress * (geo.swordTopMax - geo.swordTopMin)}px`;
         }
     }
 
     /* ---- 11.5 拖剑 = 拖页面；没拖动就松手 = 点剑跳进度 ----
-       鼠标沿剑的行程（--sword-top-max − --sword-top-min）移动多少，
+       鼠标沿剑的行程（= 3.5 个剑长）移动多少，
        剑就走多远、页面就滚多少 —— 也就是剑永远跟手。
        按下后先不动页面，超过 DRAG_THRESHOLD 才当拖动，避免“想点一下跳进度”
        被手抖的两像素吃掉。 */
@@ -1805,7 +1853,8 @@ autoplayTopVideo();
     });
 
     /* ---- 11.7 监听 & 初始化 ----
-       滚动 / 尺寸变化都要重摆一次；图片晚到时（拿不到宽度）也要补一次。 */
+       滚动只重摆位置（几何没变）；尺寸 / 断点 / 图片晚到要【重量几何再摆】
+       —— 剑长是量渲染高度得来的，剑一变短变长，起点和行程要按新剑长重算。 */
     function refresh() {
         readGeometry();
         updatePosition();
@@ -1814,17 +1863,19 @@ autoplayTopVideo();
     window.addEventListener('scroll', updatePosition, { passive: true });
     window.addEventListener('resize', refresh, { passive: true });
     narrowViewport.addEventListener('change', refresh);
-    sword.addEventListener('load', updatePosition);
+    sword.addEventListener('load', refresh);
 
     refresh();
     /* 图片若走缓存、刚才没触发 load，下一帧再补一次（此时尺寸才是真的） */
-    requestAnimationFrame(updatePosition);
+    requestAnimationFrame(refresh);
 
     /* 只读调试接口：控制台 __swordTrack.bounds 看当前的进度区间，
+       __swordTrack.geometry 看量到的剑长 / 起点 / 终点，
        __swordTrack.refresh() 手动重摆一次。 */
     window.__swordTrack = {
         get bounds() { return bounds(); },
         get geometry() { return geo; },
+        get swordHeight() { return geo.swordHeight; },
         refresh
     };
 })();

@@ -17,7 +17,8 @@
      1. 底图：宽度对齐（100% 宽）、高度 auto —— 底图本来就是这么画的（1.js 写
         background-size: 100% auto），这里只把它明确锁住，防止别的规则改掉；
      2. 进度条宝剑：和 PC 一样保留那把剑（= 滚动进度 / 点 TOP 回顶部），
-        只把它调短一点、往右挪一点，手机上不至于压住正文；
+        并且【尺寸和位置一个数都不改】：1.css 第 11 节现在把整组写成
+        "剑长的倍数"，手机上直接沿用那一套，所以和调试好的 PC 长得一模一样；
      3. 所有文字放大一些：字号是 calc(设计值 × var(--u))，--u 在 :root 是
         100vw ÷ 1440；这里【只把文字盒子里的 --u】改成 100vw ÷ 760
         （≈ 放大 1.9 倍，手机上正文约 20px），图标 / 名字等其它地方不受影响；
@@ -42,7 +43,9 @@
      · 文字更大 / 更小       → 改 :root 里的 --m5-text-w（改小 = 字更大，760 是默认）
      · 图标更大 / 更小       → 改 --m5-icon-w（同理，默认 950）
      · 接多长底图 / 行程多少 → 改 5.js 顶上的 TARGET_SCROLL（默认 6200px 行程）
-     · 剑的大小 / 露多少     → 改第 2 节里的 --sword-height / --sword-shift
+     · 剑的大小 / 行程 / 露多少 → 改 1.css 第 11.1 节的 --sword-height /
+                                  --sword-start-ratio / --sword-travel-ratio /
+                                  --sword-shift（改一处，PC 和手机一起变）
      · 断点                  → 改下面的媒体查询（5.js 里有一份一模一样的，改要一起改）
    ========================================================================== */
 
@@ -92,38 +95,36 @@
        2. 进度条宝剑（就是 PC 上那把剑 = 滚动进度）
        ----------------------------------------------------------------------
        1.css 第 11.4 节在 ≤820px 把整组藏掉了（display: none !important），
-       这里用同一条规则 + 后写的 !important 把它请回来：
-         · 手机上整页有 6200px 行程，没有进度指示会不知道滚到哪了；
-         · 剑的位置仍然完全由 1.js 按 window.scrollY 算（1.css 第 11 节），
-           剑从 --sword-top-min 滑到 --sword-top-max，滑到最下面 = 动效演完；
-         · 剑旁那竖排 "TOP" 点一下回页面顶部（1.js 里就这一件事）。
-       ★ 手机上的几何：比 PC 短一点、更靠右（--sword-shift 是"再往右推出多少"），
-         只露一条窄边，尽量不压住居中的正文。想让它露更多就把 shift 调小。 */
+       这里用同一条规则 + 后写的 !important 把它请回来。
+       ★ 本节只做一件事：【请回来】。大小 / 起点 / 行程 / 露多少一个数都不重写。
+         为什么可以一个数都不写：1.css 第 11 节现在整组都是"剑长的倍数"——
+           --sword-height      20vh          （剑长，唯一的尺寸参数）
+           --sword-start-ratio 0.5           （起点 = 0.5 × 剑长）
+           --sword-travel-ratio 3.5          （行程 = 3.5 × 剑长）
+           --sword-shift       40%           （往右推 40% 剑宽 → 百分比相对剑宽）
+           TOP 字号 = 剑长 ÷ 6
+         所以手机上拿到的就是调试好的 PC 那一套比例，屏幕上看起来一模一样；
+         以后想整体改，仍然只改 1.css 第 11.1 节那几个数（手机自动跟着变，
+         这里永远不用再写第二份 —— 这就是"相对剑的位置 / 相对剑的大小"的意义）。
+       ★ 剑的位置完全由 1.js 按 window.scrollY 算：剑顶从 0.5 个剑长滑到
+         4 个剑长（剑长 20vh 时，进度 100% 剑尖正好落在视口底边）；
+         剑旁那竖排 "TOP" 点一下回页面顶部（1.js 里就这一件事）。 */
     .scroll-sword-wrap {
         display: block !important;
         visibility: visible !important;
-
-        --sword-height: 15vh;    /* 剑的长度（PC 是 20vh） */
-        --sword-top-min: 12vh;   /* 进度 0% 时剑的上沿 */
-        --sword-top-max: 80vh;   /* 进度 100% 时剑的上沿 */
-        --sword-right: -1px;     /* 贴屏幕右边缘 */
-        --sword-shift: 46%;      /* 再往右推 46% 的剑宽 → 露出来的只有一窄条 */
     }
 
     .scroll-sword {
         display: block !important;
         visibility: visible !important;
-        pointer-events: auto !important;   /* 1.css 那段隐藏里写了 none，这里还回来 */
+        pointer-events: auto !important;   /* 容器是 none，剑自己要能点 / 能拖 */
     }
 
     .scroll-back-to-top {
         display: block !important;
         visibility: visible !important;
         pointer-events: auto !important;
-
-        /* PC 上是 calc(30 * var(--u)) = 8px（手机上太小、点不准），这里给个固定值 */
-        font-size: 13px;
-        line-height: 1.2;
+        /* 字号也不写死：1.css 给的是"剑长 ÷ 6"，跟着剑一起缩放（手机上一样清楚） */
     }
 
     /* ======================================================================

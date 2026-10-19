@@ -713,24 +713,51 @@ body.frozen-scroll .text-6 {
    全部由本节控制 —— 想挪 TOP 只改它自己的 --top-label-x / --top-label-y，
    它是容器的子元素，所以永远跟着剑一起走。
 
+   ★ 几何的写法（本节的核心约定，跟"屏幕多大"彻底解耦）：
+       整组的【大小 + 位置】只用「剑长」一个数当基准，其它全是它的倍数 ——
+         --sword-height        剑长本身（唯一的尺寸参数）
+         --sword-start-ratio   进度 0%   时，剑顶距视口顶 = 剑长 × 这个数
+         --sword-travel-ratio  进度 100% 时，剑顶再往下走 = 剑长 × 这个数
+       于是：起点 = 0.5 × 剑长，行程 = 3.5 × 剑长，
+             进度 100% 时剑顶 = 4 × 剑长、剑底 = 5 × 剑长；
+             剑长 = 20vh 时 5 × 20vh 正好 = 100vh → 剑尖收在视口底边。
+       为什么不再写 10vh / 80vh（以前就是这么写的）：
+         那些是【和剑无关】的单位，换一块屏幕、换一个断点（手机）就得重新调，
+         一重调就和调试好的 PC 不一样。改成"剑长的倍数"以后，只要剑长定了，
+         整组在任何屏幕、任何断点上必然长一个样 —— 手机（5.css 第 2 节）
+         直接沿用本节这一套数，不再另写一份，所以手机 = PC。
+       1.js 第 11 节按同一套约定摆剑：剑长它【不解析 CSS】（直接量渲染高度），
+       另外两个是纯数字（0.5 / 3.5）；所以这里写 min() / clamp() / calc() 都不影响它。
+
    互动（逻辑在 1.js 第 11 节）：拖剑 = 拖页面；点剑身 = 跳到对应进度；
    点 TOP = 回到页面顶部。
    ========================================================================== */
 
 /* ---------- 11.1 容器（滑块本体，只有它固定在视口里） ---------- */
 .scroll-sword-wrap {
-    --sword-top-min: 10vh;    /* 进度 0% 时宝剑的上沿 */
-    --sword-top-max: 80vh;    /* 进度 100% 时宝剑的上沿（两者之差 = 剑的滑动行程） */
-    --sword-height: 20vh;     /* 宝剑的长短 */
-    --sword-right: 0px;       /* 离右边界多远 */
-    --sword-shift: 40%;       /* 在 right 的基础上再往右推多少（> 0 就是露出半截） */
+    /* ★ 唯一需要调的尺寸：剑长。整组的长度 / 起点 / 行程 / TOP 字号
+       全部由它派生，改这一个数整组等比缩放（PC、各种屏幕、手机都一样）。
+       想在大屏上给个封顶就写成：--sword-height: min(20vh, 260px); */
+    --sword-height: 20vh;
+
+    /* ★ 位置 / 行程 = 剑长的倍数（纯数字，1.js 第 11 节会直接读这两个） */
+    --sword-start-ratio: 0.5;    /* 起点：剑顶距视口顶 = 0.5 × 剑长 */
+    --sword-travel-ratio: 3.5;   /* 行程：剑顶从起点再往下走 3.5 × 剑长 */
+
+    /* 派生值：给 CSS 自己用（初始 top / TOP 的位置），
+       算式和 1.js 里完全一样（剑长 × 倍数），所以 JS 接手时不会跳一下 */
+    --sword-top-min: calc(var(--sword-height) * var(--sword-start-ratio));
+    --sword-top-max: calc(var(--sword-top-min) + var(--sword-height) * var(--sword-travel-ratio));
+
+    --sword-right: 0px;       /* 离右边界多远（横向"露多少"由下面的 shift 决定） */
+    --sword-shift: 40%;       /* 再往右推【剑宽的 40%】（> 0 就是露出大半截） */
 
     position: fixed;
     top: var(--sword-top-min);   /* 初始值：1.js 一跑起来就由它接管 top */
     right: var(--sword-right);
     width: max-content;          /* 宽度 = 剑的宽度（TOP 是绝对定位，不参与撑宽） */
     z-index: 90;                 /* 压在本页所有内容之上（文字内联 z-index 最多几十） */
-    transform: translateX(var(--sword-shift));
+    transform: translateX(var(--sword-shift));  /* 百分比 = 剑宽的百分比（相对剑） */
     will-change: top;            /* 滚动时每帧都在改 top，单独提一层合成 */
     pointer-events: none;        /* 容器本身不挡鼠标，只有剑和 TOP 各自打开 */
 }
@@ -753,11 +780,12 @@ body.frozen-scroll .text-6 {
 }
 
 /* ---------- 11.3 剑旁的 TOP（回到顶部） ----------
-   writing-mode: vertical-rl → 文字竖排，立着贴在剑旁边，和 description 页一致。
-   位置相对【容器】给（容器宽度 = 剑宽、容器高度 = 剑高），所以它跟着剑一起走。
-   想挪字号 / 位置只改下面这两个变量：
-       --top-label-x  文字右边缘相对容器左沿的位置（正数往右压到剑上，负数离开剑）
-       --top-label-y  文字中心在剑高上的位置（0% = 剑顶，50% = 正中，100% = 剑底） */
+    writing-mode: vertical-rl → 文字竖排，立着贴在剑旁边，和 description 页一致。
+    位置相对【容器】给（容器宽度 = 剑宽、容器高度 = 剑高），所以它跟着剑一起走。
+    想挪字号 / 位置只改下面这几个变量：
+        --top-label-x  文字右边缘相对【剑宽】的位置（50% = 剑的正中，正数往右压到剑上）
+        --top-label-y  文字中心在【剑高】上的位置（0% = 剑顶，50% = 正中，100% = 剑底）
+        font-size      剑长 ÷ 6（跟着剑等比缩放，见下） */
 .scroll-back-to-top {
     --top-label-x: 50%;
     --top-label-y: 60%;
@@ -773,7 +801,10 @@ body.frozen-scroll .text-6 {
        字色改成正文色 #465E77，hover 那圈泛光仍是 #95c3f1。 */
     color: #465E77;
     font-family: 'The artist sans', -apple-system, sans-serif;
-    font-size: calc(30 * var(--u));
+    /* ★ 字号也是"相对剑"的：剑长 ÷ 6。
+       20vh 的剑 → 30px，正好等于桌面原来 calc(30 * var(--u)) 在 1440 宽时的值；
+       手机 / 任何屏幕上剑变短，字就跟着变短，永远和剑是同一个比例。 */
+    font-size: calc(var(--sword-height) / 6);
     line-height: 1.6;
     writing-mode: vertical-rl;
     white-space: nowrap;
@@ -788,7 +819,12 @@ body.frozen-scroll .text-6 {
 
 /* ---------- 11.4 窄屏隐藏 ----------
    手机 / 竖屏窄屏整组不显示（与 description 页第 8.3 节同一套做法）。
-   1.js 写的是内联 top，压不过 !important，所以窄屏照样不显示。 */
+   1.js 写的是内联 top，压不过 !important，所以窄屏照样不显示。
+
+   ★ 但本页要让手机上也有这个进度条：5.css 第 2 节会在同一个断点上
+     用 display: block !important 把它请回来，并且【只请回来、不改数】——
+     尺寸和位置仍然用上面这套"剑长的倍数"，所以手机和调试好的 PC 长得一模一样。
+     （把 5.css 去掉，这里就是"窄屏不显示"的老行为。） */
 @media (max-width: 820px) {
     .scroll-sword-wrap,
     .scroll-sword,
