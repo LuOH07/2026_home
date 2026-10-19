@@ -3,27 +3,29 @@
    --------------------------------------------------------------------------
    桌面版的 1.js ~ 4.js 一个字节都不动。这个文件只干三件事，而且都只在手机断点里生效：
 
-     1. 页尾空白（对应 5.css 第 6 节）
+     1. 页尾接续的底图（对应 5.css 第 6 节）
         手机上的底图只有 1900px 上下，整页可滚动行程太短，
         1.js 把 22 段文字依次演一遍的时间轴塞进去，只能把每段压到几十像素 ——
         表现就是"滚一点点进度就到底了，字还一段段没看完"。
-        这里按屏幕把空白长度算出来写进 --m5-blank（5.css 的 body::after 读它），
-        把【文档可滚动行程】补到 TARGET_SCROLL 这么长。
+        这里按屏幕把"还要再接多长底图"算出来写进 --m5-blank（5.css 的 body::after
+        读它，并用 repeat-y 一张接一张铺满），把【文档可滚动行程】补到
+        TARGET_SCROLL 这么长；顺便把底图地址交给 CSS（--m5-map），
+        接续段和正片用的就是同一张图、同一套缩放。
 
      2. 把 22 段文字"摊开"到这段行程上（第 4 节，本文件最核心的一段）
-        光加空白还不够：1.js 的规则是"滚到这段文字 CSS top 那一屏它就出场"，
+        光接底图还不够：1.js 的规则是"滚到这段文字 CSS top 那一屏它就出场"，
         而 top 是底图高度的百分比 —— 手机上底图只有 1943px，
         22 个百分比全挤在 0~1950px 里，于是三四句话同时压在同一条锚线上，
-        下面那 4000px 空白反而滚不到（最远进度只到最后一句话的结尾）。
+        后面接的那几张底图反而滚不到（最远进度只到最后一句话的结尾）。
         所以这里按整页行程给每段文字重算一个 top，让它们从头到尾排开：
-        一段文字一段行程，滚到底 = 最后一句演完 = 进度正好走完。
+        一段文字一段行程，滚到底 = 最后一句演完 = 接续的底图正好铺完。
 
      3. 宝剑进度条（对应 5.css 第 2 节）
-        手机上整组隐藏（连 TOP 一起）。5.css 里已经用 !important 藏了，
-        这里再把内联 display 一起设上：双保险，并且回到桌面宽度时能干净地恢复。
+        PC 上那把剑（= 滚动进度）在手机上也保留：位置由 1.js 按 scrollY 自己算，
+        CSS 只负责把它调短、往右挪。本文件不碰它。
 
    ★ 断点必须和 5.css 顶部那条媒体查询一模一样（改要一起改）。
-   ★ 想调"整页多长"：只改下面的 TARGET_SCROLL（空白和文字间距会一起跟着变）。
+   ★ 想调"整页多长 / 再接几张底图"：只改下面的 TARGET_SCROLL。
    ========================================================================== */
 
 (function () {
@@ -32,10 +34,10 @@
     /* ======================= 0. 可调参数 ======================= */
 
     /* 目标"文档可滚动行程"（px）= 滚轮从页面顶部滚到最底部要走的距离。
-       为什么要按它算空白，而不是写死一个空白高度：
+       为什么按它算要接多长，而不是写死一个高度：
          · 22 段文字、每段 4.2 秒的窗口，要摊开得能看清，整页行程需要 6000px 上下
            （桌面 1440 宽时正好是 ~6400px，这一页在桌面上就是这么走的）；
-         · 手机上底图本身只有 ~1900px，只够 1/3 —— 差的这部分全部用空白补上。
+         · 手机上底图本身只有 ~1900px，只够 1/3 —— 差的这部分用"再接几张底图"补上。
        所以"行程"在任何屏幕尺寸下都差不多，而底图该多高就多高。
        想更慢 / 更长：调大（8000 更从容）；想更短：调小（5000 更紧凑）。 */
     var TARGET_SCROLL = 6200;
@@ -81,8 +83,8 @@
     }
 
     /* ---- 保险：5.css 没被引入时自己补一个 ----
-       移动端效果一半在 5.css（字号 / 居中 / 图标中线 / 页尾空白的高度）、
-       一半在本文件（空白长度 / 文字摊开 / 藏剑），两个都要 index.html 引入。
+       移动端效果一半在 5.css（字号 / 居中 / 图标中线 / 接续底图的高度）、
+       一半在本文件（接续长度 / 文字摊开 / 底图地址），两个都要 index.html 引入。
        万一只引了 5.js（或者顺序写错、路径写错），这里补一个 <link> 指向同目录的
        5.css，免得出现"字放大了但没居中"这种半截状态。
        ★ 已经引过 5.css 就什么都不做，不会重复加载。 */
@@ -99,18 +101,20 @@
         document.head.appendChild(link);
     }
 
-    /* ======================= 2. 页尾空白 ======================= */
+    /* ======================= 2. 页尾接续的底图 ======================= */
 
-    /* 空白长度 = 目标行程 + 视口高 − 底图高 − 视频高。
-       （文档可滚动行程 = 文档总高 − 视口高 = 视频高 + 底图高 + 空白 − 视口高，
+    /* 接续长度 = 目标行程 + 视口高 − 底图高 − 视频高。
+       （文档可滚动行程 = 文档总高 − 视口高 = 视频高 + 底图高 + 接续长 − 视口高，
          让它等于 TARGET_SCROLL 就解出下面这个式子。）
-       ★ 算出来是负数（屏幕特别高、底图特别高）就不加：0 表示"不需要补"。 */
+       ★ 5.css 的 body::after 把这段高度拿去 repeat-y 铺底图：一张、两张……
+         最后一张不足一张就只露出上半截，页面末尾正好是它被切断的地方。
+       ★ 算出来是负数（屏幕特别高、底图特别高）就不接：0 = 不需要再接。 */
     function blankLength() {
         var vh = window.innerHeight || root.clientHeight || 0;
         return Math.max(0, TARGET_SCROLL + vh - mapHeight() - leadInHeight());
     }
 
-    /* 写进 --m5-blank（5.css 的 body::after 用它当高度）。
+    /* 写进 --m5-blank（5.css 的 body::after 用它当"再接多长"）。
        桌面宽度下把这个变量删掉，让 5.css 的媒体查询整段失效。 */
     function applyBlank() {
         if (!isMobile()) {
@@ -127,41 +131,52 @@
         return true;
     }
 
-    /* ======================= 3. 宝剑进度条 ======================= */
+    /* ---- 把底图地址交给 CSS（--m5-map）----
+       1.js 顶上有一个 const BG_URL = "…/map-5.avif"，页面的底图就是它。
+       接续段必须用【同一张图】，所以这里直接读它，读不到再用同一个地址兜底
+       （这样以后 1.js 换底图，接续段自动跟着换，不用改两处）。
+       ★ 顶层的 const 不是 window 的属性，而且它没初始化时 typeof 也会抛错，
+         所以整段包在 try 里。 */
+    var MAP_URL_FALLBACK = "https://static.igem.wiki/teams/6059/wiki/home/map-5.avif";
 
-    /* 手机上一律不显示；回到桌面宽度时把内联样式摘掉，交还给 1.css。
-       （1.js 只给这个容器写内联 top，所以 display 由我们说了算。） */
-    var swordWrap = null;
-
-    function findSword() {
-        if (!swordWrap || !swordWrap.isConnected) {
-            swordWrap = document.querySelector(".scroll-sword-wrap");
-        }
-        return swordWrap;
+    function mapUrl() {
+        try {
+            if (typeof BG_URL === "string" && BG_URL) return BG_URL;
+        } catch (err) { /* 1.js 还没跑 / 被改名：用兜底地址 */ }
+        return MAP_URL_FALLBACK;
     }
 
-    function applySword() {
-        var wrap = findSword();
-        if (!wrap) return false;
+    function applyMap() {
+        if (!isMobile()) {
+            var cleared = false;
+            if (root.style.getPropertyValue("--m5-map")) {
+                root.style.removeProperty("--m5-map");
+                cleared = true;
+            }
+            if (root.style.getPropertyValue("--m5-tile")) {
+                root.style.removeProperty("--m5-tile");
+                cleared = true;
+            }
+            return cleared;
+        }
 
-        var hide = isMobile();
-        var wantDisplay = hide ? "none" : "";
         var changed = false;
 
-        if (wrap.style.display !== wantDisplay) {
-            wrap.style.display = wantDisplay;
+        var val = 'url("' + mapUrl() + '")';
+        if (root.style.getPropertyValue("--m5-map") !== val) {
+            root.style.setProperty("--m5-map", val);
             changed = true;
         }
-        /* 手机上顺手把整组标成 aria-hidden（读屏不再念它）；回到桌面就把属性摘掉 */
-        if (hide) {
-            if (wrap.getAttribute("aria-hidden") !== "true") {
-                wrap.setAttribute("aria-hidden", "true");
-                changed = true;
-            }
-        } else if (wrap.hasAttribute("aria-hidden")) {
-            wrap.removeAttribute("aria-hidden");
+
+        /* --m5-tile = 一张底图铺开后的高度（= body 高度 = 屏宽 × 4000 ÷ 803）。
+           5.css 用它给每张交接处画一条 2px 白线，盖掉底图自带的那条 1px 灰边；
+           周期必须和实际铺出来的高度完全一致，否则白线会一张一张跑偏。 */
+        var tile = Math.round(mapHeight()) + "px";
+        if (root.style.getPropertyValue("--m5-tile") !== tile) {
+            root.style.setProperty("--m5-tile", tile);
             changed = true;
         }
+
         return changed;
     }
 
@@ -172,14 +187,14 @@
          手机上底图只有 1943px，这 22 个 % 全挤在 0~1950px 里，
          而每段文字的窗口（淡入 0.6s + 停留 3s + 淡出 0.6s）却要占 250px 上下 ——
          于是相邻三、四句同时出现在同一条锚线上（字压字），
-         而页面下面那 4000px 空白根本滚不到（1.js 的最远进度只到最后一句话的结尾）。
+         而页面下面接的那几张底图根本滚不到（1.js 的最远进度只到最后一句话的结尾）。
        做法：
          手机断点里，按【当前屏宽下的总行程】重新给每段文字算一个 top，
          让它们从头到尾均匀排开（第一段在顶部视频下面，最后一段正好在页面底部收尾），
          再请 1.js 重排一次。这样：
            · 每句话单独占一段行程，不会互相压在一起；
            · 可滚动行程被完整用满 —— 滚到底 = 最后一句演完，进度正好走完；
-           · 那 4000 多 px 的"空白"就变成了段与段之间的呼吸，而不是滚不到的死区。
+           · 那 4000 多 px 的"接续底图"就变成了段与段之间的呼吸，而不是滚不到的死区。
        ★ 只改 .text-box 的 inline top（等于"它什么时候出场"），
          屏幕上文字的竖直位置仍然由 1.js 钉在锚线上，一个字都没挪。 */
 
@@ -282,7 +297,7 @@
          它量到的就是新布局（1.js 的 layout 只读当前 DOM，不会反过来改 top）。 */
     function apply(needRelayout) {
         applyBlank();
-        applySword();
+        applyMap();
         applyTextTops();
         if (needRelayout) refineTextTops();
     }
@@ -314,12 +329,12 @@
     }
 
     /* 初始化：脚本在 body 末尾执行，body / 宝剑容器（1.js 建的）都已经在了。
-       这一轮只写"第一版"（空白 + 藏剑 + 文字 top 的目标值），
+       这一轮只写"第一版"（接续底图的长度 + 底图地址 + 文字 top 的目标值），
        1.js 第一遍 layout 就会按它排；真正的校正交给 waitForHome / load。 */
     ensureStylesheet();
     apply(false);
 
-    /* 窗口尺寸变了（含手机横竖屏切换）：重算空白 + 重排 */
+    /* 窗口尺寸变了（含手机横竖屏切换）：重算接续长度 + 重排 */
     window.addEventListener("resize", scheduleApply, { passive: true });
 
     /* 断点跨越（桌面 ↔ 手机）：只靠 resize 有时候赶不上（比如某些 devicePixelRatio
@@ -342,8 +357,8 @@
 
     /* ======================= 6. 调试接口（只读） ======================= */
 
-    /* 控制台里 __m5 可以看当前算出来的空白 / 行程，方便对着调 TARGET_SCROLL：
-         __m5.blank       现在的空白高度（px）
+    /* 控制台里 __m5 可以看当前算出来的接续长度 / 行程，方便对着调 TARGET_SCROLL：
+         __m5.blank       现在接在多后面（= 再接多长底图，px）
          __m5.scroll      当前文档的可滚动行程（px）
          __m5.target      目标行程（px）
          __m5.layouts     5.js 请 1.js 重排过几次
@@ -352,6 +367,7 @@
         get blank() { return Math.round(parseFloat(root.style.getPropertyValue("--m5-blank")) || 0); },
         get scroll() { return Math.max(0, root.scrollHeight - window.innerHeight); },
         get target() { return TARGET_SCROLL; },
+        get map() { return root.style.getPropertyValue("--m5-map"); },
         get mobile() { return isMobile(); },
         get layouts() { return layoutCount; },
         reapply: function () { waitTries = 0; apply(true); }
