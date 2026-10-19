@@ -1,0 +1,762 @@
+/* ---------------------- text-1：只有 “Compact” 是卡片 ---------------------- */
+/* ★ 为什么要把 text-1 改成块级：
+   1.css 的 .text-box 是 display:flex + flex-direction:column，
+   它的【直接子元素】会被 blockify 成独立的 flex item —— 那样 <span class="compact">
+   就不再是行内元素，“Compact”会自己占一整行，句子被拆成三行。
+   改成 block 之后 text-1 里恢复正常的行内文字流：
+   <br> 照样断行、字号/行距都不变，
+   而 “Compact” 这个词可以是一个真正的行内卡片。只影响 text-1，别的文字不动。 */
+.text-1 {
+    display: block;
+    text-align: left;             /* ★ 整句左对齐（.text-box 原本是 text-align: center） */
+}
+
+.text-1 .compact {
+    /* ── 可调旋钮：只影响这一个词，动它们不会牵动整句 ── */
+    --compact-bg: #467aae;        /* 矩形颜色 */
+    --compact-radius: 20px;       /* 圆角（要求就是 20px） */
+    --compact-pad-x: 0.24em;      /* 矩形左右比字宽出多少（em = 跟着 60px 字号缩放） */
+    --compact-pad-y: 0.08em;      /* 矩形上下比字高出多少 */
+
+    display: inline-block;        /* 让背景 / 圆角能包住这一个词，且不打断这一行 */
+    padding: var(--compact-pad-y) var(--compact-pad-x);
+    background: var(--compact-bg);
+    border-radius: var(--compact-radius);
+    color: #ffffff;               /* ★ 只有这个字改纯白 */
+
+    /* 卡片上下各多出的那点高度，用负 margin 抵掉一部分，
+       免得第一行和 “Beginning” 之间的行距被明显撑大 */
+    margin: -0.04em 0;
+    line-height: 1.15;
+}
+
+/* 句子里其余部分：故意不给任何规则 —— 沿用 1.css 的 .text-box（颜色 #324561、
+   字体 impact、字号 60px），没有背景、没有圆角。 */
+
+/* ---------------------- text-1：“Beginning” 单独放大 ---------------------- */
+/* 只改这一个词的字号（60px → 128px），颜色 / 字体 / 位置关系都不动。
+   ★ 用 em 无关的绝对 px，和 1.css 的 60px 是同一套单位，方便对着调。
+   ★ line-height 收一点：128px 的木字默认行高会把这一行撑得很高，
+     而且会把上面那行 “Compact is only the” 和它之间的间距拉得过大。 */
+.text-1 .beginning {
+    --beginning-size: 152px;   /* ← 只改这一个数就能整体缩放这个词 */
+
+    font-size: var(--beginning-size);
+    line-height: 1.05;
+
+    /* 出场动效（由 4.js 每帧写 inline transform / opacity，滚轮驱动）：
+       · 等 ico7（箭头）的渐入彻底走完，这个词才弹出来（4.js 从 3.js 的时刻表读起点）；
+       · 弹出后先淡入、再缩回这里的字号，缩完那一刻 ico6 才出场；
+       · inline-block 才能吃 transform；
+       · 原点固定在左上角 → 出现时往右下“长”，缩回 scale(1) 正好归位。 */
+    display: inline-block;
+    transform-origin: left top;
+    will-change: transform, opacity;
+}
+
+/* ---------------------- text-3：“harder” 与 “Familiar Host” 单独放大 ---------------------- */
+/* ★ 为什么先把 text-3 改成块级：
+   1.css 的 .text-box 是 display:flex + flex-direction:column，
+   它的【直接子元素】会被块级化成独立的 flex item —— 那样
+   <span class="familiar"> 和 <span class="host"> 会各自占一整行，
+   “Genome editing gets harder beyond Familiar Host” 会被拆成三行。
+   改成 block 之后 text-3 里恢复正常的行内文字流：
+   居中对齐（.text-box 的 text-align: center）、字号、位置都不变，
+   而这两个词可以各自是一个真正的行内盒子。只影响 text-3，别的文字不动。 */
+.text-3 {
+    display: block;
+}
+
+/* 两个词的“外框”：负责把 “Familiar Host” 锁在同一行里，并给词间空格定字号。
+   128px 之后一行只放得下一个词，不锁住就会被拆成上下两行（看着像阶梯）。
+   inline-block = 一整块，放不下时整体换到下一行，而不是词与词之间断行。
+   ★ --text3-word-size 是【唯一】的字号旋钮：外框（词间空格）和两个词都读它，
+     所以改这一个数，两个词和中间的空隙一起缩放，比例不会跑掉。 */
+.text-3 .familiar-host {
+    --text3-word-size: 164px;     /* ← 44px 的整句里，这两个词单独放大到 128px */
+    --text3-shift:0%;             /* ← 只改这一个数就能左右平移整组（页面宽度的 %） */
+
+    /* ---- TNT 爆炸的旋钮 ---- */
+    --tnt-bob: 5;              /* ← 上下跳多高（em，跟着字号走）。0.45 以上容易顶到上一行的字 */
+
+    display: inline-block;
+    position: relative;           /* ← 碎块要绝对定位盖在原句上 */
+    white-space: nowrap;
+    font-size: var(--text3-word-size);   /* 只为让词间那个空格也按 128px 排 */
+    line-height: 1.05;                   /* 128px 的默认行高会把这一行撑得太高，收一点 */
+
+    /* 1vw = 页面宽度的 1%，所以 数字 × 1vw 就是“页面宽度的百分比” */
+    transform: translateX(calc(var(--text3-shift) * 1vw));
+}
+
+/* ---- TNT 爆炸的三个“角色”（4.js 建好，这里只管长相）----
+   .tnt-body ：包着两个词的行内外壳 —— 白闪 / 消散只作用在它身上，
+               这样像素云不会被文字的透明度一起带走；
+   .tnt-flash：炸开瞬间的一层白色闪光；
+   .tnt-cloud：像素云（一堆灰白 / 灰 / 绿的方块），铺在整组上面。
+   ★ 全部只动 transform / opacity，不改布局：不会把别的句子推来推去。 */
+.text-3 .tnt-flash {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 130%;
+    height: 240%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse at center,
+        rgba(255, 255, 255, 0.92) 0%,
+        rgba(255, 255, 255, 0.5) 40%,
+        rgba(255, 255, 255, 0) 70%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.text-3 .tnt-cloud {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;                     /* 0×0 的定位点：像素从这一点（爆炸中心）往外飞 */
+    height: 0;
+    display: none;                /* 平时不显示；炸开时 4.js 打开 */
+    pointer-events: none;
+}
+
+/* 一个像素块：大小 / 颜色、飞向哪里（--pdx / --pdy）、何时出现（--pa）/ 何时消失（--pd）
+   都是 4.js 随机写进来的；位置和不透明度统一用 --tnt-s 一条变量算出来 ——
+   所以 4.js 每帧只写一次 --tnt-s，不用逐个改这些块。
+   ★ 位置 = 爆炸中心 + 目标偏移 × 扩散进度：
+       --pdx 用 vw、--pdy 用 vh 当单位，所以目标点铺满整个窗口；
+       扩散进度在前 45%（clamp 到 1）就走完，之后停在原地慢慢淡出。
+   ★ --tnt-s 是一个 0→1 的数：块在 --pa 之后淡入、在 --pd 之后淡出，
+      全部在 s=1（= E，文字淡出结束）之前消失。 */
+.text-3 .tnt-px {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: block;
+    transform: translate(
+        calc(var(--pdx, 0) * 1vw * clamp(0, var(--tnt-s, 0) * 2.2, 1)),
+        calc(var(--pdy, 0) * 1vh * clamp(0, var(--tnt-s, 0) * 2.2, 1))
+    );
+    opacity: calc(
+        clamp(0, (var(--tnt-s, 0) - var(--pa, 1)) / 0.06, 1)
+        * (1 - clamp(0, (var(--tnt-s, 0) - var(--pd, 1)) / 0.20, 1))
+    );
+}
+
+/* 两个词：各自是一个行内盒子（以后要加背景 / 动效都方便），
+   字号统一跟着外框的 --text3-word-size 走。 */
+.text-3 .familiar,
+.text-3 .host {
+    display: inline-block;
+    font-size: var(--text3-word-size);
+    line-height: 1.05;
+    --host-shift: 0;                              
+    transform: translateX(calc(var(--host-shift) * 1vw)); 
+    vertical-align: baseline;     /* 和前后 44px 的文字坐在同一条基线上 */
+}
+
+/* ★ 想单独调某一个词（比如 Host 要小一点）：
+   就在它自己那条里覆盖 font-size —— 只影响这一个词，另一个和空格不动。
+   .text-3 .host { font-size: 96px; } */
+
+/* ---------------------- text-3：“harder” 单独放大（带“撑开”动效） ---------------------- */
+/* 只放大这一个词，句子里其余的 44px 文字一个都不动。
+   ★ 它不在 .familiar-host 那一组里（4.js 把它单独包成 <span class="harder">），
+     所以字号和外框完全独立：外框怎么缩放都不会牵动它，反过来也一样。
+   ★ --text3-harder-size 是【唯一】的字号旋钮：只改这一个数就能整体缩放这个词。
+
+   ★ 出现动效（由 4.js 逐帧驱动，绑在滚轮上、可以倒放）：
+      整句淡入的时候 harder 是 44px（和其他字一样大），看不出它是个大字；
+      整句【完全出现】之后，它才用 GROW_SEC 秒从 44px 长到上面的 --text3-harder-size，
+      长的时候会把旁边的字真挤开（同一行的往右推、后面的行往下推），长完就是现在这个效果。
+      —— 所以下面写的 font-size 只是【最终值】，动画期间会被 inline font-size 临时覆盖。 */
+.text-3 .harder {
+    --text3-harder-size: 90px;   /* ← 只改这一个数就能整体缩放这个词（原本整句是 44px） */
+    --text3-harder-shift: 0;      /* ← 想单独左右平移它就改这个数（单位 1vw = 页面宽度的 1%） */
+
+    display: inline-block;        /* 单独成盒，但仍留在这一行里，不打断整句 */
+    font-size: var(--text3-harder-size);
+    line-height: 1.05;            /* 放大后默认行高会把这一行撑得太高，收一点 */
+    vertical-align: baseline;     /* 和前后 44px 的文字坐在同一条基线上 */
+    transform: translateX(calc(var(--text3-harder-shift) * 1vw));
+}
+
+/* ---------------------- text-6：“Not” 单独放大到 128px ---------------------- */
+/* ★ 和 text-3 一样，先把这句改成块级：
+   .text-box 是 display:flex + flex-direction:column，<span> 会被块级化成独立 flex item，
+   “But small does Not mean flexible.” 就会被拆成好几行。
+   改成 block 之后恢复普通行内文字流，居中（text-align: center）、字号、位置都不变。 */
+.text-6 {
+    display: block;
+}
+
+/* 只改这一个词的字号（44px → 128px）：
+   颜色 / 字体 / 位置关系都不动，句子里其余文字仍是 44px。 */
+.text-6 .not {
+    --not-size: 128px;            /* ← 只改这一个数就能整体缩放这个词 */
+
+    display: inline-block;        /* 单独成盒（以后要加背景 / 动效都方便），但仍留在这一行里 */
+    font-size: var(--not-size);
+    line-height: 1.05;            /* 128px 的默认行高会把这一行撑得太高，收一点 */
+    vertical-align: baseline;     /* 和前后 44px 的文字坐在同一条基线上 */
+}
+
+/* ---------------------- text-6：整句“往左移”的动效 ---------------------- */
+/* 需求：这一句（“But small does NOT mean flexible.”）【完全出现】之后，再往下滑一点滚轮，
+   整句就开始往左挪一段（默认页面宽度的 5%），挪完停在那儿，之后照常淡出。
+   挪多远 = 下面 --t6-shift 那一个数；随滚轮推进，往上滚会原样退回去。
+
+   ★ 计时是从“完全出现”（1.js 的 H）往后算的，不从结尾（B / E）倒推：
+     4.js 里两个旋钮 —— 先再滑 T6_DELAY_SEC 秒，再用 T6_MOVE_SEC 秒走完全程。
+
+   ★ 为什么用 translate（独立属性）而不是 transform：
+     1.js 每帧都在 .text-6 上写 inline transform —— 把这一句钉在锚线上
+     （render() 里的 translate(0px, dy)），在这里写 transform 会被每帧覆盖掉。
+     translate 和 transform 是两个独立属性，最终位移 = 先在 translate 上挪、
+     再在 transform 里钉锚线，两者叠加、互不干扰
+     （2.css 的 .rect-box 也是用 translate 避开 1.js 的 transform 的）。
+     换句话说：上下钉在锚线上那一位移归 1.js，左右这一份位移归这里。
+
+   ★ --t6-u 是“已经往左走了多少”的进度（0→1），由 4.js 每帧写：
+       0 = 一点没走（原位）      1 = 完全移到目标位置
+     所以这条规则只写“移到哪里”，怎么插值、什么时候开始走，全在 4.js 里。
+     JS 没跑 / 没写这个变量时默认 0 → 就是原位，不会把这一句永久挪走。
+
+   ★ 距离单位是 vw：1vw = 页面宽度的 1%，所以 --t6-shift: 5 = 页面宽度的 5%。
+     为什么不写 %：.text-6 自己只占页面宽度的一半（1.css 的 max-width: 50%），
+     这里的 % 会变成“这一句自己宽度的 %”，同一个数字看着只有一半。
+     想改成按“句子自己宽度”算，把下面的 -1vw 改成 -1% 即可。 */
+.text-6 {
+    --t6-shift: 5;      /* ← 完全出现后整句往左移多远（页面宽度的百分比：5 = 5%） */
+    --t6-u: 0;          /* 由 4.js 每帧写（0→1）；写死 0 就等于关掉这个动效 */
+
+    translate: calc(var(--t6-shift) * -1vw * var(--t6-u)) 0;
+}
+
+/* ==================== text-11：五个首字母单独放大（白字 + 等宽描边） ====================
+   需求：这句 “Small TnpB-based Innovative Nuclease toolkit for bacterial Genome editing.” 里
+     Small 的 S、TnpB-based 的 T、Innovative 的 I、Nuclease 的 N、Genome 的 G
+   这五个字母单独放大，填充纯白、四周一圈描边（描边颜色 / 粗细、字母大小、和后面字母的间距
+   都是下面 .text-11 .init-11 里的一个数）。
+
+   ★ 谁把这五个字母包成盒子的：4.js 的 wrapInitial（配置在 INITIALS11 那一条）。
+     它只包【每个词的首字母】，这个词剩下的字母和句子里其余的字一个都不动
+     （仍是 44px / #324561 / impact）。
+
+   ★ 为什么先把 text-11 改成块级：
+     1.css 的 .text-box 是 display:flex + flex-direction:column，
+     它的【直接子元素】会被块级化成独立的 flex item —— 那样每个被包起来的首字母
+     都会自己占一整行，“Small” 会被拆成 “S” 和 “mall” 两行。
+     改成 block 之后恢复普通的行内文字流：居中（text-align: center）、
+     字号、位置关系和原来一样。只影响 text-11，别的句子不动。
+
+   ★ 想调大小 / 描边粗细 / 左右间距：只动下面 .text-11 .init-11 里的这几个数：
+       --init11-size        首字母多大（这句其余的文字仍是 44px）
+       --init11-outline     描边多粗（1px 很细 / 3px 默认 / 5px 很粗）
+       --init11-gap         首字母和【后面】字母之间空多宽（0 = 不留，10px 默认）
+       --init11-gap-before  首字母和【前面】那个词之间再加多宽（16px 默认；句首那个 S 不加）
+   ★ 想单独调某一个字母（比如 I 要高一点、N 要再粗一点）：用它自己的类另写一条，例如
+       .text-11 .init-i { --init11-size: 112px; }
+     只影响那一个字母，另外四个不动（五个类名见 4.js 的 INITIALS11）。
+   ========================================================================== */
+.text-11 {
+    display: block;                /* ★ 恢复普通行内文字流（原因见上面那段） */
+    text-align: center;            /* 和原来 flex + text-align: center 的观感一致 */
+}
+
+/* 每个被点名的词外面还有一层 .init-word（4.js 建的）：它只负责“整词不拆行”。
+   为什么要它：首字母是 inline-block（原子行内元素），浏览器允许在原子行内元素
+   前后换行 —— 不加这一层，“Nuclease” 会被拆成 “N” 掉在上一行末尾、
+   “uclease” 落到下一行开头，看着像拼错了。
+   inline-block + nowrap = 这个词整体换行，词内绝不断开；
+   它自己的字号仍是 44px（放大的只有里面的首字母）。 */
+.text-11 .init-word {
+    display: inline-block;
+    white-space: nowrap;
+    vertical-align: baseline;
+}
+
+/* 五个首字母共用的那套样式 */
+.text-11 .init-11 {
+    --init11-size: 96px;             /* ← 首字母字号（这句其余的字仍是 44px） */
+    --init11-outline: 6px;           /* ← 描边粗细：描在字外面的那一圈（颜色见下一行） */
+    --init11-outline-color: #465e77; /* ← 描边颜色（想换颜色只改这一个值） */
+    --init11-gap: 8px;              /* ← ★首字母和【后面】字母之间空多宽（写 px 是固定宽度；写 em 会跟着 --init11-size 缩放） */
+    --init11-gap-before: 16px;       /* ← ★首字母和【前面】那个词之间再加多宽（词间那个空格之外，另加的） */
+    --init11-pull: 0em;              /* ← 首字母把这一行“撑高”的那部分，收回去多少（em，0 = 不收回） */
+
+    display: inline-block;        /* 单独成盒（以后要加背景 / 动效都方便），但仍留在这一行里 */
+    font-size: var(--init11-size);
+    line-height: 1;               /* 96px 的默认行高会把这一行撑得太高，收一点 */
+    vertical-align: baseline;     /* ★ 坐在和后面小字同一条基线上：像“首字放大的大写字母”，不会浮起来 */
+    color: #ffffff;               /* ★ 填充纯白 */
+    letter-spacing: 0;            /* 大字母上那 1px 字距会被一起放大，这里归零，轮廓才收得紧 */
+
+    /* ★ 左右各让出一段：
+         --init11-gap        右边：首字母 → 这个词剩下的字母
+         --init11-gap-before 左边：前面那个词 → 首字母（在原来的词间空格之外【再加】这么宽）
+       两个数互不影响，想哪边宽就改哪一个（0 = 不留）。
+       第一个值（负 margin-top）只收“行框往上的那部分”，基线不动 ——
+       所以字还是坐在原来的基线上，只是行距不会被 96px 撑得那么开。
+       ★ 默认 0（不收回）：改成 0.1em 左右会让行距紧一点，
+         但太大会让首字母顶到上一行的字上（尤其字号调大以后）。 */
+    margin: calc(-1 * var(--init11-pull)) var(--init11-gap) 0 var(--init11-gap-before);
+
+    /* ★ 描边用 text-shadow 在字【外面】摹一圈「等宽」的边（和 2.css 的 .bg-video-label 同一套做法）：
+       · color 已经是纯白，阴影只负责在白色轮廓外面再包一圈 --init11-outline-color；
+       · 为什么不用 -webkit-text-stroke：它的描边是【压在字里面】的，
+         Impact 这种本来就瘦的字一描就细一圈、还发虚；
+         text-shadow 是在外面加边，字形和白色填充都完全不变。
+
+       ★★ 为什么是 16 层而不是 8 层（「各处粗细一致」的关键）★★
+         描边的“粗细”就是这些影子离字边多远。要让它处处一样，
+         每个影子到原字的距离都必须【等于同一个半径 --init11-outline】。
+         · 8 层那种写法是 ±3px / ±3px 的九个方向：四个斜角的影子其实离字
+           3×1.414 ≈ 4.24px —— 于是横平竖直的边上是 3px，45° 的斜边（比如 N 的斜笔、
+           S 和 G 的弧线上）却有 4.2px，看着就是“有的地方粗、有的地方细”。
+         · 这里是 16 个方向、全部按“半径×cos / 半径×sin”放到同一个圆周上：
+           每个影子离字都是整整 --init11-outline，任何角度的边都一样厚
+           （最薄的斜角方向 0.98R，肉眼看不出差别）。
+       · 想更粗：只改 --init11-outline（5px 以内都还很干净）。 */
+    text-shadow:
+        calc(var(--init11-outline) * -1)      calc(var(--init11-outline) *  0)       0 var(--init11-outline-color),
+        calc(var(--init11-outline) *  1)      calc(var(--init11-outline) *  0)       0 var(--init11-outline-color),
+        calc(var(--init11-outline) *  0)      calc(var(--init11-outline) * -1)       0 var(--init11-outline-color),
+        calc(var(--init11-outline) *  0)      calc(var(--init11-outline) *  1)       0 var(--init11-outline-color),
+        /* 22.5° / 157.5° / 202.5° / 337.5°：cos = 0.9239, sin = 0.3827 */
+        calc(var(--init11-outline) * -0.9239) calc(var(--init11-outline) * -0.3827)  0 var(--init11-outline-color),
+        calc(var(--init11-outline) * -0.9239) calc(var(--init11-outline) *  0.3827)  0 var(--init11-outline-color),
+        calc(var(--init11-outline) *  0.9239) calc(var(--init11-outline) * -0.3827)  0 var(--init11-outline-color),
+        calc(var(--init11-outline) *  0.9239) calc(var(--init11-outline) *  0.3827)  0 var(--init11-outline-color),
+        /* 67.5° / 112.5° / 247.5° / 292.5°：cos = 0.3827, sin = 0.9239 */
+        calc(var(--init11-outline) * -0.3827) calc(var(--init11-outline) * -0.9239)  0 var(--init11-outline-color),
+        calc(var(--init11-outline) * -0.3827) calc(var(--init11-outline) *  0.9239)  0 var(--init11-outline-color),
+        calc(var(--init11-outline) *  0.3827) calc(var(--init11-outline) * -0.9239)  0 var(--init11-outline-color),
+        calc(var(--init11-outline) *  0.3827) calc(var(--init11-outline) *  0.9239)  0 var(--init11-outline-color),
+        /* 45° / 135° / 225° / 315°：cos = sin = 0.7071 */
+        calc(var(--init11-outline) * -0.7071) calc(var(--init11-outline) * -0.7071)  0 var(--init11-outline-color),
+        calc(var(--init11-outline) * -0.7071) calc(var(--init11-outline) *  0.7071)  0 var(--init11-outline-color),
+        calc(var(--init11-outline) *  0.7071) calc(var(--init11-outline) * -0.7071)  0 var(--init11-outline-color),
+        calc(var(--init11-outline) *  0.7071) calc(var(--init11-outline) *  0.7071)  0 var(--init11-outline-color);
+}
+
+/* 句首那个字母（这里是 “Small” 的 S）前面没有字，左边就不用再留空了 ——
+   不然第一行会被推得比下面几行靠右，看起来像没居中。 */
+.text-11 > .init-word:first-of-type .init-11 {
+    margin-left: 0;
+}
+
+/* ---------------------- text-9：左端对齐 + 第一个 “cut” 放大并原地上下蹦 ---------------------- */
+/* ★ 为什么先把 text-9 改成块级：
+   1.css 的 .text-box 是 display:flex + flex-direction:column + align-items:center，
+   它的【直接子元素】会被块级化成独立的 flex item，而且每一块各自由 align-items 居中 ——
+   那样 <br> 前后两行会各自居中，左端对不齐（看着像第二行缩进了）。
+   改成 block 之后恢复普通的行内文字流：两行都从同一个左边界起排（text-align: left），
+   字号 / 位置 / 段内换行都不变。只影响 text-9，别的句子不动。 */
+.text-9 {
+    display: block;
+    text-align: left;              /* ★ 整句左端对齐（.text-box 原本是 text-align: center） */
+}
+
+/* 只放大【第一个】“cut”（4.js 把它包成 <span class="cut9">），句子里其余文字仍是 44px。
+   三个旋钮全在下面，只改这几个数就能调：
+       --cut9-size     放大程度 → 这一个词多大（这句其余的字是 44px）
+       --cut9-bob      蹦的幅度 → 往上跳多高（em，跟着 --cut9-size 缩放）
+       --cut9-bob-sec  蹦的速度 → 一个完整周期（起跳 → 落地 → 停一下）多少秒，越小越快
+
+   ★ 为什么跳动写在【这个词自己】身上、用 transform 也不会被覆盖：
+      1.js 每帧写 transform 的是 .text-box（整句那个盒子，把它钉在锚线上），
+      这里是它里面的一个 <span>，1.js / 3.js 都不会碰它的 transform，所以随便用。
+   ★ 跳动只改 Y 方向的位移（外加一点落地压扁）：左右、字号、基线都不动，
+     所以是“在原地”上下蹦，不会把旁边的字推来推去。 */
+.text-9 .cut9 {
+    --cut9-size: 66px;        /* ← 放大程度：这一个词的字号（44px 的整句里单独放大到这个字号） */
+    --cut9-bob: 0.26em;        /* ← 蹦的幅度：往上跳多高（em，跟着 --cut9-size 走；越大跳越高） */
+    --cut9-bob-sec: 0.8s;      /* ← 蹦的速度：一跳的周期（秒）；0.8 = 每秒一下多，越小跳得越快 */
+    --cut9-pull: 0em;          /* ← 把这一行被大字撑高的那部分收回多少（em；0 = 不收回，0.1 左右会紧一点） */
+    --cut9-gap: 0.06em;        /* ← 这个词左右各留多宽（em，跟着 --cut9-size 走；0 = 紧贴前后那两个字） */
+
+    display: inline-block;     /* 单独成盒，但仍留在这一行里，不打断整句 */
+    font-size: var(--cut9-size);
+    line-height: 1.05;         /* 放大后默认行高会把这一行撑得太高，收一点 */
+    vertical-align: baseline;  /* ★ 和前后 44px 的文字坐在同一条基线上 */
+    margin: calc(-1 * var(--cut9-pull)) var(--cut9-gap) 0 var(--cut9-gap);
+    will-change: transform;
+
+    /* ★ 可点：.text-box 是 pointer-events: none（整句原本都点不到），这里只给这个词开回来，
+         点它一下 = 让配套的视频从头再播一遍（监听写在 4.js 的 CUT9_VIDEO 那一段）。
+         只有这个词能点，句子其余部分照旧“点不到”，也不影响滚轮 / 文字选择。 */
+    pointer-events: auto;
+    cursor: pointer;
+
+    /* 一跳一循环、永远循环下去 —— 速度就是 --cut9-bob-sec 那一个数 */
+    animation: cut9-bob var(--cut9-bob-sec) infinite;
+}
+
+/* 一跳的节奏：地面 → 弹起 → 最高点 → 加速落下 → 落地压一下 → 在地上停一小会儿。
+   ★ 位移都写成 calc(var(--cut9-bob) * 系数)，所以改 --cut9-bob 一个数就整体变幅度；
+     快慢由上面 animation 里的 --cut9-bob-sec 决定（改周期，节奏比例不变）。
+   ★ 落地那点压扁（scale 的第二位 0.93 / 起跳时 1.02）只是让“蹦”更有弹性；
+     不想要就把每条的 scale 都改成 (1, 1)，位移部分完全不受影响。 */
+@keyframes cut9-bob {
+    0% {
+        transform: translateY(0) scale(1, 1);
+        animation-timing-function: cubic-bezier(0.22, 0.68, 0.35, 1);   /* 起跳：快出慢收 */
+    }
+    40% {
+        transform: translateY(calc(var(--cut9-bob) * -1)) scale(1, 1.02);   /* 最高点 */
+        animation-timing-function: cubic-bezier(0.55, 0, 0.85, 0.45);       /* 下落：越落越快 */
+    }
+    78% {
+        transform: translateY(0) scale(1, 0.93);        /* 落地：压一下 */
+        animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+    }
+    88%, 100% {
+        transform: translateY(0) scale(1, 1);           /* 88%→100%：在地上停一下再蹦第二下 */
+    }
+}
+
+/* ==================== text-9：飞进来的 gene.webm（半路空中回环 → 落在 “where” 正上方）====================
+   需求：这一句（text-9）淡入结束之后（不等图标 10 的 editing.webm 播完），
+        gene.webm 从屏幕顶边的右侧飞进来、同时淡入，
+        在【半路空中】像过山车那样绕一个完整的圈，然后稳稳落在 “where” 这个词的正上方，
+        之后一直循环播放；鼠标悬停在它上面会淡出名字 “gene”（颜色 / 字体跟随正文）；
+        整段像别的效果一样由滚轮驱动（往上滚会原样倒放），
+        并且到这一句淡出时跟着它一起淡掉。
+   ★ 谁在动：4.js 的 “text-9：gene.webm 从屏幕顶边的右侧飞进来” 那一段（每帧只写 inline
+     transform / opacity，和 BEGINNING、TNT 同一套做法）。
+   ★ 为什么下面这两条在 CSS 里、“where” 还要单独包一层：
+     视频要“贴着 where 摆”，最省事、也最不怕窗口缩放 / 文字重排的做法，
+     就是让外壳成为那个词的【绝对定位子元素】：left: 50% 配一个负 margin
+     居中在词的正上方，bottom: 100% + gap 让它的底面刚好离词的顶边一段距离。
+     这样不管页面怎么缩放、这一句怎么重排，它都自动对在 where 头顶，
+     4.js 一个像素都不用量（量出来的坐标一旦字体晚加载就会错位）。
+   ★ 为什么还要多一层 .gene9-wrap 外壳：视频和 hover 名字都住在里面，
+     飞行 / 淡入只写在外壳上，名字就自动跟着一起飞、一起落位、一起淡出。
+   ========================================================================== */
+
+/* “where” 外面那层（4.js 的 wrapWord 建的）：只当定位锚点用，
+   字号 / 基线 / 换行都和原来一样，视觉上没有任何变化。 */
+.text-9 .where9 {
+    position: relative;        /* ← 视频相对它定位 */
+    display: inline-block;     /* 单独成盒，才能当定位参照；仍是行内元素，不打断这一句 */
+    vertical-align: baseline;  /* 和前后 44px 的文字坐在同一条基线上 */
+}
+
+/* 视频的“外壳”：绝对定位 + 飞行动画（transform / opacity）都在它身上。
+   视频和 hover 名字都住在里面 —— 这样名字跟着视频一起飞、一起落位、一起淡出。 */
+.text-9 .gene9-wrap {
+    --gene9-w: 50px;          /* ← 视频宽度（高度按素材自己的比例自动算） */
+    --gene9-gap: 10px;         /* ← 落点在 “where” 正上方：底面离这个词的顶边多少 */
+    --gene9-dx: 0px;           /* ← 左右微调（正数往右、负数往左；0 = 正对 where 中心） */
+
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + var(--gene9-gap));   /* 底面 = 词的顶边再往上 --gene9-gap */
+    width: var(--gene9-w);
+    /* ★ 居中用 margin 而不是 transform: translateX(-50%)：
+          transform 整个留给 4.js 的飞行（位移 + 转圈 + 缩放），两边不打架。
+          --gene9-dx 就加在这里，所以“改左 / 改右”不会碰飞行动画。 */
+    margin-left: calc(var(--gene9-w) / -2 + var(--gene9-dx));
+
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+    opacity: 0;                /* 还没飞进来（或 4.js 没跑）时看不见 */
+    pointer-events: none;      /* ★ 飞的过程中不接鼠标（免得半空抢走 hover / 挡住下面的字） */
+}
+
+/* 落位之后 4.js 会给外壳加 .is-landed —— 从这时起才允许鼠标悬停 */
+.text-9 .gene9-wrap.is-landed {
+    pointer-events: auto;
+}
+
+/* 视频本体：老老实实铺满外壳（外壳有多宽它就多宽），不参与定位 */
+.text-9 .gene9 {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* ---------------------- hover 才出现的名字 “gene” ----------------------
+   需求：落地之后鼠标悬停在视频上，淡出名字 “gene”，颜色和字体跟随正文。
+   ★ 跟随正文的做法就是【什么都不写、全靠继承】：
+       · font-family：.text-box 是 'impact', sans-serif  → 这里不写，自动继承
+       · color      ：.text-box 是 #324561              → 这里不写，自动继承
+       · letter-spacing：.text-box 是 1px                → 这里不写，自动继承
+     所以正文一改颜色 / 字体，这个名字会自动跟着变，不需要同步两处。
+   ★ 唯一单独给的是一个字号旋钮 --gene9-name-size（默认 28px，和页面上别的 hover 名字一致；
+     想让它和正文一样大就写 1em = 44px）。
+   ★ 位置默认贴在视频【正上方】（那里是空背景，读起来最清楚）；
+     想放到下面：把 bottom: 100% / margin-bottom 换成 top: 100% / margin-top 即可。 */
+.text-9 .gene9-name {
+    --gene9-name-size: 28px;   /* ← 名字字号（颜色 / 字体 / 字距都继承正文） */
+
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translateX(-50%);   /* 水平居中在视频中线上 */
+    margin-bottom: 6px;
+
+    font-family: inherit;          /* ← 正文字体 */
+    color: inherit;                /* ← 正文颜色 */
+    letter-spacing: inherit;       /* ← 正文的字距 */
+    font-size: var(--gene9-name-size);
+    line-height: 1.2;
+    white-space: nowrap;           /* 名字不断行 */
+
+    opacity: 0;                    /* 平时不显示 */
+    transition: opacity .18s ease; /* 移入淡入、移出淡出，不会突然闪 */
+    pointer-events: none;          /* 名字本身不接鼠标，免得一碰就消失 */
+    user-select: none;
+}
+
+/* ★ hover 显示 / 移开消失：纯 CSS，不需要 JS 监听鼠标。
+     只在“已经落位”（.is-landed）之后才可能命中 —— 飞行途中外壳不接鼠标。 */
+.text-9 .gene9-wrap.is-landed:hover .gene9-name {
+    opacity: 1;
+}
+
+/* ---------------------- text-13：“BUILD” 单独放大 ---------------------- */
+/* 只放大这一个词：下面那行 “Establish the Editing Tools” 仍是 44px，颜色 / 位置都不动。
+   ★ 这句的 .text-box 是 flex column，“BUILD”（4.js 包成 <span class="build13">）
+     仍然是一个独立的块（flex item），所以放大它只是把这一个块变高，不会把下面那行挤歪。
+   ★ --build13-size 是【唯一】的字号旋钮：只改这一个数就能整体缩放这个词。 */
+.text-13 .build13 {
+    --build13-size: 128px;         /* ← 只改这一个数就行（这句原本是 44px） */
+
+    display: block;               /* 它本来就是块（flex item），这里写清楚，方便理解 */
+    font-size: var(--build13-size);
+    line-height: 0.5;            /* 放大后默认行高会把这一行撑得太高，收一点 */
+}
+
+/* ---------------------- text-15：“EXPAND” 单独放大 ---------------------- */
+/* 和 text-13 的 BUILD 完全是同一套：只放大这一个词，下面那行
+   “Broaden the Targeting Toolbox” 仍是 44px，颜色 / 位置都不动。
+   ★ 这句的 .text-box 同样是 flex column，“EXPAND”（4.js 包成 <span class="expand15">）
+     仍然是一个独立的块（flex item），所以放大它只是把这一个块变高，不会挤歪下面那行。
+   ★ --expand15-size 是【唯一】的字号旋钮：只改这一个数就能整体缩放这个词。 */
+.text-15 .expand15 {
+    --expand15-size: 128px;        /* ← 只改这一个数就行（这句原本是 44px） */
+
+    display: block;               /* 它本来就是块（flex item），这里写清楚，方便理解 */
+    font-size: var(--expand15-size);
+    line-height: 0.5;             /* 和 BUILD 用同一套行高，两个标题看起来才一致 */
+}
+
+/* ---------------------- text-17：“MODEL” 单独放大 ---------------------- */
+/* 和 BUILD / EXPAND 完全是同一套：只放大这一个词，下面那行
+   “From Data to Mechanism” 仍是 44px，颜色 / 位置都不动。
+   ★ 这句的 .text-box 同样是 flex column，“MODEL”（4.js 包成 <span class="model17">）
+     仍然是一个独立的块（flex item），所以放大它只是把这一个块变高，不会挤歪下面那行。
+   ★ --model17-size 是【唯一】的字号旋钮：只改这一个数就能整体缩放这个词。 */
+.text-17 .model17 {
+    --model17-size: 128px;         /* ← 只改这一个数就行（这句原本是 44px） */
+
+    display: block;               /* 它本来就是块（flex item），这里写清楚，方便理解 */
+    font-size: var(--model17-size);
+    line-height: 0.5;             /* 和 BUILD / EXPAND 用同一套行高，三个标题才一致 */
+}
+
+/* ==================== text-20：四句话拆成四块，各自调静态位置 ====================
+   index.html 里这一句是：
+       Our platform allows<br>More targets<br>More functions<br>More understanding
+   4.js 把那个 <br> 换成四块 ——
+       <span class="t20-line t20-p1">Our platform allows</span>
+       <span class="t20-line t20-p2">More targets</span>
+       <span class="t20-line t20-p3">More functions</span>
+       <span class="t20-line t20-p4">More understanding</span>
+   文字一个字符都不改、顺序不变；字号 / 颜色 / 字体 / 居中方式也全不动
+   （.text-20 仍是 1.css 的 flex column + align-items: center，四块就是四个 flex item）。
+
+   ★ 每一块的位置 = 它自己那两行数字（默认全 0 = 现在的位置，所以一进来看不出变化）：
+        --t20-p1-x / --t20-p1-y   “Our platform allows”
+        --t20-p2-x / --t20-p2-y   “More targets”
+        --t20-p3-x / --t20-p3-y   “More functions”
+        --t20-p4-x / --t20-p4-y   “More understanding”
+     单位：x 是【页面宽度】的百分比（1 = 1vw），y 是【页面高度】的百分比（1 = 1vh）。
+     正数 = 往右 / 往下，负数 = 往左 / 往上；四块互不影响，想重叠也可以。
+     例：想让 “More targets” 往左 3%、往上 2% →  --t20-p2-x: -3;  --t20-p2-y: -2;
+
+   ★ 只用 transform 平移（不参与布局）：
+        · 挪动不会推挤别的那三行，也不会改变 .text-20 的高度 ——
+          1.js 的 layout() 量到的仍是原来那个高度，时间轴 / 锚线一点不受影响；
+        · 1.js 每帧写的是 .text-20 自己的 inline transform（把整句钉在锚线上），
+          这里动的是它【里面】的块，两套 transform 各管各的，不会互相覆盖。
+   ★ white-space: nowrap —— 每句永远排成一行：挪出去之后也不会自己折行、变成两行。
+   ★ 如果想按“这一句自己”而不是“页面”来算距离，把下面的 1vw / 1vh 换成 1% 即可
+     （.text-20 的 max-width 是 40%，用 % 的话单位会变成这一句自己的宽度）。
+   ========================================================================== */
+.text-20 .t20-line {
+    /* 默认落点：原位。下面 p1 ~ p4 各自覆盖这两个数 */
+    --t20-x: 0;
+    --t20-y: 0;
+
+    display: block;               /* 它本来就是 flex item（已经被块级化），这里写清楚 */
+    white-space: nowrap;          /* ★ 每句永远一行，挪到哪儿都不会折行 */
+    transform: translate(calc(var(--t20-x) * 1vw), calc(var(--t20-y) * 1vh));
+}
+
+/* 四块各自的位置旋钮 —— 只改这四行里的数字 */
+.text-20 .t20-p1 { --t20-x: -15; --t20-y: 0; }   /* Our platform allows */
+.text-20 .t20-p2 { --t20-x: 10; --t20-y: 10; }   /* More targets        */
+.text-20 .t20-p3 { --t20-x: -18; --t20-y: 20; }   /* More functions      */
+.text-20 .t20-p4 { --t20-x: 10; --t20-y: 30; }   /* More understanding  */
+
+/* ==================== text-20：点名的那几个字母单独加大 ====================
+   4.js 只把【这几个字符】各包成 <span class="t20-big t20-big-x">：
+        “Our platform allows”     → 最后一个 s           （.t20-big-s）
+        “More targets”            → 第一个 t             （.t20-big-t）
+        “More functions”          → i                    （.t20-big-i）
+        “More understanding”      → 第一个 n + 最后一个 g（.t20-big-n / .t20-big-g）
+   句子里其余的字一个都不动（仍是 44px / #324561 / impact / 居中）。
+
+   ★ 大小有两层旋钮：
+       ① 统一倍数：.text-20 上的 --t20-big-scale（1 = 原样，1.5 = 五个一起放大 1.5 倍；
+          间距用的是 em，会跟着一起缩放）；
+       ② 单个字母：下面五行各自一个数（在统一倍数之上，再单独缩放那一个）：
+            .text-20 .t20-big-s { --t20-big-size: … }   “allows” 最后那个 s
+            .text-20 .t20-big-t { --t20-big-size: … }   “targets” 第一个 t
+            .text-20 .t20-big-i { --t20-big-size: … }   “functions” 里的 i
+            .text-20 .t20-big-n { --t20-big-size: … }   “understanding” 第一个 n
+            .text-20 .t20-big-g { --t20-big-size: … }   “understanding” 最后那个 g
+   ★ 和前后字母的间距：--t20-big-gap（后面）/ --t20-big-gap-before（前面），写法见下。
+
+   ★ 为什么 line-height: 0（这很关键）：
+      大字母真的变大之后，如果按普通行高排版，这一行会被撑高（44px → 88px 时
+      行高 64px → 95px），于是它下面那几行会整体被推下去 ——
+      刚才在 .t20-p1 ~ p4 里调好的静态位置就被推歪了。
+      写成 line-height: 0，大字母的盒子不再参与行高计算：
+      · 四行的高度仍是原来的 64px，.t20-p1 ~ p4 的 --t20-x / --t20-y 一点不受影响；
+      · 大字母照样按 --t20-big-size 画出来，而且仍然坐在原来的基线上（不会浮起来）。
+      代价：大字母会稍微伸出这一行（上下各一点）。四行已经被拉开了，所以看不出来；
+      如果哪天把某两行调得很近、大字母压到邻居，有两个办法：
+        ① 把那两行的 --t20-y 再拉开一点，或把 --t20-big-size 改小；
+        ② 想让行“跟着变大”（大字母绝不压到上下行，代价是下面几行会被推下去）：
+           把下面的 line-height: 0 改成 1。
+   ★ 为什么用 font-size 而不是 transform: scale：
+      缩放不参与排版，大字母会和前后的字重叠；改字号则这一行会按大字母重新排，
+      字母不会压到旁边的字上（只是行框高度被 line-height: 0 固定住了，不会被撑高）。
+   ★ 基线：vertical-align: baseline —— 大字母和前后 44px 的字坐在同一条基线上，
+     像“首字放大”的排版，不会浮起来。
+   ========================================================================== */
+/* 五个字母的“统一倍数”：1 = 各自原样，1.5 = 一起放大 1.5 倍（间距 / 行内位置一起缩放） */
+.text-20 {
+    --t20-big-scale: 1;
+}
+
+.text-20 .t20-big {
+    --t20-big-size: 88px;         /* 默认大小：下面五个字母各自覆盖这个数 */
+
+    /* 兜底的默认间距（五个字母各自在下面那一块里覆盖这两个数）：
+         --t20-big-gap         和【后面】那个字母之间（0 = 紧贴）
+         --t20-big-gap-before  和【前面】那个字母之间（0 = 紧贴）
+       给负数能挨得更紧（比如 -0.02em）。 */
+    --t20-big-gap: 0.08em;
+    --t20-big-gap-before: 0.08em;
+
+    /* ★ 略微的黄色荧光（#fbe15c），只给这几个放大的字母：
+         --t20-glow-color  荧光颜色（默认 #fbe15c）
+         --t20-glow-size   光晕多大（em，跟着这个字母的字号缩放）
+         --t20-glow-alpha  亮度 / 浓度（0 = 关掉，1 = 最亮；“略微”就保持在 0.5 上下）
+       三层叠加：贴着字形的一圈 → 中圈 → 外圈（越外越淡），
+       看上去是“字形在发光”，而不是描了一圈边。
+       ★ 只画在字形【外面】，不占布局：不撑行高、不推挤前后字母、不影响那四个位置旋钮。
+       ★ 改了字号 / 颜色也会自动跟着变（em 相对这个字母自己的字号）。
+       如果不支持 color-mix 的老浏览器，会退到下面第一行那条淡黄光晕。 */
+    --t20-glow-color: #fbe15c;
+    --t20-glow-size: 0.12em;
+    --t20-glow-alpha: 0.55;
+
+    display: inline-block;        /* 单独成盒，但仍留在这一行里，不打断句子 */
+    color: #fbe15c;               /* ★ 默认字色（被 ico15 敲中后变 #465E77，见下面 .is-hit） */
+    font-size: calc(var(--t20-big-size) * var(--t20-big-scale, 1));
+    line-height: 0;               /* ★ 不参与行高：四行的位置不会被推歪（原因见上面） */
+    vertical-align: baseline;     /* ★ 和前后 44px 的字坐在同一条基线上 */
+    transform-origin: 50% 100%;   /* ★ 被撞时从【基线】往压缩放（像踩了一下） */
+    will-change: transform;
+    letter-spacing: 0;            /* 大字母上那 1px 字距会被一起放大，这里归零 */
+    margin: 0 var(--t20-big-gap) 0 var(--t20-big-gap-before);
+
+    /* 荧光：老浏览器走这一条（rgba 就是 #fbe15c 加上透明度） */
+    text-shadow: 0 0 calc(var(--t20-glow-size) * 1.6)
+                 rgba(251, 225, 92, calc(var(--t20-glow-alpha) * 0.8));
+    /* 荧光：现代浏览器走这一条（三层，可换颜色） */
+    text-shadow:
+        0 0 calc(var(--t20-glow-size) * 0.35) color-mix(in srgb, var(--t20-glow-color) calc(var(--t20-glow-alpha) * 100%), transparent),
+        0 0 calc(var(--t20-glow-size) * 1)    color-mix(in srgb, var(--t20-glow-color) calc(var(--t20-glow-alpha) * 62%), transparent),
+        0 0 calc(var(--t20-glow-size) * 2.4)  color-mix(in srgb, var(--t20-glow-color) calc(var(--t20-glow-alpha) * 30%), transparent);
+}
+
+/* 被 ico15 敲中之后：字色变 #465E77，荧光关掉（敲击顺序见 4.js 的 stingBounce） */
+.text-20 .t20-big.is-hit {
+    color: #465E77;
+    text-shadow: none;
+}
+
+/* ico15 的专用图层：4.js 会把这一颗图标从 .bug-icons（z-index: 3）里搬到这里，
+   让它在【文字图层之上】（文字的内联 z-index 最高到 20，这里给 60，怎么都压得住）。
+   ★ 只挪这一颗，其他图标的图层关系不受影响。 */
+.sting-layer {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 60;
+}
+
+/* 演出期间（4.js 加的 .is-sting）强制可见：这一段跟着滚轮走，
+   可能演到这一句淡出之后、压到后面几句文字上。 */
+.bug-icon-slot.bug-icon-15.is-sting {
+    opacity: 1 !important;
+}
+
+/* ico15 的“舞台”：位置完全由 4.js 每帧写 transform，
+   所以把 slot 自己的 left / top 归零 —— 这样 transform 里的坐标就是视口坐标，
+   算“撞到哪个字母”时不用再减掉偏移。 */
+.bug-icon-slot.bug-icon-15 {
+    left: 0;
+    top: 0;
+    transform-origin: 50% 50%;
+    --icon-height: 90px;        /* ← 这颗弹跳图标的个头（60px 的 1.5 倍） */
+}
+
+/* 五个字母各自的大小 + 和前后字母的间距 —— 只改这几块里的数字
+   ★ 间距是按【字形】调过的，不是五个一样的数：
+       S / T 的笔画几乎贴着自己的字框边，两侧看起来本来就窄 → margin 给大一点；
+       I / N 的字形窄、两侧本来就有很宽的白边 → margin 给小一点；
+       G 介于两者之间。
+     这样五个字母【看上去】的空白宽度是一样的（都约 11px），不会有的松有的紧。
+   ★ 想整体更松 / 更紧：把每块的两个数一起加 / 减（例如都 +0.02em）；
+     只想动某一个字母：只改它自己那一块。单位 em，跟着这个字母的字号缩放。 */
+.text-20 .t20-big-s {   /* “allowS” 最后那个 S（笔画贴边 → 多留一点） */
+    --t20-big-size: 88px;
+    --t20-big-gap-before: 0.09em;
+    --t20-big-gap: 0.09em;
+}
+
+.text-20 .t20-big-t {   /* “Targets” 第一个 T（笔画贴边 → 多留一点） */
+    --t20-big-size: 88px;
+    --t20-big-gap-before: 0.10em;
+    --t20-big-gap: 0.11em;
+}
+
+.text-20 .t20-big-i {   /* “functIons” 里的 I（字窄、白边宽 → 少留一点） */
+    --t20-big-size: 88px;
+    --t20-big-gap-before: 0.03em;
+    --t20-big-gap: 0.04em;
+}
+
+.text-20 .t20-big-n {   /* “uNderstandinG” 的第一个 N（两侧白边宽 → 少留一点） */
+    --t20-big-size: 88px;
+    --t20-big-gap-before: 0.03em;
+    --t20-big-gap: 0.03em;
+}
+
+.text-20 .t20-big-g {   /* “uNderstandinG” 最后的 G（介于两者之间） */
+    --t20-big-size: 88px;
+    --t20-big-gap-before: 0.08em;
+    --t20-big-gap: 0.06em;
+}

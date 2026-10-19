@@ -1,36 +1,5 @@
-/* ==========================================================================
-   3.css —— 二十个图标的大小与位置（编号 1、3~11、14~23；2 / 12 / 13 号已删）
-             1 b-subtilis / 3 p-putida / 4 e-coli-1（会飘动）
-             5 crispr / 6 tnpb / 7 arrow / 8 ctac / 9 tnpb-1 / 10 title / 11 answer
-             14 suicide（text-17 淡入时出现、text-18 淡出之后消失，在文字下方；
-                        右边带一个绿/灰开关按钮，点它正放 / 倒放这段视频；
-                        按钮上方一行字 “Kill Switch”，字体 / 颜色同正文）
-             15/16/17/18 understand（text-21 淡入时四只一起出现、跟 text-21 一起淡出，会飘动）
-                                      （钉在屏幕上，不飘动）
-             19 expand（text-15 淡入时出现、text-16 淡出时消失，一直循环播放，在文字下方）
-             20 standing（text-13 淡入时出现、text-14 淡出时消失，只播一次、停在最后一帧）
-             21 model（text-17 淡入时出现、text-19 淡出时消失，只播一次、停在最后一帧；
-                      宽横幅，贴在页面右侧、文字下方）
-             22 computer（computer.avif，text-17 淡入时出现、text-19 淡出时消失；
-                       位置 / 大小见下面 .bug-icon-22，文字下方）
-             23 tool（tool.webm，text-11 淡入时出现、跟 text-11 一起淡出；
-                     只播一次、停在最后一帧，位置 / 大小见下面 .bug-icon-23）
-   ★ 12 build / 13 expand 已按需求整条删除（图标与视频效果都没了），文字不受影响。
-   ★ 19 号是后来重新加的 expand 视频（expand.webm，循环播放），和旧的 13 号不是同一条。
-   ★ 22 号在图标里又叠了一段视频 model.mp4（以图标为容器，只播一次、播完停在最后一帧），
-     右下角带一颗【播放 / 暂停 / 重播】键（大小 / 位置都相对图标容器）：
-     图形用的是 power.avif（白色电源符号，透明底；白 ↔ 蓝荧光呼吸、压扁贴台面这些效果不变），
-     按下它做什么看视频此刻的状态：正在播 → 停在当前帧；暂停着 → 接着播到结尾；
-     停在最后一帧 → 从头再播一次（行为在 3.js 的 toggleOverlayPlay，样式在下面）。
-     见下面的 .bug-icon-22 .bug-icon-video 和 .bug-icon-22 .bug-replay。
-   ★ 23 号是给 text-11 配的独立视频图标（tool.webm），和图标 11 的 answer.webm 不是同一条。
-   ★ text-11 现在不再只是“原地淡入”：它是从 23 号那段视频里【从小到大弹出来】的，
-     起点位置 / 初始大小用下面 .text-11 里的 --pop-x / --pop-y / --pop-scale 调；
-     淡出仍然是原来的原地淡出，一点都没变。
-   ========================================================================== */
-
 .bug-icons {
-    --icon-height: 300px;     /* 图标高度（宽度按图片自身比例自适应） */
+    --icon-height: calc(300 * var(--u));     /* 图标高度（宽度按图片自身比例自适应） */
 
     position: fixed;          /* 钉在屏幕上：页面怎么滚都不动 */
     left: 0;
@@ -93,7 +62,7 @@
      3.js 会根据 src 的后缀（.webm / .mp4 …）决定建哪一种节点，两者都挂 .bug-icon。 */
 .bug-icon {
     display: block;
-    height: var(--icon-height, 300px);  /* 继承 .bug-icons 的 --icon-height，也可被单条覆盖 */
+    height: var(--icon-height, calc(300 * var(--u)));  /* 继承 .bug-icons 的 --icon-height，也可被单条覆盖 */
     width: auto;                        /* 图片按自身比例；视频按视频自身比例（metadata 到位后） */
     object-fit: contain;
     pointer-events: none;               /* 鼠标事件由 slot 接（整块矩形都可 hover） */
@@ -124,10 +93,10 @@ video.bug-icon {
     left: 50%;
     top: 100%;                          /* 图标下方 */
     transform: translateX(-50%);        /* 水平居中在图标中线上 */
-    margin-top: 6px;
+    margin-top: calc(6 * var(--u));
 
     font-family: 'impact', sans-serif;  /* ← 正文字体（和 1.css 的 .text-box 一致） */
-    font-size: 28px;                    /* 和正文 .text-box 一致 */
+    font-size: calc(28 * var(--u));                    /* 和正文 .text-box 一致 */
     line-height: 1.2;
     color: #465E77;                     /* ← 需求指定的颜色 */
     white-space: nowrap;                /* 名字不断行 */
@@ -143,7 +112,7 @@ video.bug-icon {
     top: auto;
     bottom: 100%;
     margin-top: 0;
-    margin-bottom: 6px;
+    margin-bottom: calc(6 * var(--u));
 }
 
 /* ★ hover 显示 / 移开消失：纯 CSS，不需要 JS 监听鼠标 */
@@ -178,9 +147,10 @@ video.bug-icon {
      下面 left / top 只是“3.js 还没跑起来”那一下的兜底，正常看不到这两个值。
      想改运动范围 / 随机规则，去 3.js 的 DRIFT（area / randomStart / startGap）。
    想让某一个图标单独大一点 / 小一点：在它自己这条里覆盖 --icon-height。 */
-.bug-icon-1 { --icon-height: 300px; left: 16%; top: 30%; }    /* Bacillus subtilis    */
-.bug-icon-3 { --icon-height: 300px; left: 44%; top: 45%; }    /* Pseudomonas putida   */
-.bug-icon-4 { --icon-height: 300px; left: 36%; top: 3%;  }    /* Escherichia coli (2) */
+/* ★ 高度也走 --u（和别的图标一样），否则这三只飘动图标在任何屏宽下都是 300px */
+.bug-icon-1 { --icon-height: calc(250 * var(--u)); left: 16%; top: 30%; }    /* Bacillus subtilis    */
+.bug-icon-3 { --icon-height: calc(250 * var(--u)); left: 44%; top: 45%; }    /* Pseudomonas putida   */
+.bug-icon-4 { --icon-height: calc(250 * var(--u)); left: 36%; top: 3%;  }    /* Escherichia coli (2) */
 
 /* ============================================================================
    图标 5 / 6 / 7 —— 不飘动，钉在屏幕上（3.js 里写了 pin: true）
@@ -217,7 +187,7 @@ video.bug-icon {
 
 /* 图标 5（crispr.avif）：text-1 的第一行出现之后才出现，位置＝屏幕左下角 */
 .bug-icon-5 {
-    --icon-height: 280px;
+    --icon-height: calc(230 * var(--u));
     left: 8%;                 /* ← 距屏幕左边 4% */
     right: auto;
     top: auto;                /* 用 bottom 定位，必须把兜底的 top: 50% 清掉 */
@@ -227,7 +197,7 @@ video.bug-icon {
 
 /* 图标 6（tnpb.avif）：BEGINNING 缩回原大小、整段演完之后才出现，位置＝屏幕中间下方 */
 .bug-icon-6 {
-    --icon-height: 180px;
+    --icon-height: calc(140 * var(--u));
     left: 50%;                /* ← 水平居中 */
     right: auto;
     top: auto;
@@ -247,10 +217,10 @@ video.bug-icon {
      淡出和图标 5 / 6 一起走（text-2 完全消失时一起消失），也在 3.js。
    ============================================================================ */
 .bug-icon-7 {
-    --icon-height: 100px;
+    --icon-height: calc(80 * var(--u));
     left: 35%;                 /* ← 兜底：大致落在图标 5 和 6 之间 */
     right: auto;
-    top: 65%;                  /* ← 兜底：大致对齐两只图标的竖直中点 */
+    top: 67%;                  /* ← 兜底：大致对齐两只图标的竖直中点 */
     bottom: auto;
     transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
 }
@@ -259,10 +229,10 @@ video.bug-icon {
    图标 8（ctac.avif）—— text-8 淡入时出现、text-9 淡出时消失
    ============================================================================ */
 .bug-icon-8 {
-    --icon-height: 200px;
+    --icon-height: calc(180 * var(--u));
     left: 40%;
     right: auto;
-    top: 70%;
+    top: 67%;
     bottom: auto;
     transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
 }
@@ -271,14 +241,14 @@ video.bug-icon {
    图标 8 上叠的那段视频（3.js 里 ico8 的 video: { src: "./CTAC.webm" }）
    ---------------------------------------------------------------------------- */
 .bug-icon-8 .bug-icon-video {
-    --video-dx: 0px;
-    --video-dy: 0px;
+    --video-dx: calc(0 * var(--u));
+    --video-dy: calc(0 * var(--u));
 
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%) translate(var(--video-dx), var(--video-dy));
-    height: 310px;
+    height: calc(280 * var(--u));
     width: auto;
     max-width: none;
     z-index: 1;                 /* 盖在下面那张静态图上面 */
@@ -301,7 +271,7 @@ video.bug-icon {
    图标 9（tnpb-1.avif）—— text-7 淡入时出现、跟 text-7 一起消失
    ============================================================================ */
 .bug-icon-9 {
-    --icon-height: 400px;
+    --icon-height: calc(400 * var(--u));
     left: 36%;
     right: auto;
     top: 43%;
@@ -329,8 +299,8 @@ video.bug-icon {
      只播一次、播完定格在最后一帧。
    ============================================================================ */
 .bug-icon-10 {
-    --icon-height: 300px;
-    left: 40%;
+    --icon-height: calc(250 * var(--u));
+    left: 37%;
     right: auto;
     top: 65%;
     bottom: auto;
@@ -346,7 +316,7 @@ video.bug-icon {
    图标 11（answer.webm）—— 跟 text-11 同步淡入 / 淡出
    ============================================================================ */
 .bug-icon-11 {
-    --icon-height: 800px;               /* ← 视频高度（宽度按视频比例自动） */
+    --icon-height: calc(800 * var(--u));               /* ← 视频高度（宽度按视频比例自动） */
     left: 35%;                          /* ← 水平位置（盒子中点对准屏幕一半） */
     right: auto;
     top: 53%;                           /* ← 竖直位置（盒子中点；文字中心在屏幕 40% 处） */
@@ -375,7 +345,7 @@ video.bug-icon {
      只在这个图标亮着的时候才看得到（跟着 slot 的 opacity 一起淡入淡出）
    ============================================================================ */
 .bug-icon-14 {
-    --icon-height: 500px;               /* ← 视频高度（宽度按比例自动；现在是竖版 1098×1312 ≈ 0.84:1，
+    --icon-height: calc(400 * var(--u));               /* ← 视频高度（宽度按比例自动；现在是竖版 1098×1312 ≈ 0.84:1，
                                             所以 500px 高时宽度约 418px） */
     left: 35%;                          /* ← 水平位置（盒子中点） */
     right: auto;
@@ -385,10 +355,10 @@ video.bug-icon {
 
     /* ★ 开关的几何：定义在 slot 上，【按钮】和它上面那行【文字】共用同一套数，
        所以改下面 --toggle-w 一个值，按钮和文字会一起跟着挪 / 一起缩放。 */
-    --toggle-w: clamp(46px, 5.2vw, 108px);
+    --toggle-w: clamp(calc(46 * var(--u)), 5.2vw, calc(108 * var(--u)));
     --toggle-h: calc(var(--toggle-w) * 0.5135);              /* 高 ≈ 宽的 51%（原 38 / 74） */
-    --toggle-knob: calc(var(--toggle-h) - 6px);              /* 圆点直径 = 高 − 上下各 3px */
-    --toggle-travel: calc(var(--toggle-w) - 6px - var(--toggle-knob));  /* 圆点行程 */
+    --toggle-knob: calc(var(--toggle-h) - calc(6 * var(--u)));              /* 圆点直径 = 高 − 上下各 3px */
+    --toggle-travel: calc(var(--toggle-w) - calc(6 * var(--u)) - var(--toggle-knob));  /* 圆点行程 */
     --toggle-gap: calc(var(--toggle-w) * 0.19);              /* 和视频之间的空隙（原 14 / 74） */
 }
 
@@ -417,7 +387,7 @@ video.bug-icon {
     height: var(--toggle-h);
     padding: 0;
     border: 0;
-    border-radius: 999px;
+    border-radius: calc(999 * var(--u));
     background: #C9D2DC;                /* 关：灰 */
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
     cursor: pointer;
@@ -430,8 +400,8 @@ video.bug-icon {
 .bug-icon-14 .bug-toggle::after {
     content: "";
     position: absolute;
-    left: 3px;
-    top: 3px;
+    left: calc(3 * var(--u));
+    top: calc(3 * var(--u));
     width: var(--toggle-knob);
     height: var(--toggle-knob);
     border-radius: 50%;
@@ -476,12 +446,12 @@ video.bug-icon {
 .bug-icon-14 .bug-toggle-label {
     position: absolute;
     left: 100%;
-    bottom: calc(50% + var(--toggle-h) * 0.5 + 10px);
+    bottom: calc(50% + var(--toggle-h) * 0.5 + calc(10 * var(--u)));
     transform: translateX(var(--toggle-gap));
     font-family: 'impact', sans-serif;  /* ← 正文字体（和 1.css 的 .text-box 一致） */
-    font-size: 18px;
+    font-size: calc(18 * var(--u));
     line-height: 1.2;
-    letter-spacing: 1px;                /* 和正文一样有点字距，Impact 不至于挤成一团 */
+    letter-spacing: calc(1 * var(--u));                /* 和正文一样有点字距，Impact 不至于挤成一团 */
     color: #324561;                     /* ← 正文颜色（1.css 的 .text-box） */
     white-space: nowrap;                /* 不换行 */
     pointer-events: none;
@@ -502,7 +472,7 @@ video.bug-icon {
 .bug-icon-16,
 .bug-icon-17,
 .bug-icon-18 {
-    --icon-height: 180px;               /* ← 图标高度（宽度按图片比例自动） */
+    --icon-height: calc(180 * var(--u));               /* ← 图标高度（宽度按图片比例自动） */
 }
 
 /* 它们没有 hover 名字 → 亮着的时候也别接鼠标，免得挡住底下文字 */
@@ -517,7 +487,7 @@ video.bug-icon {
    图标 19（expand.webm）—— text-15 淡入时出现、text-16 淡出时消失；一直循环播放
    ============================================================================ */
 .bug-icon-19 {
-    --icon-height: 700px;               /* ← 视频高度（宽度自动 ≈ height × 1.59） */
+    --icon-height: calc(580 * var(--u));               /* ← 视频高度（宽度自动 ≈ height × 1.59） */
     left: auto;                         /* ★ 必须：清掉 .bug-icon-slot 兜底的 left: 25% */
     right: 0%;                          /* ← 贴屏幕右边（想留白改 3% / 5%） */
     top: 70%;                           /* ← 竖直位置（盒子中点） */
@@ -548,7 +518,7 @@ video.bug-icon {
      所以它【一定在文字下面】—— 不要给它单独写 z-index。
    ============================================================================ */
 .bug-icon-20 {
-    --icon-height: 1200px;               /* ← 视频高度（宽度自动 ≈ height × 1.23 = 592px） */
+    --icon-height: calc(1000 * var(--u));               /* ← 视频高度（宽度自动 ≈ height × 1.23 = 592px） */
     left: auto;                         /* ★ 必须：清掉 .bug-icon-slot 兜底的 left: 25% */
     right: -10%;                          /* ★ 贴屏幕右边（想留白多一点改 4% / 6%） */
     top: 52%;                           /* ← 竖直位置（盒子中点） */
@@ -579,7 +549,7 @@ video.bug-icon {
      所以它【一定在文字下面】—— 不要给它单独写 z-index。
    ============================================================================ */
 .bug-icon-21 {
-    --icon-height: 260px;               /* ← 视频高度（宽度自动 ≈ height × 2.61 = 679px） */
+    --icon-height: calc(260 * var(--u));               /* ← 视频高度（宽度自动 ≈ height × 2.61 = 679px） */
     left: auto;                         /* ★ 必须：清掉 .bug-icon-slot 兜底的 left: 25% */
     right: 2%;                          /* ★ 贴页面右边（想留白多一点改 4% / 6%） */
     top: 72%;                           /* ← 竖直位置（盒子中点；落在文字下方） */
@@ -611,10 +581,10 @@ video.bug-icon {
      z-index 都 ≥ 4，所以它【一定在文字下面】—— 不要给它单独写 z-index。
    ============================================================================ */
 .bug-icon-22 {
-    --icon-height: 800px;               /* ← 图标高度（宽度自动 ≈ height × 1.15 = 691px） */
+    --icon-height: calc(600 * var(--u));               /* ← 图标高度（宽度自动 ≈ height × 1.15 = 691px） */
     left: auto;                         /* ★ 必须：清掉 .bug-icon-slot 兜底的 left: 25% */
-    right: -1%;                          /* ← 贴屏幕右边（想留白多一点改 6% / 8%） */
-    top: 80%;                           /* ← 竖直位置（盒子中点；落在文字下方） */
+    right: 3%;                          /* ← 贴屏幕右边（想留白多一点改 6% / 8%） */
+    top: 78%;                           /* ← 竖直位置（盒子中点；落在文字下方） */
     bottom: auto;
     transform: translateY(-50%);        /* ★ 只做竖直居中，横向交给 right */
 }
@@ -859,7 +829,7 @@ video.bug-icon {
       想改回“视频在文字下面”：把 3.js 里 ico23 那一条的 topLayer: true 删掉即可。
    ============================================================================ */
 .bug-icon-23 {
-    --icon-height: 800px;               /* ← 视频高度（宽度自动 ≈ height × 1.23 ≈ 984px） */
+    --icon-height: calc(800 * var(--u));               /* ← 视频高度（宽度自动 ≈ height × 1.23 ≈ 984px） */
     left: 37%;                          /* ← 水平位置（盒子中点；50% = 屏幕水平居中） */
     right: auto;
     top: 55%;                           /* ← 竖直位置（盒子中点；落在文字下方） */
@@ -921,68 +891,30 @@ video.bug-icon {
     --pop-scale: 0.14; /* ← 起点大小（最终字号的多少倍） */
 }
 
-/* 窄屏：画框本来就铺满视口，位置是百分比、自动跟着缩；
-   只需要把图标本身收小一点，免得在小屏上占掉半屏。 */
+/* ★ 原来这里有一条 @media (max-width: 900px)，在窄屏把图标高度单独调成
+   90 / 70 / 44 / 60 / 110px…… —— 那是【字号还写死 px 的时候】的补丁：
+   位置用 %（会跟着缩）、图标用 px（不会缩），所以只好在小屏手动收小图标。
+   ★ 现在图标高度已经全部写成 calc(设计值 * var(--u))，和文字、底图、% 位置
+     是同一个参照系，窄屏会自动按同一比例缩小 —— 这条补丁如果留着，
+     小屏上的图标会被【缩放两次】（比正文小一大截），所以整块删掉。
+   ★ 想让小屏的图标特别小（有意的第二套比例）：把下面注释里的内容取消注释，
+     并把 Npx 写成 calc(N * var(--u)) 或者直接写固定 px 都行。
+     但那会和文字的缩放比例不一致，一般不建议。
+
 @media (max-width: 900px) {
-    .bug-icons {
-        --icon-height: 90px;
-    }
-    /* 钉住的这两只也跟着收小（百分比位置不用改，会自动跟着屏幕缩放） */
-    .bug-icon-5,
-    .bug-icon-6 {
-        --icon-height: 70px;
-    }
-    /* 箭头比两只图标再小一点，小屏上挤在一起不好看 */
-    .bug-icon-7 {
-        --icon-height: 44px;
-    }
-    /* ctac 也跟着收小 */
-    .bug-icon-8 {
-        --icon-height: 60px;
-    }
-    /* tnpb-1 也跟着收小 */
-    .bug-icon-9 {
-        --icon-height: 110px;
-    }
-    /* title.mp4 也跟着收小 */
-    .bug-icon-10 {
-        --icon-height: 110px;
-    }
-    /* answer.webm 也跟着收小 */
-    .bug-icon-11 {
-        --icon-height: 110px;
-    }
-    /* suicide.webm 也跟着收小 */
-    .bug-icon-14 {
-        --icon-height: 90px;
-    }
-    /* ★ 它右边那个开关【不在这里改】：那个按钮的大小本来就是按页面宽度算的
-       （--toggle-w: clamp(46px, 5.2vw, 108px)），窄屏自动变小，不用再单独覆盖。 */
-    /* understand-1.avif 的四只也跟着收小 */
-    .bug-icon-15,
-    .bug-icon-16,
-    .bug-icon-17,
-    .bug-icon-18 {
-        --icon-height: 70px;
-    }
-    /* expand.webm 也跟着收小 */
-    .bug-icon-19 {
-        --icon-height: 90px;
-    }
-    /* standing.webm 也跟着收小 */
-    .bug-icon-20 {
-        --icon-height: 110px;
-    }
-    /* model.webm 也跟着收小 */
-    .bug-icon-21 {
-        --icon-height: 80px;
-    }
-    /* computer.avif 也跟着收小 */
-    .bug-icon-22 {
-        --icon-height: 100px;
-    }
-    /* tool.webm 也跟着收小 */
-    .bug-icon-23 {
-        --icon-height: 110px;
-    }
+    .bug-icons { --icon-height: calc(90 * var(--u)); }
+    .bug-icon-5, .bug-icon-6 { --icon-height: calc(70 * var(--u)); }
+    .bug-icon-7 { --icon-height: calc(44 * var(--u)); }
+    .bug-icon-8 { --icon-height: calc(60 * var(--u)); }
+    .bug-icon-9,
+    .bug-icon-10,
+    .bug-icon-11 { --icon-height: calc(110 * var(--u)); }
+    .bug-icon-14 { --icon-height: calc(90 * var(--u)); }
+    .bug-icon-15, .bug-icon-16, .bug-icon-17, .bug-icon-18 { --icon-height: calc(70 * var(--u)); }
+    .bug-icon-19 { --icon-height: calc(90 * var(--u)); }
+    .bug-icon-20 { --icon-height: calc(110 * var(--u)); }
+    .bug-icon-21 { --icon-height: calc(80 * var(--u)); }
+    .bug-icon-22 { --icon-height: calc(100 * var(--u)); }
+    .bug-icon-23 { --icon-height: calc(110 * var(--u)); }
 }
+*/

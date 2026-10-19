@@ -90,6 +90,13 @@ body {
 
 .bg-video-wrap {
     position: absolute;     /* 跟随底图/文档；不要用 fixed */
+
+    /* ★★ 定位锚点 = 视频盒子的【几何中心】（全页统一约定）★★
+       每条 .bg-video-wrap-xxx 里的 left / top 都是【盒子中点】相对底图宽 / 高的百分比，
+       不再是左上角或右上角；原来写 right 的那几条已经按实测换成中心坐标。
+       ★ 走动的那几个（crispr-3 / tnpb-1 / tnpb-2 / genewalk-1）位置由 2.js 每帧算，
+         2.js 已同步改成按中心锚点换算，所以轨迹点和画面完全不变。 */
+    translate: -50% -50%;
     z-index: 0;             /* 层级：0 = 在正文之下；想让某个压在上面就在它自己那条里写 z-index */
     pointer-events: none;   /* 默认不挡鼠标事件，不会影响原有滚动交互；
                                有名字的那些在下面 [data-video-name] 那条里单独打开，
@@ -142,12 +149,12 @@ body {
     left: 50%;
     bottom: 100%;                       /* 视频正上方 */
     transform: translateX(-50%);        /* 水平居中在视频中线上 */
-    margin-bottom: 6px;
+    margin-bottom: calc(6 * var(--u));
 
     font-family: 'impact', sans-serif;  /* ← 正文字体（和 1.css 的 .text-box 一致） */
-    font-size: 28px;                    /* 和 3.css 里图标名字一样大 */
+    font-size: calc(28 * var(--u));                    /* 和 3.css 里图标名字一样大 */
     line-height: 1.2;
-    letter-spacing: 1px;                /* ← 正文的字距（1.css 的 .text-box） */
+    letter-spacing: calc(1 * var(--u));                /* ← 正文的字距（1.css 的 .text-box） */
     color: #324561;                     /* ← 正文颜色（1.css 的 .text-box） */
     white-space: nowrap;                /* 名字不断行 */
 
@@ -156,7 +163,7 @@ body {
        ★ 为什么不用 -webkit-text-stroke：它的描边是【压在字里面】的，
          Impact 本来就瘦，一描字就细一半、还会发虚；
          用 8 向 text-shadow 描在外面，字形完全不变，只在周围多一圈白边。 */
-    --label-outline: 2px;
+    --label-outline: calc(2 * var(--u));
     text-shadow:
         calc(-1 * var(--label-outline)) calc(-1 * var(--label-outline)) 0 #fff,
         calc(-1 * var(--label-outline)) 0                               0 #fff,
@@ -203,8 +210,8 @@ body {
    pointer-events: none），所以不会挡 ico 的 hover，也不影响滚轮。
    ========================================================================== */
 .bg-video-wrap-falls-1 {
-    top: 40.2%;               /* ← 纵坐标：相对底图高度 */
-    right: -10%;              /* ← 横坐标：相对底图宽度（也可以换成 right: 20%） */
+    left: 86.99%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 46.80%;                        /* ← 几何中心 Y（相对底图高度） */
     width: 46%;             /* ← 宽度：相对底图宽度 */
     height: auto;           /* 高度 = 宽度 ÷ 视频比例（falls.webm 是 480×686 ≈ 0.70，
                                所以现在的高度大约是宽度的 1.43 倍） */
@@ -245,8 +252,8 @@ body {
    数字随你改；那份删掉的话它会自动借用 tnpb-1 的点。
    （它自己这条 top / right 对走动没有影响 —— 位置完全由轨迹点决定。） */
 .bg-video-wrap-crispr-3 {
-    top: 10.9%;             
-    right: 24%;             
+    left: 72.99%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 11.34%;                        /* ← 几何中心 Y（相对底图高度） */
     width: 6vw;           
     --rotate: 0deg;       
 }
@@ -264,8 +271,8 @@ body {
 
 /* 出现 */
 .bg-video-wrap-gene-1 {
-    top: 6.5%;
-    right: 22.5%;
+    left: 74.49%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 6.68%;                         /* ← 几何中心 Y（相对底图高度） */
     width: 6vw;
     --rotate: -8deg;         
     z-index: 2;              
@@ -273,8 +280,8 @@ body {
 
 /* gene-2：静态可见，和 gene-1 是并排的一对（两个重复的） */
 .bg-video-wrap-gene-2 {
-    top: 6.4%;
-    right: 23%;
+    left: 73.99%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 6.58%;                         /* ← 几何中心 Y（相对底图高度） */
     width: 6vw;
     --rotate: -8deg;         
     z-index: 1;              
@@ -314,8 +321,8 @@ body {
    width / --rotate 跟 gene-1 保持一致（6vw / -8deg），走起来才和它一样大、一样斜。
    ========================================================================== */
 .bg-video-wrap-genewalk-1 {
-    top: 42%;               /* 起点（仅初始值；真正的起点见 .genewalk-move-1） */
-    right: 9%;
+    left: 87.99%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 42.18%;                        /* ← 几何中心 Y（相对底图高度） */
     width: 6vw;
     --rotate: -8deg;
     z-index: 2;             /* 和 gene-1 同层：压在底图 / falls 之上，文字之下 */
@@ -352,13 +359,13 @@ body {
 /* 第 1 段起点：一开始就在这儿等着 */
 .genewalk-points > .genewalk-move-1 {
     top: 42.9%;
-    right: 17%;
+    left: 83%;
 }
 
 /* 第 1 段终点：走到这儿就消失 */
 .genewalk-points > .genewalk-move-2 {
     top: 50%;
-    right: 16.1%;
+    left: 83.9%;
 }
 
 /* ======================= TnpB 类 ======================= */
@@ -369,8 +376,8 @@ body {
    2.js 只负责“滚到哪就走到哪”。下面那条 top / right 是它没被移动时的位置。
    -------------------------------------------------------------------------- */
 .bg-video-wrap-tnpb-1 {
-    top: 24.3%;
-    right: 27%;
+    left: 71.01%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 24.79%;                        /* ← 几何中心 Y（相对底图高度） */
     width: 4vw;
     --rotate: 0deg;
     will-change: transform; /* 跟着滚动在动，提示浏览器 */
@@ -450,13 +457,13 @@ body {
 /* 第 1 段起点（人一开始站在这里） */
 .tnpb-points > .tnpb-move-1 {
     top: 20.7%;
-    right: 20%;
+    left: 80%;
 }
 
 /* 第 1 段终点 */
 .tnpb-points > .tnpb-move-2 {
     top: 21.1%;
-    right: 31%;
+    left: 69%;
 }
 
 /* ---- 第 2 段：点 3 → 点 4（它的起点 top = 这一段什么时候开始走）---- */
@@ -464,13 +471,13 @@ body {
 /* 第 2 段起点 */
 .tnpb-points > .tnpb-move-3 {
     top: 21.1%;
-    right: 31%;
+    left: 69%;
 }
 
 /* 第 2 段终点 */
 .tnpb-points > .tnpb-move-4 {
     top: 23.5%;
-    right: 10%;
+    left: 90%;
 }
 
 /* ---- 第 3 段：点 5 → 点 6 ---- */
@@ -478,128 +485,128 @@ body {
 /* 第 3 段起点 */
 .tnpb-points > .tnpb-move-5 {
     top: 23.5%;
-    right: 10%;
+    left: 90%;
 }
 
 /* 第 3 段终点 */
 .tnpb-points > .tnpb-move-6 {
     top: 24.3%;
-    right: 32%;
+    left: 68%;
 }
 
 
 /* 第 4 段起点 */
 .tnpb-points > .tnpb-move-7 {
     top: 34.3%;
-    right: 14%;
+    left: 86%;
 }
 
 /* 第 4 段终点 */
 .tnpb-points > .tnpb-move-8 {
     top: 34.6%;
-    right: 25%;
+    left: 75%;
 }
 
 /* 第 5 段起点 */
 .tnpb-points > .tnpb-move-9 {
     top: 38.8%;
-    right: 20%;
+    left: 80%;
 }
 
 /* 第 5 段终点 */
 .tnpb-points > .tnpb-move-10 {
     top: 39.8%;
-    right: 16%;
+    left: 84%;
 }
 
 /* 第 6 段起点 */
 .tnpb-points > .tnpb-move-11 {
     top: 39.8%;
-    right: 16%;
+    left: 84%;
 }
 
 /* 第 6 段终点 */
 .tnpb-points > .tnpb-move-12 {
     top: 40%;
-    right: 14%;
+    left: 86%;
 }
 
 /* 第 7 段起点 */
 .tnpb-points > .tnpb-move-13 {
     top: 40%;
-    right: 14%;
+    left: 86%;
 }
 
 /* 第 7 段终点 */
 .tnpb-points > .tnpb-move-14 {
     top: 40.7%;
-    right: 20%;
+    left: 80%;
 }
 
 /* 第 8 段起点 */
 .tnpb-points > .tnpb-move-15 {
     top: 40.7%;
-    right: 20%;
+    left: 80%;
 }
 
 /* 第 8 段终点 */
 .tnpb-points > .tnpb-move-16 {
     top: 42%;
-    right: 9%;
+    left: 91%;
 }
 
 /* 第 9 段起点 */
 .tnpb-points > .tnpb-move-17 {
     top: 49.7%;
-    right: 21%;
+    left: 79%;
 }
 
 /* 第 9 段终点 */
 .tnpb-points > .tnpb-move-18 {
     top: 51%;
-    right:11%;
+    left: 89%;
 }
 
 /* 第 10 段起点 */
 .tnpb-points > .tnpb-move-19 {
     top: 51%;
-    right:11%;
+    left: 89%;
 }
 
 /* 第 10 段终点 */
 .tnpb-points > .tnpb-move-20 {
     top: 51.4%;
-    right: 25%;
+    left: 75%;
 }
 
 /* 第 11 段起点 */
 .tnpb-points > .tnpb-move-21 {
     top: 51.4%;
-    right: 25%;
+    left: 75%;
 }
 
 /* 第 11 段终点 */
 .tnpb-points > .tnpb-move-22 {
     top: 52.4%;
-    right: 21%;
+    left: 79%;
 }
 
 /* 第 12 段起点 */
 .tnpb-points > .tnpb-move-23 {
     top: 52.4%;
-    right: 21%;
+    left: 79%;
 }
 
 /* 第 12 段终点 */
 .tnpb-points > .tnpb-move-24 {
     top: 53.2%;
-    right: 27%;
+    left: 73%;
 }
 
 /* 第 13 段起点 */
 .tnpb-points > .tnpb-move-25 {
     top: 53.2%;
-    right: 27%;
+    left: 73%;
 }
 
 /* 第 13 段终点 */
@@ -746,13 +753,13 @@ body {
 /* 第 1 段起点（它一开始站在这里） */
 .crispr3-points > .crispr3-move-1 {
     top: 3.6%;             
-    right: 30.7%;
+    left: 69.3%;
 }
 
 /* 第 1 段终点 */
 .crispr3-points > .crispr3-move-2 {
     top: 3.8%;
-    right: 28%;
+    left: 72%;
 }
 
 /* ---- 第 2 段：点 3 → 点 4 ---- */
@@ -760,13 +767,13 @@ body {
 /* 第 2 段起点 */
 .crispr3-points > .crispr3-move-3 {
     top: 3.8%;
-    right: 28%;
+    left: 72%;
 }
 
 /* 第 2 段终点 */
 .crispr3-points > .crispr3-move-4 {
     top: 5%;             
-    right: 22.2%;    
+    left: 77.8%;    
 }
 
 /* 消失动画 TnpB_2：★ 不再固定摆在页面上了 —— 平时完全不显示，
@@ -777,8 +784,8 @@ body {
    width / --rotate 仍然决定它的大小和角度，
    位置微调（相对终点往上挪多少）在 2.js 的 END_ANIM_UP_PERCENT。 */
 .bg-video-wrap-tnpb-2 {
-    top: 23.7%;
-    right: 20%;
+    left: 77.76%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 24.40%;                        /* ← 几何中心 Y（相对底图高度） */
     width: 4.5vw;
     --rotate: 0deg;
 }
@@ -811,8 +818,8 @@ body {
         想让它压住文字就把 z-index 改成 2（3.js 的图标是 3）。
    ================================================================== */
 .bg-video-wrap-tnpbend-1 {
-    top: 92.3%;
-    left: 21%;
+    left: 27.01%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 94.26%;                        /* ← 几何中心 Y（相对底图高度） */
     width: 12vw;
     --rotate: 0deg;
     z-index: 0;

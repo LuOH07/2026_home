@@ -14,7 +14,7 @@
 .text-1 .compact {
     /* ── 可调旋钮：只影响这一个词，动它们不会牵动整句 ── */
     --compact-bg: #467aae;        /* 矩形颜色 */
-    --compact-radius: 20px;       /* 圆角（要求就是 20px） */
+    --compact-radius: calc(20 * var(--u));       /* 圆角（要求就是 20px） */
     --compact-pad-x: 0.24em;      /* 矩形左右比字宽出多少（em = 跟着 60px 字号缩放） */
     --compact-pad-y: 0.08em;      /* 矩形上下比字高出多少 */
 
@@ -39,10 +39,10 @@
    ★ line-height 收一点：128px 的木字默认行高会把这一行撑得很高，
      而且会把上面那行 “Compact is only the” 和它之间的间距拉得过大。 */
 .text-1 .beginning {
-    --beginning-size: 152px;   /* ← 只改这一个数就能整体缩放这个词 */
+    --beginning-size: calc(100 * var(--u));   /* ← 只改这一个数就能整体缩放这个词 */
 
     font-size: var(--beginning-size);
-    line-height: 1.05;
+    line-height: 1.5;
 
     /* 出场动效（由 4.js 每帧写 inline transform / opacity，滚轮驱动）：
        · 等 ico7（箭头）的渐入彻底走完，这个词才弹出来（4.js 从 3.js 的时刻表读起点）；
@@ -73,7 +73,7 @@
    ★ --text3-word-size 是【唯一】的字号旋钮：外框（词间空格）和两个词都读它，
      所以改这一个数，两个词和中间的空隙一起缩放，比例不会跑掉。 */
 .text-3 .familiar-host {
-    --text3-word-size: 164px;     /* ← 44px 的整句里，这两个词单独放大到 128px */
+    --text3-word-size: calc(108 * var(--u));     /* ← 44px 的整句里，这两个词单独放大到 128px */
     --text3-shift:0%;             /* ← 只改这一个数就能左右平移整组（页面宽度的 %） */
 
     /* ---- TNT 爆炸的旋钮 ---- */
@@ -171,7 +171,7 @@
       长的时候会把旁边的字真挤开（同一行的往右推、后面的行往下推），长完就是现在这个效果。
       —— 所以下面写的 font-size 只是【最终值】，动画期间会被 inline font-size 临时覆盖。 */
 .text-3 .harder {
-    --text3-harder-size: 90px;   /* ← 只改这一个数就能整体缩放这个词（原本整句是 44px） */
+    --text3-harder-size: calc(70 * var(--u));   /* ← 只改这一个数就能整体缩放这个词（原本整句是 44px） */
     --text3-harder-shift: 0;      /* ← 想单独左右平移它就改这个数（单位 1vw = 页面宽度的 1%） */
 
     display: inline-block;        /* 单独成盒，但仍留在这一行里，不打断整句 */
@@ -193,7 +193,7 @@
 /* 只改这一个词的字号（44px → 128px）：
    颜色 / 字体 / 位置关系都不动，句子里其余文字仍是 44px。 */
 .text-6 .not {
-    --not-size: 128px;            /* ← 只改这一个数就能整体缩放这个词 */
+    --not-size: calc(96 * var(--u));            /* ← 只改这一个数就能整体缩放这个词 */
 
     display: inline-block;        /* 单独成盒（以后要加背景 / 动效都方便），但仍留在这一行里 */
     font-size: var(--not-size);
@@ -278,12 +278,12 @@
 
 /* 五个首字母共用的那套样式 */
 .text-11 .init-11 {
-    --init11-size: 96px;             /* ← 首字母字号（这句其余的字仍是 44px） */
-    --init11-outline: 6px;           /* ← 描边粗细：描在字外面的那一圈（颜色见下一行） */
+    --init11-size: calc(60 * var(--u));             /* ← 首字母字号（这句其余的字仍是 44px） */
+    --init11-outline: calc(6 * var(--u));           /* ← 描边粗细：描在字外面的那一圈（颜色见下一行） */
     --init11-outline-color: #465e77; /* ← 描边颜色（想换颜色只改这一个值） */
-    --init11-gap: 8px;              /* ← ★首字母和【后面】字母之间空多宽（写 px 是固定宽度；写 em 会跟着 --init11-size 缩放） */
-    --init11-gap-before: 16px;       /* ← ★首字母和【前面】那个词之间再加多宽（词间那个空格之外，另加的） */
-    --init11-pull: 0em;              /* ← 首字母把这一行“撑高”的那部分，收回去多少（em，0 = 不收回） */
+    --init11-gap: calc(8 * var(--u));              /* ← ★首字母和【后面】字母之间空多宽（写 px 是固定宽度；写 em 会跟着 --init11-size 缩放） */
+    --init11-gap-before: calc(16 * var(--u));       /* ← ★首字母和【前面】那个词之间再加多宽（词间那个空格之外，另加的） */
+    --init11-pull: -0.3em;              /* ← 首字母把这一行“撑高”的那部分，收回去多少（em，0 = 不收回） */
 
     display: inline-block;        /* 单独成盒（以后要加背景 / 动效都方便），但仍留在这一行里 */
     font-size: var(--init11-size);
@@ -370,7 +370,7 @@
    ★ 跳动只改 Y 方向的位移（外加一点落地压扁）：左右、字号、基线都不动，
      所以是“在原地”上下蹦，不会把旁边的字推来推去。 */
 .text-9 .cut9 {
-    --cut9-size: 66px;        /* ← 放大程度：这一个词的字号（44px 的整句里单独放大到这个字号） */
+    --cut9-size: calc(66 * var(--u));        /* ← 放大程度：这一个词的字号（44px 的整句里单独放大到这个字号） */
     --cut9-bob: 0.26em;        /* ← 蹦的幅度：往上跳多高（em，跟着 --cut9-size 走；越大跳越高） */
     --cut9-bob-sec: 0.8s;      /* ← 蹦的速度：一跳的周期（秒）；0.8 = 每秒一下多，越小跳得越快 */
     --cut9-pull: 0em;          /* ← 把这一行被大字撑高的那部分收回多少（em；0 = 不收回，0.1 左右会紧一点） */
@@ -446,9 +446,9 @@
 /* 视频的“外壳”：绝对定位 + 飞行动画（transform / opacity）都在它身上。
    视频和 hover 名字都住在里面 —— 这样名字跟着视频一起飞、一起落位、一起淡出。 */
 .text-9 .gene9-wrap {
-    --gene9-w: 50px;          /* ← 视频宽度（高度按素材自己的比例自动算） */
-    --gene9-gap: 10px;         /* ← 落点在 “where” 正上方：底面离这个词的顶边多少 */
-    --gene9-dx: 0px;           /* ← 左右微调（正数往右、负数往左；0 = 正对 where 中心） */
+    --gene9-w: calc(50 * var(--u));          /* ← 视频宽度（高度按素材自己的比例自动算） */
+    --gene9-gap: calc(10 * var(--u));         /* ← 落点在 “where” 正上方：底面离这个词的顶边多少 */
+    --gene9-dx: calc(0 * var(--u));           /* ← 左右微调（正数往右、负数往左；0 = 正对 where 中心） */
 
     position: absolute;
     left: 50%;
@@ -489,16 +489,16 @@
    ★ 位置默认贴在视频【正上方】（那里是空背景，读起来最清楚）；
      想放到下面：把 bottom: 100% / margin-bottom 换成 top: 100% / margin-top 即可。 */
 .text-9 .gene9-name {
-    --gene9-name-size: 28px;   /* ← 名字字号（颜色 / 字体 / 字距都继承正文） */
+    --gene9-name-size: calc(28 * var(--u));   /* ← 名字字号（颜色 / 字体 / 字距都继承正文） */
 
     position: absolute;
     left: 50%;
     bottom: 100%;
     transform: translateX(-50%);   /* 水平居中在视频中线上 */
-    margin-bottom: 6px;
+    margin-bottom: calc(6 * var(--u));
 
     font-family: inherit;          /* ← 正文字体 */
-    color: inherit;                /* ← 正文颜色 */
+    color: #C1C8CE;                /* ← 正文颜色 */
     letter-spacing: inherit;       /* ← 正文的字距 */
     font-size: var(--gene9-name-size);
     line-height: 1.2;
@@ -522,7 +522,7 @@
      仍然是一个独立的块（flex item），所以放大它只是把这一个块变高，不会把下面那行挤歪。
    ★ --build13-size 是【唯一】的字号旋钮：只改这一个数就能整体缩放这个词。 */
 .text-13 .build13 {
-    --build13-size: 128px;         /* ← 只改这一个数就行（这句原本是 44px） */
+    --build13-size: calc(88 * var(--u));         /* ← 只改这一个数就行（这句原本是 44px） */
 
     display: block;               /* 它本来就是块（flex item），这里写清楚，方便理解 */
     font-size: var(--build13-size);
@@ -536,7 +536,7 @@
      仍然是一个独立的块（flex item），所以放大它只是把这一个块变高，不会挤歪下面那行。
    ★ --expand15-size 是【唯一】的字号旋钮：只改这一个数就能整体缩放这个词。 */
 .text-15 .expand15 {
-    --expand15-size: 128px;        /* ← 只改这一个数就行（这句原本是 44px） */
+    --expand15-size: calc(88 * var(--u));        /* ← 只改这一个数就行（这句原本是 44px） */
 
     display: block;               /* 它本来就是块（flex item），这里写清楚，方便理解 */
     font-size: var(--expand15-size);
@@ -550,7 +550,7 @@
      仍然是一个独立的块（flex item），所以放大它只是把这一个块变高，不会挤歪下面那行。
    ★ --model17-size 是【唯一】的字号旋钮：只改这一个数就能整体缩放这个词。 */
 .text-17 .model17 {
-    --model17-size: 128px;         /* ← 只改这一个数就行（这句原本是 44px） */
+    --model17-size: calc(88 * var(--u));         /* ← 只改这一个数就行（这句原本是 44px） */
 
     display: block;               /* 它本来就是块（flex item），这里写清楚，方便理解 */
     font-size: var(--model17-size);
@@ -645,7 +645,7 @@
 }
 
 .text-20 .t20-big {
-    --t20-big-size: 88px;         /* 默认大小：下面五个字母各自覆盖这个数 */
+    --t20-big-size: calc(80 * var(--u));         /* 默认大小：下面五个字母各自覆盖这个数 */
 
     /* 兜底的默认间距（五个字母各自在下面那一块里覆盖这两个数）：
          --t20-big-gap         和【后面】那个字母之间（0 = 紧贴）
@@ -720,7 +720,7 @@
     left: 0;
     top: 0;
     transform-origin: 50% 50%;
-    --icon-height: 90px;        /* ← 这颗弹跳图标的个头（60px 的 1.5 倍） */
+    --icon-height: calc(90 * var(--u));        /* ← 这颗弹跳图标的个头（60px 的 1.5 倍） */
 }
 
 /* 五个字母各自的大小 + 和前后字母的间距 —— 只改这几块里的数字
@@ -732,31 +732,31 @@
    ★ 想整体更松 / 更紧：把每块的两个数一起加 / 减（例如都 +0.02em）；
      只想动某一个字母：只改它自己那一块。单位 em，跟着这个字母的字号缩放。 */
 .text-20 .t20-big-s {   /* “allowS” 最后那个 S（笔画贴边 → 多留一点） */
-    --t20-big-size: 88px;
+    --t20-big-size: calc(88 * var(--u));
     --t20-big-gap-before: 0.09em;
     --t20-big-gap: 0.09em;
 }
 
 .text-20 .t20-big-t {   /* “Targets” 第一个 T（笔画贴边 → 多留一点） */
-    --t20-big-size: 88px;
+    --t20-big-size: calc(88 * var(--u));
     --t20-big-gap-before: 0.10em;
     --t20-big-gap: 0.11em;
 }
 
 .text-20 .t20-big-i {   /* “functIons” 里的 I（字窄、白边宽 → 少留一点） */
-    --t20-big-size: 88px;
+    --t20-big-size: calc(88 * var(--u));
     --t20-big-gap-before: 0.03em;
     --t20-big-gap: 0.04em;
 }
 
 .text-20 .t20-big-n {   /* “uNderstandinG” 的第一个 N（两侧白边宽 → 少留一点） */
-    --t20-big-size: 88px;
+    --t20-big-size: calc(88 * var(--u));
     --t20-big-gap-before: 0.03em;
     --t20-big-gap: 0.03em;
 }
 
 .text-20 .t20-big-g {   /* “uNderstandinG” 最后的 G（介于两者之间） */
-    --t20-big-size: 88px;
+    --t20-big-size: calc(88 * var(--u));
     --t20-big-gap-before: 0.08em;
     --t20-big-gap: 0.06em;
 }

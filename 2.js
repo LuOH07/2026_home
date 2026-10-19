@@ -349,7 +349,7 @@ function measureLength(raw, axis) {
     return n;
 }
 
-/* 读第 N 个点的位置：直接读它 css 里写的 top / right（和视频本体一个写法）。
+/* 读第 N 个点的位置：直接读它 css 里写的 top / left（2.css 现在统一用左向坐标，不再写 right）。
    这里不依赖元素的盒模型（它的祖先盒子高度是 0，靠 getComputedStyle
    读 top 会把百分比解析成 0），而是自己按底图尺寸把 % 换算成 px，
    所以改 2.css 里的数值能立刻生效。 */
@@ -359,16 +359,15 @@ function readPoint(className) {
 
     var cs = window.getComputedStyle(el);
     var y = measureLength(cs.top, "y");
-    var right = measureLength(cs.right, "x");
+    var left = measureLength(cs.left, "x");
 
-    /* 这条规则没写 top / right 时，用元素自己的行内值兜底 */
+    /* 这条规则没写 top / left 时，用元素自己的行内值兜底 */
     if (y === null) y = measureLength(el.style.top, "y");
-    if (right === null) right = measureLength(el.style.right, "x");
+    if (left === null) left = measureLength(el.style.left, "x");
 
-    if (y === null && right === null) return null;
+    if (y === null && left === null) return null;
 
-    var vw = document.documentElement.clientWidth || window.innerWidth;
-    var x = right === null ? 0 : vw - right;   /* right 换算成“离左边缘” */
+    var x = left === null ? 0 : left;          /* left 本身就是“离左边缘” */
 
     /* ★ 点盒子自己也可能被挪过（2.css 的“引导段” --lead-in：盒子 top 会往下推）：
        cs.top / cs.right 是相对盒子算的，要再加上盒子自己的位置，
@@ -509,10 +508,13 @@ function buildMotionPath(state) {
     });
     state.segments = segments;
 
-    /* 记下视频自己（没被移动时）在文档里的位置（offsetLeft/Top 是布局位置，
-       不会被 transform 影响，所以只在重建路线时量一次即可） */
-    state.docX = state.el.offsetLeft;
-    state.docY = state.el.offsetTop;
+    /* 记下视频自己（没被移动时）在文档里的【视觉左上角】：
+       中心锚点下 offsetLeft/Top 是盒子中心，所以要减去半个自身尺寸（见 boxCorner）。
+       不会被 transform 影响，所以只在重建路线时量一次；尺寸变了由 watchBoxSize 补量。 */
+    var corner = boxCorner(state.el);
+    state.docX = corner.x;
+    state.docY = corner.y;
+    watchBoxSize(state);
 
     if (!segments.length) return;
 
@@ -587,6 +589,30 @@ function motionPositionAt(segments, centerY) {
         t: 1,
         parked: true
     };
+}
+
+/* ★ 视频容器的“视觉左上角”：
+   2.css 里 .bg-video-wrap 用的是【中心锚点】（translate: -50% -50%），
+   所以 offsetLeft / offsetTop 是盒子【中心】的布局坐标；
+   而轨迹点（cur.x / cur.y）一直是按“盒子左上角站到点上”调的，
+   所以换算时要把半个自身尺寸加回去 —— 画面和改之前一模一样。
+   ★ 半宽 / 半高会随视频元数据、窗口宽度变，用 ResizeObserver 盯着，变了就重记一次。 */
+function boxCorner(el) {
+    return {
+        x: el.offsetLeft - el.offsetWidth / 2,
+        y: el.offsetTop - el.offsetHeight / 2
+    };
+}
+
+function watchBoxSize(state) {
+    if (state.ro || typeof ResizeObserver !== "function") return;
+    state.ro = new ResizeObserver(function () {
+        var c = boxCorner(state.el);
+        state.docX = c.x;
+        state.docY = c.y;
+        commitMotion(state);
+    });
+    state.ro.observe(state.el);
 }
 
 /* 把 transform 写上去 */
@@ -822,10 +848,12 @@ function playFxAt(pl, point) {
     var up = mapHeight() * pl.up / 100;        /* 往上挪（底图高度的 %） */
     var left = vw * pl.left / 100;             /* 往左挪（底图宽度的 %） */
 
-    /* 和人物一样的对齐方式：盒子的左上角 = 目标点（再按 up / left 微调一点） */
+    /* 和人物一样的对齐方式：盒子的【视觉左上角】= 目标点（再按 up / left 微调一点）。
+       中心锚点下 offsetLeft/Top 是盒子中心，所以先换算成视觉左上角（boxCorner）。 */
+    var corner = boxCorner(wrap);
     wrap.style.transform = "translate3d(" +
-        (point.x - wrap.offsetLeft - left).toFixed(2) + "px," +
-        (point.y - wrap.offsetTop - up).toFixed(2) + "px,0)";
+        (point.x - corner.x - left).toFixed(2) + "px," +
+        (point.y - corner.y - up).toFixed(2) + "px,0)";
     wrap.style.visibility = "visible";
 
     var from = video.__startAt || 0;           /* 配了 startAt 的就从那一秒开始播 */
@@ -878,7 +906,9 @@ function playLinkedFx(pl) {
     var hidden = wrapByKey(pl.hideKey);
     if (hidden) hidden.style.visibility = "hidden";     /* 参照视频先消失 */
 
-    var ok = playFxAt(pl, { x: ref.offsetLeft, y: ref.offsetTop });
+    /* 参照视频的视觉左上角（中心锚点 → 减去半个自身尺寸），联动动画就叠在它上面 */
+    var refCorner = boxCorner(ref);
+    var ok = playFxAt(pl, refCorner);
     if (!ok && hidden) hidden.style.visibility = "";    /* 播不起来就直接放回去 */
 
     return ok;

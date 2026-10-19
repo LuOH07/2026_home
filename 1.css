@@ -27,6 +27,50 @@
     font-style: normal;
     font-display: swap;
 }
+/* ==========================================================================
+   ★★ 全页唯一的“缩放基准”：--u ★★
+   --------------------------------------------------------------------------
+   这一页实际上是一张【竖长海报】：底图（803×4000）永远铺满 100% 宽，
+   页面高度由 1.js 按图片比例写死，所以底图在任何屏幕宽度下都会等比缩放；
+   文字 / 图标 / 轨迹点的【位置】本来就用 % 写，天然跟着等比。
+
+   以前出问题的是【尺寸】：字号、图标高度全是写死的 px（44px / 152px / 300px…），
+   而位置是 % —— 屏幕一变宽 / 一变窄，字和画面的比例就变了：
+       · 1920 宽：字只占屏宽的 2.3%，看着又小又散；
+       · 1024 宽：开始有 16 处相邻文字重叠（累计 1730px）；
+       ·  430 宽：字占到屏宽的 10%，几乎每一句都压在下一句上（21 处、累计 8000+px）。
+   （数字是用无头 Chrome 在 8 个宽度下量出来的，改完可以按同样方法复测。）
+
+   现在把【所有尺寸】都写成 calc(设计值 * var(--u))：
+       --u = 屏宽 ÷ 1440  →  1440 宽时和改之前一模一样，一个像素都不变；
+       更宽 / 更窄时，字号、图标、字距、圆角、行内小间距……全部按同一比例缩放，
+       和底图、和 % 位置完全同一个参照系 ⇒ 任何屏宽下版式都和 1440 时一致。
+
+   ★ 想让全页的“字 + 图标”整体大一点 / 小一点（不动布局位置）：
+       只改 --design-w 这一个数。改小 = 所有东西变大，改大 = 变小。
+       例：--design-w: 1920 = “按 1920 宽设计”，1440 宽时所有尺寸 ×0.75。
+   ★ 为什么不用 rem：rem 跟的是【浏览器的默认字号】（用户可以在设置里改成 16px→24px），
+       那只会把字放大、不放大画面 —— 正好是现在这个 bug 的翻版。
+       vw 只跟窗口宽度走，和画面用的是同一个参照系，才是正确的锚点。
+   ★ 以后新加的任何尺寸（字号、宽高、间距、圆角）都写成
+       calc(设计值 * var(--u))，不要再写死 px。
+   ========================================================================== */
+:root {
+    --design-w: 1440;                    /* ← 设计基准宽度（全页唯一的总开关） */
+    --u: calc(100vw / var(--design-w));  /* 1440 宽时 --u = 1px */
+}
+
+/* 系统 / 浏览器的“字体放大”会无视 vw、单独把 px 字号再乘一个倍数
+   （安卓 Chrome 的无障碍字号、iOS Safari 的 text autosizing 都属于这种），
+   那同样会把版式挤乱。这里明确告诉浏览器：不要自动放大文字，
+   字号只由上面的 --u 决定。
+   （浏览器缩放 Ctrl +/- 和系统“显示缩放”不用管：它们改变的就是窗口宽度，
+      --u 会自动跟着变 —— 这正是本页想要的行为。） */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -71,7 +115,7 @@ body::-webkit-scrollbar {
     color: #324561;
     position: absolute;
     transform-origin: 0 0; 
-    letter-spacing: 1px;     
+    letter-spacing: calc(1 * var(--u));     
     will-change: transform, opacity;
     visibility: hidden;         
     pointer-events: none;
@@ -84,140 +128,142 @@ body::-webkit-scrollbar {
 }
 .text-1 {
     top: -1%;
-    left: 8%;
+    left: 10%;
     max-width: 60%;
-    font-size: 60px;
+    font-size: calc(40 * var(--u));
 }
 .text-2 {
     top: 2%;
     left: 10%;
-    max-width: 45%;
-    font-size: 44px;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-3 {
     top: 7%;
-    left: 3%;
+    left: 11%;
     max-width: 60%;
     line-height: 2.5;
-    font-size: 44px;
+    font-size: calc(40 * var(--u));
 }
 .text-4 {
     top: 11%;
     left: 13%;
-    max-width: 45%;
-    font-size: 44px;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-5 {
     top: 14%;
-    left: 13%;
-    max-width: 45%;
-    font-size: 44px;
+    left: 11%;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-6 {
     top: 19%;
-    left: 16%;
-    max-width: 50%;
-    font-size: 44px;
+    left: 15%;
+    max-width: 60%;
+    white-space: nowrap;
+    font-size: calc(40 * var(--u));
 }
 .text-7 {
     top: 23%;
     left: 14%;
-    max-width: 50%;
-    font-size: 44px;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-8 {
     top: 26%;
     left: 16%;
-    max-width: 45%;
-    font-size: 44px;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-9 {
     top: 29%;
     left: 14%;
     max-width: 60%;
-    font-size: 44px;
+    font-size: calc(40 * var(--u));
 }
 .text-10 {
     top: 34%;
-    left: 23%;
-    max-width: 45%;
-    font-size: 44px;
+    left: 22%;
+    max-width: 60%;
+    white-space: nowrap;
+    font-size: calc(40 * var(--u));
 }
 .text-11 {
     top: 38%;
-    left: 14%;
+    left: 16%;
     max-width: 60%;
-    font-size: 44px;
+    font-size: calc(40 * var(--u));
 }
 .text-12 {
     top: 42%;
-    left: 12%;
-    max-width: 50%;
-    font-size: 44px;
+    left: 20%;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 
 .text-13 {
     top: 54%;
     right: 20%;
-    max-width: 40%;
-    font-size: 44px;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-14 {
     top: 57%;
     right: 12%;
-    max-width: 55%;
-    font-size: 44px;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 
 .text-15 {
     top: 61%;
-    right: 15%;
-    max-width: 45%;
-    font-size: 44px;
+    right: 12%;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 
 .text-16 {
     top: 64%;
-    right: 10%;
-    max-width: 40%;
-    font-size: 44px;
+    right: 5%;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-17 {
     top: 68%;
     right: 15%;
-    max-width: 45%;
-    font-size: 44px;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-18 {
     top: 71%;
     right: 10%;
-    max-width: 40%;
-    font-size: 44px;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-19 {
     top: 74%;
-    right: 2%;
-    max-width: 55%;
-    font-size: 44px;
+    right: 10%;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-20 {
     top: 78%;
-    right: 20%;
-    max-width: 40%;
-    font-size: 44px;
+    right: 15%;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 
 .text-22 {
     top: 83%;
     right: 10%;
-    max-width: 45%;
-    font-size: 44px;
+    max-width: 60%;
+    font-size: calc(40 * var(--u));
 }
 .text-23 {
     top: 89%;
     right: 10%;
     max-width: 60%;
-    font-size: 44px;
+    font-size: calc(36 * var(--u));
 }
 /*
 .text-24 {
@@ -484,7 +530,7 @@ body.frozen-scroll .text-6 {
 .top-video-play:focus-visible {
     outline: 2px solid #465E77;
     outline-offset: 4px;
-    border-radius: 6px;
+    border-radius: calc(6 * var(--u));
 }
 
 /* 侧三角形（指向右 = 播放）：border 画的实心三角，尖朝右，颜色 465E77。
@@ -690,7 +736,7 @@ body.frozen-scroll .text-6 {
        字色改成正文色 #465E77，hover 那圈泛光仍是 #95c3f1。 */
     color: #465E77;
     font-family: 'The artist sans', -apple-system, sans-serif;
-    font-size: 40px;
+    font-size: calc(30 * var(--u));
     line-height: 1.6;
     writing-mode: vertical-rl;
     white-space: nowrap;

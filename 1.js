@@ -96,17 +96,20 @@ const ANCHOR_RATIO = 0.4;
        { sel: ".text-13", top: 0.3 }
    ]; */
 const ANCHOR_OVERRIDES = [
-    { sel: ".text-1",  top: 0.3 },   /* 70% 高度 → 距顶 30% */
-    { sel: ".text-2",  top: 0.3 },   /* 70% 高度 → 距顶 30% */
-    { sel: ".text-3",  top: 0.3 },  /* 65% 高度 → 距顶 35% */
-    { sel: ".text-10", top: 0.3 },   /* 70% 高度 → 距顶 30% */
-    { sel: ".text-11", top: 0.2 },   /* 70% 高度 → 距顶 30% */
-    { sel: ".text-12", top: 0.3 },   /* 70% 高度 → 距顶 30% */
-    { sel: ".text-15", top: 0.2 },   /* 80% 高度 → 距顶 20% */
-    { sel: ".text-16", top: 0.1 },   /* 80% 高度 → 距顶 20% */
-    { sel: ".text-17", top: 0.15 },   /* 80% 高度 → 距顶 20% */
-    { sel: ".text-18", top: 0.12 },   /* 80% 高度 → 距顶 20% */
-    { sel: ".text-19", top: 0.12 }    /* 80% 高度 → 距顶 20% */
+    { sel: ".text-1",  top: 0.23 },   
+    { sel: ".text-2",  top: 0.3 },   
+    { sel: ".text-3",  top: 0.3 },  
+    { sel: ".text-6",  top: 0.35 },  
+    { sel: ".text-7",  top: 0.23 },  
+    { sel: ".text-8",  top: 0.28 },  
+    { sel: ".text-10", top: 0.3 },   
+    { sel: ".text-11", top: 0.15 },   
+    { sel: ".text-12", top: 0.25 },   
+    { sel: ".text-15", top: 0.2 },   
+    { sel: ".text-16", top: 0.15 },   
+    { sel: ".text-17", top: 0.15 },  
+    { sel: ".text-18", top: 0.15 },  
+    { sel: ".text-19", top: 0.1 }   
 ];
 
 /* 这个元素的上沿该压在视口从上往下多少比例：命中覆盖表就返回它的 top，没命中返回 null */
