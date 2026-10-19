@@ -109,7 +109,8 @@ const ANCHOR_OVERRIDES = [
     { sel: ".text-16", top: 0.15 },   
     { sel: ".text-17", top: 0.13 },  
     { sel: ".text-18", top: 0.13 },  
-    { sel: ".text-19", top: 0.08 }   
+    { sel: ".text-19", top: 0.08 },
+    { sel: ".text-23", top: 0.15 }    
 ];
 
 /* 这个元素的上沿该压在视口从上往下多少比例：命中覆盖表就返回它的 top，没命中返回 null */

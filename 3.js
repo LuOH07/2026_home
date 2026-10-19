@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    /* ======================= 1. 二十个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~23，2 号已删，12 / 13 号已删） ======================= */
+    /* ======================= 1. 十八个图标（图片 / 视频链接、出场点在这里改；编号 1、3~11、14~24，2 号已删，12 / 13 号已删） ======================= */
     /* ============ ico5 / ico7 / ico6 的出场时刻（三只都挂在 text-1 上） ============
        text-1 = "Compact is only the" + <br> + "BEGINNING"，它自己有四个时刻（见 1.js）：
            A ──淡入(0.6s)── H ──停留(3s)── B ──淡出(0.6s)── E
@@ -483,6 +483,42 @@
             start: { from: ".text-11", mark: "A" },
             /* ★ 跟着 text-11 的【淡出区间】一起消失（它的 B → E） */
             fadeOut: ".text-11"
+        },
+
+        /* ---- 图标 24（End.webm）—— 跟 text-23 同步淡入 / 淡出 ----
+           ★ 素材用【相对路径】./End.webm（和 index.html 放在同一个目录）。
+           ★ 只播一次、播完就【定格在最后一帧】（和图标 10 / 11 / 20 / 21 / 23 一个用法）：
+                · autoplay: false → 不跟着进页面就播，等它随 text-23 亮起来才播；
+                · loop: false     → 不循环，走到头就停住。
+              一次性视频暗下去【不会】暂停（否则滚走了就永远走不到结尾，
+              “定格在最后一帧”也就不会发生）；已经播完再滚回来会从头再演一遍
+              （见 mediaLive 里那一段）。
+           ★ 出场 / 退场【整段都跟着 text-23】：
+                start   = text-23 的淡入起点（A），淡入时长也取 text-23 的淡入时长
+                          （默认 = host 的 H - A，两个曲线用的是同一条 easeOut，所以是同步亮起来的）；
+                fadeOut = ".text-23" → 在 text-23 的【淡出区间】（它的 B → E）里一起淡出，
+                          text-23 完全消失时它正好也没了；
+                往上滑倒放时会对称地跟着亮回来。
+           ★ 图层：仍在 .bug-icons 这个 z-index: 3 的画框里，而 text-23 的内联
+              z-index 比 3 高，所以它【天然在文字下面】—— 不要给它单独写 z-index。
+           ★ 位置 / 大小在 3.css 的 .bug-icon-24 里调（right / top / --icon-height）。
+           ★ 它没有 hover 名字 → 3.css 里另有 pointer-events: none，不挡底下文字。 */
+        {
+            cls: "bug-icon-24",
+            host: ".text-23",
+            src: "./End.webm",                       /* ★ 相对路径：和 index.html 同目录 */
+            name: "End",
+            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-24 决定 */
+            autoplay: false,                /* ★ 亮起来才播（不然进页面就播完了） */
+            loop: false,                    /* ★ 只播一次，播完定格在最后一帧 */
+            /* ★ 跟着 text-23 的【淡入区间】一起淡入（它的 A → H），时长和它一样 */
+            start: { from: ".text-23", mark: "A" },
+            /* ★ 跟着 text-23 的【淡出区间】一起消失（它的 B → E） */
+            fadeOut: ".text-23",
+            /* ★ 淡出也用文字那条曲线：1.js 画文字淡出用的是 1 - easeOut(t)，
+               而图标默认是线性的 1 - t —— 不改的话最后一段图标会比文字亮、
+               看起来像“文字先没了、视频还挂着”。写上这一行，两者逐帧一致。 */
+            fadeOutEase: true
         }
     ];
 
@@ -492,7 +528,7 @@
        图标 10 跟 .text-10、图标 11 跟 .text-10、
        图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21、
        图标 19 跟 .text-16、图标 20 跟 .text-14、图标 21 跟 .text-19、
-       图标 22 跟 .text-19、图标 23 跟 .text-11
+       图标 22 跟 .text-19、图标 23 跟 .text-11、图标 24 跟 .text-23
        （图标 12 / 13 已删除，不再有它们的事） */
     const FADE_OUT_HOST = ".text-6";
 
@@ -2171,8 +2207,12 @@
             }
 
             /* 按各自的淡出宿主淡出：图标 1 / 3 / 4 = text-5 开始淡出时一起暗下去
-               （到 text-5 完全消失时它们也正好全没了）；没写 fadeOut 的仍然跟 .text-6 */
-            op *= 1 - outT;
+               （到 text-5 完全消失时它们也正好全没了）；没写 fadeOut 的仍然跟 .text-6
+               ★ 默认是线性的 (1 - outT)，和 1.js 画文字的淡出（1 - easeOut(outT)）
+                 曲线不同：线性的话图标在最后一段会比文字【多留一会儿】。
+                 想要“和文字一模一样地一起暗下去”的图标，在 ICONS 那一条写
+                 fadeOutEase: true（现在只有 24 号 End.webm 这么用）。 */
+            op *= 1 - (n.cfg.fadeOutEase ? easeOut(outT) : outT);
 
             /* 页面停在冻结组中间、而这一组一次都没播过：整行不显示（见上面 stranded 说明） */
             if (stranded) op = 0;
@@ -2304,7 +2344,7 @@
     window.addEventListener("load", attach, { once: true });
 
     /* 调试用：控制台里 __bugIcons.update() 可以强制刷一次；
-       __bugIcons.nodes 能看到全部图标（现在 20 只，含各自的飘动状态 n.drift）；
+       __bugIcons.nodes 能看到全部图标（现在 18 只，含各自的飘动状态 n.drift）；
        __bugIcons.outDone 看“是否已随默认淡出宿主（.text-6）淡出”；
        __bugIcons.timeline 是 ico5 / ico7 的出场时刻表（4.js 读它来定 BEGINNING 的出场点）；
        __bugIcons.DRIFT 是飘动范围 / 速度 / 随机落点，改完下一帧就生效
