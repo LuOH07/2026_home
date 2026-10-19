@@ -107,9 +107,9 @@ const ANCHOR_OVERRIDES = [
     { sel: ".text-12", top: 0.25 },   
     { sel: ".text-15", top: 0.2 },   
     { sel: ".text-16", top: 0.15 },   
-    { sel: ".text-17", top: 0.15 },  
-    { sel: ".text-18", top: 0.15 },  
-    { sel: ".text-19", top: 0.1 }   
+    { sel: ".text-17", top: 0.13 },  
+    { sel: ".text-18", top: 0.13 },  
+    { sel: ".text-19", top: 0.08 }   
 ];
 
 /* 这个元素的上沿该压在视口从上往下多少比例：命中覆盖表就返回它的 top，没命中返回 null */
@@ -1012,10 +1012,11 @@ function tick(now) {
 
     /* 冻结时页面钉在触发线上（一点不动）；其余情况走普通映射 */
     /* ★★★ left: 0 必须写，这是“刷新后整页左移、右边空出一条、看起来像被宝剑进度条占了”
-       这个毛病的根治点。原因链条（三个文件合起来才成立，缺一条都不会犯）：
+       这个毛病的【第二道】保险。原因链条（三个文件合起来才成立，缺一条都不会犯）：
          ① 页面确实存在【横向可滚动区域】：2.css 里 .bg-video-wrap-falls-1 用了
             right: -10%，那个绝对定位的背景视频右边缘伸到页面右边界外面 10% 页宽，
             于是 scrollWidth = clientWidth + 0.1 × 页宽（1440 宽时约 144px）。
+            （另一条更大的来源见 4.js 的 PEAK_DESIGN_PX：以前写死 304px，窄屏能撑到 1300+。）
          ② overflow-x: hidden（1.css 的 body）只让【用户】滚不动，按规范
             “可滚动区域”还在：浏览器自己仍然能把它滚走 —— 滚动位置恢复、焦点进视口、
             页面内查找、以及某些 UA 对超出视口的元素做对齐，都会写 scrollLeft。
@@ -1025,7 +1026,10 @@ function tick(now) {
             文字一起左移，右侧露出白边；而宝剑是 position: fixed，不跟着文档滚，
             仍然稳稳贴在视口右边缘 —— 看上去就是“进度条占了页面右边那条宽度”。
        把 left 钉成 0：横向偏移每帧都被拉回，刷新恢复过来的旧偏移也会在下一帧消失。
-       纵向一点没变（top 还是 pageTopFor(cur)），不牵动任何其他效果。 */
+       纵向一点没变（top 还是 pageTopFor(cur)），不牵动任何其他效果。
+       ★★★ 根治不在这里：1.css 里那段 @supports (overflow: clip) 直接把【可滚动区域】
+       清零了（clip 不产生滚动容器 ⇒ scrollLeft 永远写不进去）。这里只是第二道保险，
+       所以留着它，别删。 */
     window.scrollTo({ left: 0, top: pageTopFor(cur), behavior: "instant" });
     render();
 

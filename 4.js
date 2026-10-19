@@ -1644,7 +1644,7 @@
          整个顺序：
            ① A→H：整句（Compact is only the）淡入，BEGINNING 先藏起来（opacity 0）
            ② ico5 → ico7（都归 3.js 管），等箭头的渐入彻底走完
-           ③ BEGINNING 原地出现（视觉大小 PEAK_PX），淡入用 APPEAR_SEC 秒
+           ③ BEGINNING 原地出现（视觉大小 PEAK_DESIGN_PX），淡入用 APPEAR_SEC 秒
            ④ 再缩小回 4.css 里的字号（现在是 152px），用 SHRINK_SEC 秒
            ⑤ 缩完那一刻 → 3.js 的 ico6 才出场（它来读下面挂出去的 done）
 
@@ -1668,19 +1668,41 @@
          缩到 scale(1) 时正好回到它本来的大小和位置。
        ====================================================================== */
 
-    var PEAK_PX    = 304;   /* ← 一出现时的视觉大小（要求 304px） */
+    /* ★ 一出现时的视觉大小：写的是【设计基准 1440 宽下的 304px】，不是死 px。
+       以前这里是 304 这个死数，等于“不管屏幕多窄，BEGINNING 出现时都占 304px 高的字”：
+         · 1440 宽：basePx = 100px → scale 3.04，字宽约 1326px；
+         ·  430 宽：basePx ≈ 30px → 要放大 10 倍才够 304px，那个被 transform 撑开的
+            盒子【可滚动区域】还是 1326px 宽 —— 比手机屏宽出三倍多。
+       整页的“横向可滚动区域”有一大半就是它撑出来的（右侧那条白缝 / 横向滚动条）。
+       现在按 --u 同一个参照系走：peak = 304 × (页宽 ÷ 1440)，
+       1440 宽时仍然是整整 304px（视觉一个像素都不变），窄屏 / 宽屏等比缩放。
+       （想整体调大 / 调小就改这一个数；它和 4.css 的 --beginning-size 都是设计像素。） */
+    var PEAK_DESIGN_PX = 304;
     var APPEAR_SEC = 0.35;  /* ← 出现（淡入）用多久 */
-    var SHRINK_SEC = 1.15;  /* ← 从 304px 缩回本来的大小用多久 */
+    var SHRINK_SEC = 1.15;  /* ← 从 peak 缩回本来的大小用多久 */
     var MIN_FIT    = 0.35;  /* 万一这句在画面上停留得太短，最短压到原来的 35% */
 
     var host = document.querySelector(HOST);
     var word = host && host.querySelector(".beginning");
     if (!host || !word || !window.__home) return;
 
+    /* 设计基准宽度：直接读 1.css :root 里的 --design-w（改那一个数这里自动跟着变） */
+    function designWidth() {
+        var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--design-w"));
+        return v > 0 ? v : 1440;
+    }
+
+    /* 当前页宽下的 peak 字号（px）= 304 × 页宽 ÷ 1440 —— 和 CSS 的 --u 完全同一个参照系 */
+    function peakPx() {
+        var de = document.documentElement;
+        var vw = de.clientWidth || window.innerWidth || 0;
+        return PEAK_DESIGN_PX * (vw / designWidth());
+    }
+
     /* 基准字号取自 4.css（改 --beginning-size，这里自动跟着变） */
     var basePx = parseFloat(getComputedStyle(word).fontSize) || 152;
-    /* 304px 相对基准字号的倍数（152px → 2 倍） */
-    var peakScale = Math.max(1, PEAK_PX / basePx);
+    /* peak 相对基准字号的倍数（1440 宽下 304 / 100 → 3.04 倍，任何宽度都一样） */
+    var peakScale = Math.max(1, peakPx() / basePx);
 
     var easeOut = function (t) { return 1 - Math.pow(1 - t, 3); };
 
@@ -1756,9 +1778,9 @@
         if (t <= 0) {
             paint(0, peakScale);                      /* 还没轮到（整句淡入期间也藏）：看不见 */
         } else if (t < a) {
-            paint(t / a, peakScale);                  /* 原地按 PEAK_PX 淡入 */
+            paint(t / a, peakScale);                  /* 原地按 peak 大小淡入 */
         } else if (t < a + s) {
-            var u = easeOut((t - a) / s);             /* PEAK_PX → 本来的字号 */
+            var u = easeOut((t - a) / s);             /* peak → 本来的字号 */
             paint(1, peakScale + (1 - peakScale) * u);
         } else {
             paint(null, null);                        /* 归位：样式全部交还 4.css */
@@ -1773,7 +1795,7 @@
 
     window.addEventListener("resize", function () {
         basePx = parseFloat(getComputedStyle(word).fontSize) || basePx;
-        peakScale = Math.max(1, PEAK_PX / basePx);
+        peakScale = Math.max(1, peakPx() / basePx);
         lastCur = null;          /* 下一帧重新算一次 */
     });
 

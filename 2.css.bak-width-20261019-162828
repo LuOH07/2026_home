@@ -1,0 +1,837 @@
+
+/* ==========================================================================
+   ★ 顶部“引导段” --lead-in：给页面顶上留一段可滚动的空白（随时可以整块删掉）
+   --------------------------------------------------------------------------
+   为什么需要它：人物的纵坐标 = 视口竖直中心线的纵坐标，而中心线最低只能到
+   “视口高 ÷ 2”那个位置 —— 底图最顶上那一带（大约半个视口高以内）永远扫不到，
+   轨迹最上面那几个点就走不了（crispr-3 的第一个点就在那一带）。
+
+   这里做的事：把【底图 + 页面里所有内容】一起往下挪 --lead-in 这么多，
+   于是整页在顶上多出这么一段可滚动的距离，中心线就能一路扫到底图的最顶端。
+   因为它们是一起挪的，底图 / 视频 / 文字 / 图片 / 色块 / 轨迹点之间的
+   相对位置完全不变，只是整页整体往下了一段。
+
+   · 改高度 / 关掉：只改下面 :root 里的 --lead-in（0 = 关掉，页面和以前一模一样）；
+   · :root 和下面这一组规则随时可以整块删掉，删掉就等于 0；
+   · 它只是为了让鼠标多滚一点、把人能送到最上面那几个点，和底图内容无关。
+   ========================================================================== */
+:root {
+    --lead-in: 0;
+
+    /* ★ 接缝修正（title 视频 ↔ 底图）：视频下沿正好是底图上沿。
+       map-5.avif 的最上面一行自带 1px 灰边（#A6A6A6，其余几版底图都是纯白），
+       底图被 100% 拉宽后这一行变成 2~4px，就是视频和正文之间那条线。
+       做法：把底图整体往上抬 2 个【图片像素】（= 屏宽 ÷ 803 × 2 屏幕像素），
+       让这条边藏到视频底下 —— 视频是 z-index 0、画在底图之上，白底，看不出重叠。
+       · 整页只挪背景，body 高度 / 文字 / 轨迹点的 % 都不变，实际位移只有 2~4px；
+       · 换底图后如果新图顶部没有这条边，把 --seam-hide 设成 0 即可。
+       · 想改成固定像素：--seam-hide: 3px; */
+    --map-w: 803;                                 /* 底图原始宽度（map-5.avif 是 803×4000） */
+    --seam-hide: calc(100vw / var(--map-w) * 2);  /* 藏掉底图顶部 2 个图片像素 */
+}
+
+/* 底图跟着往下挪同样的距离 —— 1.js 只设了 background-image / repeat / size，
+   background-position 留在这里控制 */
+body {
+    background-position: 0 calc(var(--lead-in, 0px) - var(--seam-hide, 0px));
+}
+
+/* ==========================================================================
+   ★ structure 图层：叠在底图之上、所有组件之下
+   --------------------------------------------------------------------------
+   · 尺寸 / 位置完全照抄底图：宽度 100%、高度 100%（= body 高度，也就是底图的
+     显示高度），从 --lead-in 那条线开始 —— 所以它和底图是同一个框，
+     顶部、底部都对齐；
+   · 层级只用 z-index: -1：
+       最底  = body 背景（底图，画布背景，没有 z-index）
+       -1   = 这一层
+       0~2  = 2.js 挂的行走视频 / 1.js 的文字（从 1 起）/ 3.js 的图标（3）
+     所以它正好压在底图上、又被所有组件盖住，不需要动别的 z-index；
+   · 图片会被拉伸到和底图同一个框：只要 structure 和底图的比例一致就不会变形；
+     现在底图 river.avif 是 712×4000、structure.avif 是 803×4000，比例差 12.8%，
+     所以结构会被纵向拉长一点 —— 要完全不变形，把底图也导成 803×4000 即可；
+   · 不参与 1.js 的时间轴（它的选择器只收 .text-box / .img-box），
+     也不会挡鼠标；
+   · 换图只改 index.html 里那条 <img> 的 src。
+   ========================================================================== */
+.map-structure {
+    position: absolute;
+    top: -0.1%;                        /* ★ 相对底图高度再往上挪 0.1%（微调对位） */
+    left: 0;
+    width: 100%;
+    height: 100%;                      /* = body 高度 = 底图的显示高度 */
+    margin-top: var(--lead-in, 0px);   /* 和底图/文字一起被顶部视频的“引导段”往下推 */
+    z-index: -1;                       /* 底图之上、所有组件之下 */
+    display: block;
+    object-fit: fill;                  /* 铺满底图那个框；比例一致时不会有形变 */
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* 1.js 管的那两类（文字 / 图片）：挪的是它们的“静态位置”，
+   1.js 量到的 top 会跟着变 → 它们出场的时间点也自动跟着挪；
+   而“钉在画面竖直中心”那一位移是 1.js 每帧算的，所以看起来还是钉在中心。 */
+.text-box,
+.img-box {
+    margin-top: var(--lead-in, 0px);
+}
+
+/* 色块：1.js 每帧会覆盖它们的 margin-top，所以这里用独立的 translate 属性
+   （和它那套 transform 漂浮动画互不干扰）来挪同样的距离。 */
+.rect-box {
+    translate: 0 var(--lead-in, 0px);
+}
+
+/* 视频容器（crispr-* / gene-* / tnpb-*）：同样往下挪 */
+.bg-video-wrap {
+    margin-top: var(--lead-in, 0px);
+}
+
+.bg-video-wrap {
+    position: absolute;     /* 跟随底图/文档；不要用 fixed */
+
+    /* ★★ 定位锚点 = 视频盒子的【几何中心】（全页统一约定）★★
+       每条 .bg-video-wrap-xxx 里的 left / top 都是【盒子中点】相对底图宽 / 高的百分比，
+       不再是左上角或右上角；原来写 right 的那几条已经按实测换成中心坐标。
+       ★ 走动的那几个（crispr-3 / tnpb-1 / tnpb-2 / genewalk-1）位置由 2.js 每帧算，
+         2.js 已同步改成按中心锚点换算，所以轨迹点和画面完全不变。 */
+    translate: -50% -50%;
+    z-index: 0;             /* 层级：0 = 在正文之下；想让某个压在上面就在它自己那条里写 z-index */
+    pointer-events: none;   /* 默认不挡鼠标事件，不会影响原有滚动交互；
+                               有名字的那些在下面 [data-video-name] 那条里单独打开，
+                               好让鼠标移上去能 hover 出名字 */
+    background: transparent;/* 保持透明，1.js 画的 map.png 底图仍能看到 */
+
+    --rotate: 0deg;         /* ← 旋转角度：该类所有视频通用；单个视频可在自己那条里覆盖 */
+}
+
+/* 视频本体：宽度跟随容器，高度按视频原始比例自动，并整体旋转 --rotate */
+.bg-video-wrap > .bg-video {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+    transform: rotate(var(--rotate, 0deg));  
+    transform-origin: 50% 50%;               
+}
+
+/* ==========================================================================
+   ★ 鼠标悬停（hover）显示的名字
+   --------------------------------------------------------------------------
+   鼠标移到视频上 → 视频【正上方】淡入它的名字；移开就淡出。
+
+   名字从哪来：
+     · 文字在 2.js 的 VIDEO_NAMES 里（CRISPR / target gene / TnpB），
+       每组视频各挂一个，改名字只改那一处；
+     · 名字是容器里的一个 <span class="bg-video-label">（2.js 在 mount() 里建），
+       容器上同时会写 data-video-name = 那句话；
+     · 它是容器的子元素，所以跟着容器走 —— tnpb-1 / crispr-3 跟着滚轮走的那些，
+       名字也一直贴在它们正上方；容器被藏起来时（出场 / 终点动画），名字一起藏。
+
+   为什么下面那条 pointer-events 只对 [data-video-name] 打开：
+     .bg-video-wrap 平时是 pointer-events: none（不挡鼠标、不影响滚动和文字），
+     只有“有名字”的容器才重新接鼠标，才可能 hover 出字来。
+     ★ 它只影响鼠标悬停，滚轮照旧冒泡到 window 驱动页面（1.js / 2.js 的监听都在 window 上）。
+
+   字型 / 颜色 = 【正文】（1.css 的 .text-box）：'impact' / #324561 / letter-spacing 1px。
+   想改字号 / 位置 / 颜色，只动下面 .bg-video-label 那一条即可。
+   ========================================================================== */
+
+/* 有名字的视频才接鼠标（其余的照旧 pointer-events: none，不挡下面的东西） */
+.bg-video-wrap[data-video-name] {
+    pointer-events: auto;
+}
+
+/* 名字本体：贴在视频正上方、水平居中 */
+.bg-video-label {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;                       /* 视频正上方 */
+    transform: translateX(-50%);        /* 水平居中在视频中线上 */
+    margin-bottom: calc(6 * var(--u));
+
+    font-family: 'impact', sans-serif;  /* ← 正文字体（和 1.css 的 .text-box 一致） */
+    font-size: calc(28 * var(--u));                    /* 和 3.css 里图标名字一样大 */
+    line-height: 1.2;
+    letter-spacing: calc(1 * var(--u));                /* ← 正文的字距（1.css 的 .text-box） */
+    color: #324561;                     /* ← 正文颜色（1.css 的 .text-box） */
+    white-space: nowrap;                /* 名字不断行 */
+
+    /* ★ 白色描边：8 个方向各描一层，看上去就是一圈干净的白色轮廓。
+       ★ 粗细只改 --label-outline 这一个值即可（1px 细 / 2px 默认 / 3px 粗）。
+       ★ 为什么不用 -webkit-text-stroke：它的描边是【压在字里面】的，
+         Impact 本来就瘦，一描字就细一半、还会发虚；
+         用 8 向 text-shadow 描在外面，字形完全不变，只在周围多一圈白边。 */
+    --label-outline: calc(2 * var(--u));
+    text-shadow:
+        calc(-1 * var(--label-outline)) calc(-1 * var(--label-outline)) 0 #fff,
+        calc(-1 * var(--label-outline)) 0                               0 #fff,
+        calc(-1 * var(--label-outline)) var(--label-outline)            0 #fff,
+        0                               calc(-1 * var(--label-outline)) 0 #fff,
+        0                               var(--label-outline)             0 #fff,
+        var(--label-outline)            calc(-1 * var(--label-outline)) 0 #fff,
+        var(--label-outline)            0                               0 #fff,
+        var(--label-outline)            var(--label-outline)            0 #fff;
+
+    opacity: 0;                         /* 平时不显示 */
+    transition: opacity .18s ease;      /* 移入淡入、移出淡出，不会突然闪 */
+    pointer-events: none;               /* 名字本身不接鼠标，免得一碰就消失 */
+    user-select: none;
+}
+
+/* ★ hover 显示 / 移开消失：纯 CSS，不需要监听鼠标 */
+.bg-video-wrap[data-video-name]:hover .bg-video-label {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   ★ falls：循环播放的背景视频（falls.webm，由 2.js 的 VIDEO_GROUPS["falls"] 挂出来）
+   --------------------------------------------------------------------------
+   层级 —— z-index: 0 正好落在“底图之上、ico 和文字之下”，不用动别的规则：
+        最底  = body 背景（底图 map-5.avif，没有 z-index）
+        -1    = .map-structure（结构图那一层）
+         0    = 这一层（falls）
+         1+   = 1.js 的文字（内联 z-index 从 1 起）/ .img-box（1）/ 色块（2~5）
+         3    = 3.js 的图标画框 .bug-icons（ico + 图标名字都在里面）
+       另外 falls 是 2.js 最先插进 <body> 的，DOM 顺序最靠前，
+       所以和别的 z-index: 0 的元素同层时也在它们下面（ico 视频不会被盖）。
+
+   位置 / 大小 —— 全部是【相对底图】的百分比，写法和 tnpb-points 那套一样：
+        top   = 纵坐标，相对【底图高度】（= body 高度，随视口宽度等比缩放）
+        left  = 横坐标，相对【底图宽度】（= 视口宽度）；想从右边量就改用 right
+        width = 宽度，相对【底图宽度】
+   高度默认跟着视频原始比例自动变（只改 width 就整块缩放，不会被拉变形）。
+   想连高度也自己定：把下面 height: auto 改成 height: 30%（相对底图高度），
+   再把 .bg-video-wrap-falls-1 > .bg-video 那条的 height 改成 100%，
+   object-fit 用 fill（拉伸铺满）或 cover（裁切铺满）。
+
+   其它：--rotate 旋转整块（和别的视频一样）；它不接鼠标（.bg-video-wrap 默认
+   pointer-events: none），所以不会挡 ico 的 hover，也不影响滚轮。
+   ========================================================================== */
+.bg-video-wrap-falls-1 {
+    left: 86.99%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 46.80%;                        /* ← 几何中心 Y（相对底图高度） */
+    width: 46%;             /* ← 宽度：相对底图宽度 */
+    height: auto;           /* 高度 = 宽度 ÷ 视频比例（falls.webm 是 480×686 ≈ 0.70，
+                               所以现在的高度大约是宽度的 1.43 倍） */
+    --rotate: 0deg;         /* ← 想斜着放就改这里 */
+    z-index: 0;             /* 底图之上、ico / 文字之下（见上面那段） */
+
+    /* ★ falls.webm 是带【黑色背景】的（不是透明底），黑底会盖住那块底图。
+       想只留画面里的水、把黑底变没：打开下面这行（screen = 黑变透明，亮色保留）：
+       mix-blend-mode: screen; */
+}
+
+/* 视频本体：默认铺满容器宽度、高度按比例（其余继承上面 .bg-video-wrap > .bg-video）。
+   把容器 height 改成百分比（相对底图高度）时，再把这里的 height 改成 100%，
+   object-fit 用 fill（拉伸铺满）/ cover（裁切铺满）。 */
+.bg-video-wrap-falls-1 > .bg-video {
+    height: auto;
+    object-fit: fill;       /* 固定高度后：fill = 拉伸铺满，cover = 裁切铺满 */
+}
+
+/* ======================= CRISPR 类 ======================= */
+
+/* 出现动画 —— ★ 位置已经去掉了：它平时完全不显示，只在“第一次滑到 crispr-3
+   第一个轨迹点”时，由 2.js 钉在【第 1 段起点】上播一遍（每次刷新只播一次），
+   播完 crispr-3 才出现。位置 / 倍速都写在 2.js 的 MOVE_FX 里。
+   ★ 宽度现在比 crispr-3 小 30%（4.2vw vs 6vw），所以出场动画切到 crispr-3
+     时大小会变大一点；想跟 crispr-3 一样大就改回 6vw。 */
+.bg-video-wrap-crispr-1 {
+    width: 4.2vw;         
+    --rotate: 0deg;       
+}
+
+/* crispr-2 已经去掉了 —— 2.js 的 VIDEO_GROUPS 里 CRISPR 第 2 格写成了 null，
+   所以根本不会创建这个容器，这里也不用再写规则。
+   想恢复：把那一格改回 "./assets/CRISPR_2.webm"，再在这里补回 top / right / width。 */
+
+/* 走路 —— ★ 这个现在和 TnpB_1 一样会跟着滚动位置走（完整的那套走动逻辑）。
+   它的轨迹点在下面 crispr-3 那一节（.crispr3-points > .crispr3-move-N），
+   数字随你改；那份删掉的话它会自动借用 tnpb-1 的点。
+   （它自己这条 top / right 对走动没有影响 —— 位置完全由轨迹点决定。） */
+.bg-video-wrap-crispr-3 {
+    left: 72.99%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 11.34%;                        /* ← 几何中心 Y（相对底图高度） */
+    width: 6vw;           
+    --rotate: 0deg;       
+}
+
+/* 终点动画（敲除）—— ★ 位置也已经去掉了：它平时完全不显示，只在 crispr-3
+   往下滑走到【第 2 段终点】时，由 2.js 挪到那个点上播一遍；播完它消失、
+   crispr-3 再出现并常驻在终点。再滑下来会再播一次。
+   位置 / 倍速同样写在 2.js 的 MOVE_FX 里。 */
+.bg-video-wrap-crispr-4 {
+    width: 9vw;           
+    --rotate: 0deg;       
+}
+
+/* ======================= gene 类 ======================= */
+
+/* 出现 */
+.bg-video-wrap-gene-1 {
+    left: 74.49%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 6.68%;                         /* ← 几何中心 Y（相对底图高度） */
+    width: 6vw;
+    --rotate: -8deg;         
+    z-index: 2;              
+}
+
+/* gene-2：静态可见，和 gene-1 是并排的一对（两个重复的） */
+.bg-video-wrap-gene-2 {
+    left: 73.99%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 6.58%;                         /* ← 几何中心 Y（相对底图高度） */
+    width: 6vw;
+    --rotate: -8deg;         
+    z-index: 1;              
+}
+
+/* gene-3 / gene-4：★ 原来静态摆着的那两个不要了 —— 位置去掉了，平时完全不显示。
+   它们现在只做“同步动画”：crispr-4 那个终点动画一触发，2.js 就把
+     gene-3 摆到 gene-1 的位置上、gene-4 摆到 gene-2 的位置上，各播一遍，
+   同时把 gene-1 / gene-2 藏起来；它们播完再过 2 秒，gene-1 / gene-2 重新出现。
+   （位置 / 倍速 / 藏谁 / 几秒后恢复都写在 2.js 的 MOVE_FX 里，end.also 那两项。
+     这里只留宽度和角度 —— 要和各自的参照视频一致（都是 6vw / -8deg）才叠得准。） */
+.bg-video-wrap-gene-3 {
+    width: 6vw;
+    --rotate: -8deg;         
+    z-index: 2;              
+}
+
+.bg-video-wrap-gene-4 {
+    width: 6vw;
+    --rotate: -8deg;         
+    z-index: 1;             
+}
+
+/* ============ gene-1 的走路版（GeneWalk_1 / .bg-video-wrap-genewalk-1） ============
+   ★ 和 gene-1 / gene-2 用的是同一个 gene_1.webm，但它是【另外加的一个视频】，
+     所以原来静态摆着的 gene-1 / gene-2 一个都不动、不会消失 —— 这里只是
+     “多加一段路径”。
+
+   走动的逻辑和 TnpB_1 完全一样（2.js 的 MOVE_GROUPS["genewalk-1"]），只有一段：
+     · 一开始就站在【起点】等着（中心线还没扫到起点时它就在那儿）；
+     · 中心线扫过这一段 → 跟着中心线从起点走到终点；
+     · 走到【终点】→ 消失（MOVE_GROUPS 里的 vanishAtEnd: true）；
+     · 往回（往上）滚到终点上面 → 又出现，可以再走一遍。
+
+   下面这条 top / right 是它“没被移动时”的位置（顺手写成起点，第一帧就不跳）：
+   真正的位置完全由下面的轨迹点决定，改这里的 top / right 对走动没有影响。
+   width / --rotate 跟 gene-1 保持一致（6vw / -8deg），走起来才和它一样大、一样斜。
+   ========================================================================== */
+.bg-video-wrap-genewalk-1 {
+    left: 87.99%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 42.18%;                        /* ← 几何中心 Y（相对底图高度） */
+    width: 6vw;
+    --rotate: -8deg;
+    z-index: 2;             /* 和 gene-1 同层：压在底图 / falls 之上，文字之下 */
+    will-change: transform; /* 跟着滚动在动，提示浏览器 */
+}
+
+/* 位移由 2.js 每帧写进 transform，这条只是给个初始值 */
+.bg-video-wrap-genewalk-1[data-tnpb-move] {
+    transform: translate3d(0px, 0px, 0);
+}
+
+/* ---- GeneWalk 的轨迹点：只有【一段】（点 1 = 起点，点 2 = 终点） ----
+   写法和 tnpb-points 那套完全一样：top 相对底图高度，right 相对底图宽度。
+   ★ 要加段数：把 --genewalk-points 按偶数往上加，再往下补 .genewalk-move-N 的规则
+      （2.js 不用改，它会自己数出来）。删掉整块就等于这个视频不走路。 */
+.genewalk-points {
+    --genewalk-points: 2;
+    position: absolute;
+    top: var(--lead-in, 0px);   /* 和底图/内容一起被“引导段”往下推 */
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;       /* ★ 不接鼠标：和 .tnpb-points 一样，别把底下视频的 hover 挡掉 */
+}
+
+.genewalk-points > div {
+    position: absolute;
+    width: 0;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* 第 1 段起点：一开始就在这儿等着 */
+.genewalk-points > .genewalk-move-1 {
+    top: 42.9%;
+    left: 83%;
+}
+
+/* 第 1 段终点：走到这儿就消失 */
+.genewalk-points > .genewalk-move-2 {
+    top: 50%;
+    left: 83.9%;
+}
+
+/* ======================= TnpB 类 ======================= */
+
+/* --------------------------------------------------------------------------
+   TnpB_1：跟着滚轮移动的那个（原来走路的那条，现在改成会动的）
+   位置（起点 / 终点）全部用和视频本身一样的 top / right 写法写在下面，
+   2.js 只负责“滚到哪就走到哪”。下面那条 top / right 是它没被移动时的位置。
+   -------------------------------------------------------------------------- */
+.bg-video-wrap-tnpb-1 {
+    left: 71.01%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 24.79%;                        /* ← 几何中心 Y（相对底图高度） */
+    width: 4vw;
+    --rotate: 0deg;
+    will-change: transform; /* 跟着滚动在动，提示浏览器 */
+}
+
+/* 位移由 2.js 每帧写进 transform，这条只是给个初始值 */
+.bg-video-wrap-tnpb-1[data-tnpb-move] {
+    transform: translate3d(0px, 0px, 0);
+}
+
+/* ========================= TnpB_1 运动路径 =========================
+   下面每个 .tnpb-move-N 就是一个“点”，写法与视频本体完全一样：
+   top = 纵坐标（相对底图高度），right = 横坐标（相对底图宽度）。
+
+   规则（★ 位置完全由滚动位置决定，没有“自动播放”）：
+     · 点是【成对】的，一对 = 一段，每一段的终点不是下一段的起点：
+           .tnpb-move-1 = 第 1 段起点    .tnpb-move-2 = 第 1 段终点
+           .tnpb-move-3 = 第 2 段起点    .tnpb-move-4 = 第 2 段终点
+           .tnpb-move-5 = 第 3 段起点    .tnpb-move-6 = 第 3 段终点
+           .tnpb-move-7 = 第 4 段起点    .tnpb-move-8 = 第 4 段终点
+     · 人的纵坐标始终 = 视口竖直中心线的纵坐标：滚轮滚到哪儿，人就站在哪儿；
+     · 中心线落在某一段【起点 top → 终点 top】之间时，人就在这一段上，
+       按中心线在这段里占的纵向比例取一个点（横向 right / left 也跟着这个比例走）；
+     · 中心线落在两段之间（比如第 3 段终点和第 4 段起点中间）→
+       这段纵向范围里没有轨迹，人停在【下一段的起点】等着，
+       中心线扫到这个起点，才开始跟着中心线往这一段终点走；
+     · 中心线在第 1 段起点之上 → 停在第 1 段起点；
+       中心线在最后一段终点之下 → 停在最后一段终点；
+     · 往回滚完全对称，不循环、也不会消失；
+     · 页面滚到头之后继续往下滚：不再滚页面，而是继续把最后一段轨迹走完
+       （页面保持不动）；往上滚时先原路退回这段“额外滑动”
+       —— 见 2.js 里的 feedMotion()。
+
+   单位随便：%、vw、vh、px（px 直接写数字）都可以。
+
+   这些点由 2.js 自动创建在 <body> 下的 .tnpb-points 里 ——
+   必须挂在 body 上（不能写进 .bg-video-wrap-tnpb-1 里面），
+   否则 top / right 会变成相对视频容器计算，和视频本体就不是一个参照系了。
+
+   改法举例：
+       第 2 段覆盖哪段滚动   → 改 .tnpb-points > .tnpb-move-3 / -4 的 top
+                               （第 3 段的 top 是这一段的起点，第 4 段的 top 是终点）
+       第 2 段横向走多远     → 改这两个点的 right / left
+       加一段                → ① 把下面的 --tnpb-points 加 2（例如 42 → 44）
+                               ② 照抄 .tnpb-move-1 ～ -2 的格式，补上下一对点
+                               （2.js 不用动，它会自己数出来）
+   ================================================================== */
+
+/* 这些点只是给 2.js 读 top / right 用的，不显示、不挡东西、不参与布局。
+   注意这里不能给 .tnpb-points 设 0 高度：它的后代写的是百分比 top，
+   百分比会相对“包含块高度”解析，一旦包含块高度是 0，
+   top: 24.3% 会变成 0px（2.js 里也因此改成自己按底图尺寸换算 %）。
+
+   ★ --tnpb-points = 这里一共写了几个点。2.js 按这个数把点建出来，
+     段数 = 点数 ÷ 2，所以改段数只需改这一个数字 + 补/删下面的点规则。
+     现在是 42 个点 = 21 段；要 22 段就改成 44，再往下补 .tnpb-move-43 / -44。 */
+.tnpb-points {
+    --tnpb-points: 42;
+    position: absolute;
+    top: var(--lead-in, 0px);   /* 和底图/内容一起被“引导段”往下推 */
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;       /* ★ 不接鼠标：它是铺满整页的隐形盒子，接鼠标会把底下视频的 hover 挡掉 */
+}
+
+.tnpb-points > div {
+    position: absolute;
+    width: 0;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* ---- 第 1 段：点 1 → 点 2 ---- */
+
+/* 第 1 段起点（人一开始站在这里） */
+.tnpb-points > .tnpb-move-1 {
+    top: 20.7%;
+    left: 80%;
+}
+
+/* 第 1 段终点 */
+.tnpb-points > .tnpb-move-2 {
+    top: 21.1%;
+    left: 69%;
+}
+
+/* ---- 第 2 段：点 3 → 点 4（它的起点 top = 这一段什么时候开始走）---- */
+
+/* 第 2 段起点 */
+.tnpb-points > .tnpb-move-3 {
+    top: 21.1%;
+    left: 69%;
+}
+
+/* 第 2 段终点 */
+.tnpb-points > .tnpb-move-4 {
+    top: 23.5%;
+    left: 90%;
+}
+
+/* ---- 第 3 段：点 5 → 点 6 ---- */
+
+/* 第 3 段起点 */
+.tnpb-points > .tnpb-move-5 {
+    top: 23.5%;
+    left: 90%;
+}
+
+/* 第 3 段终点 */
+.tnpb-points > .tnpb-move-6 {
+    top: 24.3%;
+    left: 68%;
+}
+
+
+/* 第 4 段起点 */
+.tnpb-points > .tnpb-move-7 {
+    top: 34.3%;
+    left: 86%;
+}
+
+/* 第 4 段终点 */
+.tnpb-points > .tnpb-move-8 {
+    top: 34.6%;
+    left: 75%;
+}
+
+/* 第 5 段起点 */
+.tnpb-points > .tnpb-move-9 {
+    top: 38.8%;
+    left: 80%;
+}
+
+/* 第 5 段终点 */
+.tnpb-points > .tnpb-move-10 {
+    top: 39.8%;
+    left: 84%;
+}
+
+/* 第 6 段起点 */
+.tnpb-points > .tnpb-move-11 {
+    top: 39.8%;
+    left: 84%;
+}
+
+/* 第 6 段终点 */
+.tnpb-points > .tnpb-move-12 {
+    top: 40%;
+    left: 86%;
+}
+
+/* 第 7 段起点 */
+.tnpb-points > .tnpb-move-13 {
+    top: 40%;
+    left: 86%;
+}
+
+/* 第 7 段终点 */
+.tnpb-points > .tnpb-move-14 {
+    top: 40.7%;
+    left: 80%;
+}
+
+/* 第 8 段起点 */
+.tnpb-points > .tnpb-move-15 {
+    top: 40.7%;
+    left: 80%;
+}
+
+/* 第 8 段终点 */
+.tnpb-points > .tnpb-move-16 {
+    top: 42%;
+    left: 91%;
+}
+
+/* 第 9 段起点 */
+.tnpb-points > .tnpb-move-17 {
+    top: 49.7%;
+    left: 79%;
+}
+
+/* 第 9 段终点 */
+.tnpb-points > .tnpb-move-18 {
+    top: 51%;
+    left: 89%;
+}
+
+/* 第 10 段起点 */
+.tnpb-points > .tnpb-move-19 {
+    top: 51%;
+    left: 89%;
+}
+
+/* 第 10 段终点 */
+.tnpb-points > .tnpb-move-20 {
+    top: 51.4%;
+    left: 75%;
+}
+
+/* 第 11 段起点 */
+.tnpb-points > .tnpb-move-21 {
+    top: 51.4%;
+    left: 75%;
+}
+
+/* 第 11 段终点 */
+.tnpb-points > .tnpb-move-22 {
+    top: 52.4%;
+    left: 79%;
+}
+
+/* 第 12 段起点 */
+.tnpb-points > .tnpb-move-23 {
+    top: 52.4%;
+    left: 79%;
+}
+
+/* 第 12 段终点 */
+.tnpb-points > .tnpb-move-24 {
+    top: 53.2%;
+    left: 73%;
+}
+
+/* 第 13 段起点 */
+.tnpb-points > .tnpb-move-25 {
+    top: 53.2%;
+    left: 73%;
+}
+
+/* 第 13 段终点 */
+.tnpb-points > .tnpb-move-26 {
+    top: 54.8%;
+    left: 10%;
+}
+
+/* 第 14 段起点 */
+.tnpb-points > .tnpb-move-27 {
+    top: 54.8%;
+    left: 10%;
+}
+
+/* 第 14 段终点 */
+.tnpb-points > .tnpb-move-28 {
+    top: 55.8%;
+    left: 14%;
+}
+
+/* 第 15 段起点 */
+.tnpb-points > .tnpb-move-29 {
+    top: 64.2%;
+    left: 17%;
+}
+
+/* 第 15 段终点 */
+.tnpb-points > .tnpb-move-30 {
+    top: 65.7%;
+    left: 31%;
+}
+
+/* 第 16 段起点 */
+.tnpb-points > .tnpb-move-31 {
+    top: 65.7%;
+    left: 31%;
+}
+
+/* 第 16 段终点 */
+.tnpb-points > .tnpb-move-32 {
+    top: 66.1%;
+    left: 15%;
+}
+
+/* 第 17 段起点 */
+.tnpb-points > .tnpb-move-33 {
+    top: 71.8%;
+    left: 27%;
+}
+
+/* 第 17 段终点 */
+.tnpb-points > .tnpb-move-34 {
+    top: 72.3%;
+    left: 9.5%;
+}
+
+/* 第 18 段起点 */
+.tnpb-points > .tnpb-move-35 {
+    top: 72.3%;
+    left: 9.5%;
+}
+
+/* 第 18 段终点 */
+.tnpb-points > .tnpb-move-36 {
+    top: 74.5%;
+    left: 30%;
+}
+
+/* 第 19 段起点 */
+.tnpb-points > .tnpb-move-37 {
+    top: 83.3%;
+    left: 26%;
+}
+
+/* 第 19 段终点 */
+.tnpb-points > .tnpb-move-38 {
+    top: 83.8%;
+    left: 10%;
+}
+
+/* 第 20 段起点 */
+.tnpb-points > .tnpb-move-39 {
+    top: 83.8%;
+    left: 10%;
+}
+
+/* 第 20 段终点 */
+.tnpb-points > .tnpb-move-40 {
+    top: 85.3%;
+    left: 24%;
+}
+
+/* 第 21 段起点 */
+.tnpb-points > .tnpb-move-41 {
+    top: 93.7%;
+    left: 14%;
+}
+
+/* 第 21 段终点 */
+.tnpb-points > .tnpb-move-42 {
+    top: 95.4%;
+    left: 26.5%;
+}
+
+/* ===================== crispr-3（走路那个）的运动路径 =====================
+   ★ crispr-3 现在和 TnpB_1 用的是同一套走动逻辑（滚动到哪就走到哪、
+     中心线在两段之间就停在下一段起点等着、页面滚到头继续滑会把最后一段走完 ……），
+     只是它有自己的一套点，写在下面 —— 数字随你改。
+
+   规则和上面 tnpb 那套一模一样：
+     · 点是【成对】的：点 1 = 第 1 段起点，点 2 = 第 1 段终点，
+                     点 3 = 第 2 段起点，点 4 = 第 2 段终点 …… 以此类推；
+     · 写法：top = 纵坐标（相对底图高度），right / left = 横坐标（相对底图宽度），
+       和视频本体的 top / right 是同一套参照系，单位 % / vw / vh / px 都行；
+     · --crispr3-points 写几个点，2.js 就自动建几个点（偶数 = 整段）；
+       要加段数就加大这个数字，再往下补 .crispr3-move-N 的规则（2.js 不用改）；
+     · 想删掉某一段：把它的起点 / 终点规则删掉即可（中间缺号也不会错位）。
+     · ★ crispr-3 不参加 TnpB_2 那个“终点消失动画”（那个只跟 tnpb-1 走）。
+
+   ★ 这段整体删掉（或把 --crispr3-points 写成 0）的话，2.js 会【借用】
+     tnpb-1 的那套点 —— 也就是让 crispr-3 先跟着 TnpB_1 走同一条路线。
+     下面的 4 个点只是示意值，请换成你要的位置。 */
+
+.crispr3-points {
+    --crispr3-points: 4;
+    position: absolute;
+    top: var(--lead-in, 0px);   /* 和底图/内容一起被“引导段”往下推 */
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;       /* ★ 不接鼠标：和 .tnpb-points 一样，别把底下视频的 hover 挡掉 */
+}
+
+.crispr3-points > div {
+    position: absolute;
+    width: 0;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* ---- 第 1 段：点 1 → 点 2 ---- */
+
+/* 第 1 段起点（它一开始站在这里） */
+.crispr3-points > .crispr3-move-1 {
+    top: 3.6%;             
+    left: 69.3%;
+}
+
+/* 第 1 段终点 */
+.crispr3-points > .crispr3-move-2 {
+    top: 3.8%;
+    left: 72%;
+}
+
+/* ---- 第 2 段：点 3 → 点 4 ---- */
+
+/* 第 2 段起点 */
+.crispr3-points > .crispr3-move-3 {
+    top: 3.8%;
+    left: 72%;
+}
+
+/* 第 2 段终点 */
+.crispr3-points > .crispr3-move-4 {
+    top: 5%;             
+    left: 77.8%;    
+}
+
+/* 消失动画 TnpB_2：★ 不再固定摆在页面上了 —— 平时完全不显示，
+   只在 2.js 的 END_ANIM_SEGMENTS 里那几段（第 3、4、8、14、16、18、20 段）
+   被【往下滑】走到终点时，由 2.js 挪到那个终点上播放一次，播完 TnpB_1 再出现在
+   下一段起点。下面这条 top / right 只是它“没被挪动时”的位置，
+   2.js 会用 transform 覆盖它（改这里的 top/right 对动画最终位置没有影响）；
+   width / --rotate 仍然决定它的大小和角度，
+   位置微调（相对终点往上挪多少）在 2.js 的 END_ANIM_UP_PERCENT。 */
+.bg-video-wrap-tnpb-2 {
+    left: 77.76%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 24.40%;                        /* ← 几何中心 Y（相对底图高度） */
+    width: 4.5vw;
+    --rotate: 0deg;
+}
+
+/* ========================= TnpB 终点定格视频 =========================
+   TnpB-end.webm（就放在 index.html 同一个目录），由 2.js 的
+   MOVE_FX["tnpb-1"].finale 调度：
+
+     · TnpB_1 走完最后一段、正好走到轨迹【最后一个点】(.tnpb-move-42) → 播一遍；
+     · 播完【停在最后一帧】不动（不循环、也不收起来），TnpB_1 一直藏着；
+     · 往回（往上）滚到那个点上面 → 它立刻收起来，TnpB_1 重新出现、继续正常走路；
+     · 再往下滑到终点 → 再播一遍（可以反复）。
+
+   ★ 和其它视频不一样：它【不跟滚动走】，也不用 2.js 算位置 ——
+     位置 / 大小就写在这下面，和别的视频一样相对底图：
+        top   = 画布上沿（相对底图高度）
+        left  = 画布左沿（相对底图宽度；想从右边量就换成 right）
+        width = 画布宽度（相对底图宽度），高度按视频比例自动（422×686 ≈ 0.615）
+
+   为什么是这几个数：
+     · 视频画布是 422×686 的竖长条，TnpB 本人站在【画布左下角】，
+       剑从那儿往上长 —— 所以对齐的是“画布左下角 ↔ 轨迹最后一个点”；
+     · 轨迹最后一点在 top: 95.4% / left: 26.5%（见上面 .tnpb-move-42），
+       而 22vw ≈ 422px（1920 宽的屏幕）= 视频原始大小，所以：
+           left: 26%  ≈ 26.5%（画布里的人本来就贴左边）
+           top: 89.5% = 95.4% 再往上让出一个画布高度（人物 + 脚底那点留白）
+     · 想让最后定住的那个画面更大 / 更小或往别处挪：只改这三行即可。
+
+   层级：默认和别的视频一样是 0（在底图之上、1.js 的文字之下）；
+        想让它压住文字就把 z-index 改成 2（3.js 的图标是 3）。
+   ================================================================== */
+.bg-video-wrap-tnpbend-1 {
+    left: 27.01%;                       /* ← 几何中心 X（相对底图宽度） */
+    top: 94.26%;                        /* ← 几何中心 Y（相对底图高度） */
+    width: 12vw;
+    --rotate: 0deg;
+    z-index: 0;
+
+    /* 平时完全不显示（播的时候由 2.js 打开）—— 顺便挡住视频挂上来的那一瞬间 */
+    visibility: hidden;
+}
+
+/* 视频本体：宽度撑满容器，高度按视频本身的 422×686 比例走。
+   ★ 这里多写一个 aspect-ratio：视频元数据还没加载完时也先占好正确的高度，
+     不会先矮（浏览器默认的 150px）后突然变高。 */
+.bg-video-wrap-tnpbend-1 > .bg-video {
+    height: auto;
+    aspect-ratio: 422 / 686;
+}
