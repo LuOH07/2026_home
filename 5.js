@@ -1,7 +1,7 @@
 /* ==========================================================================
    5.js —【移动端（窄屏 / 手机）专用】脚本，全部移动端逻辑都写在这一个文件里
    --------------------------------------------------------------------------
-   桌面版的 1.js ~ 4.js 一个字节都不动。这个文件只干三件事，而且都只在手机断点里生效：
+   桌面版的 1.js ~ 4.js 一个字节都不动。这个文件只干五件事，而且都只在手机断点里生效：
 
      1. 页尾接续的底图（对应 5.css 第 6 节）
         手机上的底图只有 1900px 上下，整页可滚动行程太短，
@@ -26,8 +26,21 @@
         行程 3.5 个剑长），手机直接沿用同一套数，所以和调试好的 PC 一致。
         本文件不碰它。
 
+     4. 标题视频（title.mp4）竖直居中（5.css 第 7 节用 CSS 摆，第 3 节① 只负责量留白）
+        PC 上它贴在文档最顶端；手机上让它上下留白、正好落在首屏正中。
+        做法：多留一块 (视口高 − 视频高) ÷ 2 的空白，并让 --lead-in / 文档总高
+        把这块留白算进去（5.css 里用 !important 压过 1.js 的内联值，避免抢）
+        —— 底图 / 文字 / 图标 / 人物视频跟着整体下移，视频下沿仍然是底图起点，
+        所以后面的顺序一点没变。
+
+     5. 滚动快 5 倍（第 3 节②）
+        同样的手指滑动 / 滚轮距离，页面走 5 倍远（滚到底的滑动次数变成 1/5）。
+        只改 1.js 的"输入 → 进度"倍率，时间轴（每段文字的时长、视频播放）不动；
+        断点切回桌面时自动设回 1，PC 手感一个像素都不变。
+
    ★ 断点必须和 5.css 顶部那条媒体查询一模一样（改要一起改）。
    ★ 想调"整页多长 / 再接几张底图"：只改下面的 TARGET_SCROLL。
+   ★ 想调手机上的滚动快慢：改下面的 MOBILE_INPUT_SPEED（1 = 和 PC 一样快）。
    ========================================================================== */
 
 (function () {
@@ -44,6 +57,12 @@
        所以"行程"在任何屏幕尺寸下都差不多，而底图该多高就多高。
        想更慢 / 更长：调大（8000 更从容）；想更短：调小（5000 更紧凑）。 */
     var TARGET_SCROLL = 6200;
+
+    /* 手机上的"输入倍率"：同样的手指滑动 / 滚轮距离，页面走 5 倍远。
+       ★ 只乘在"输入 → 进度"那一层（1.js 的 __home.setInputScale），时间轴不动：
+         每段文字的淡入淡出 / 视频播放还是原来那套，只是滑同样的距离走得更远。
+       ★ 切回桌面断点时自动设回 1（见 applyInputSpeed），PC 手感一个像素都不变。 */
+    var MOBILE_INPUT_SPEED = 5;
 
     /* 底图原始尺寸（和 1.js 的 updateBodyHeight / 2.css 的 --map-w 一致：
        map-5.avif 是 803 × 4000）。用来算"底图在当前屏宽下有多高"。 */
@@ -82,9 +101,27 @@
         return viewWidth() * MAP_H / MAP_W;
     }
 
-    /* 顶部视频的高度（= 1.js 写进 --lead-in 的那个值） */
-    function leadInHeight() {
+    /* 标题视频的高度（16:9 → 屏宽 × 9/16；1.js 的 sizeTopVideo 也是这么写的） */
+    function titleHeight() {
         return Math.round(viewWidth() * VIDEO_RATIO);
+    }
+
+    /* ---- 手机上把标题视频竖直居中：它上面留出来的那块空白 ----
+       pad = (视口高 − 视频高) ÷ 2 → 视频中心正好落在屏幕中线（首屏竖直居中）。
+       ★ 这块留白必须算进 --lead-in（2.css 的“引导段”）：底图、文字、图标、
+         2.js 的人物视频与轨迹点都跟着它整体下移，所以视频下沿 = 底图起点，
+         "后面的正常进行"；桌面断点返回 0，一切照旧。 */
+    function titlePad() {
+        if (!isMobile()) return 0;
+        var vh = window.innerHeight || root.clientHeight || 0;
+        return Math.max(0, Math.round((vh - titleHeight()) / 2));
+    }
+
+    /* 整页内容相对文档顶端的下移量 = 视频上留白 + 视频高（= 2.css 的 --lead-in）。
+       ★ 5.css 的 body::after 用 --m5-blank 接着铺底图，而 blankLength() 用的是这个值，
+         所以行程仍然是 TARGET_SCROLL —— 多了这块留白不会让整页变长。 */
+    function leadInHeight() {
+        return titlePad() + titleHeight();
     }
 
     /* ---- 保险：5.css 没被引入时自己补一个 ----
@@ -183,6 +220,45 @@
         }
 
         return changed;
+    }
+
+    /* ======================= 3. 手机专属的两件事 =======================
+       ① 标题视频挪到首屏正中（样式全在 5.css 第 7 节，本文件只负责把这块留白量出来）
+       ② 滚动快 5 倍（只改“输入 → 进度”，时间轴不动） */
+
+    /* ---- ① 标题视频竖直居中：把上面那块留白量出来 ----
+       5.css 第 7 节已经用 CSS 摆好位置了：
+         · .top-video-wrap  top = (100vh − 100vw×9/16) ÷ 2
+         · --lead-in        = 留白 + 视频高（!important 压过 1.js 写的内联值）
+         · html min-height  = --lead-in + 底图高
+       本文件【不再改这几个值】（免得和 1.js 的 sizeTopVideo 抢，谁后跑谁赢、会闪）。
+       但算接续长度 / 文字出场点的时候需要"content 相对文档顶端下移了多少"，
+       所以这里把实际的留白量出来：直接读视频自己的位置（滚动偏移补回去）。
+       ★ 量不到（元素还没建好）就按同一个式子兜底，结果一样。 */
+    function titlePad() {
+        if (!isMobile()) return 0;
+
+        var el = document.querySelector(".top-video-wrap");
+        if (el) {
+            var top = el.getBoundingClientRect().top + (window.pageYOffset || root.scrollTop || 0);
+            if (isFinite(top) && top > 0) return Math.round(top);
+        }
+
+        var vh = window.innerHeight || root.clientHeight || 0;
+        return Math.max(0, Math.round((vh - titleHeight()) / 2));
+    }
+
+    /* ---- ② 滚动快 5 倍 ----
+       "滚轮 / 手指滑动 → 页面走多远"的那个倍率由 1.js 的 __home.setInputScale() 控制，
+       这里在手机断点里设成 MOBILE_INPUT_SPEED（5），切回桌面断点设回 1。
+       ★ 每段文字的淡入淡出、视频播放这些"秒"一点都不动（倍率只乘在输入那一层）。 */
+    function applyInputSpeed() {
+        var home = window.__home;
+        if (!home || typeof home.setInputScale !== "function") return false;
+        var want = isMobile() ? MOBILE_INPUT_SPEED : 1;
+        if (home.inputScale === want) return false;
+        home.setInputScale(want);
+        return true;
     }
 
     /* ======================= 4. 把 22 段文字"摊开"到整页行程上 =======================
@@ -298,11 +374,15 @@
     /* ======================= 5. 应用 / 监听 ======================= */
 
     /* 一次性应用（needRelayout：这一轮要不要请 1.js 重排）
-       ★ 顺序很重要：先把空白 / 底图地址 / 文字的 top 全部写好，最后再让 1.js 量一次，
-         它量到的就是新布局（1.js 的 layout 只读当前 DOM，不会反过来改 top）。 */
+       ★ 顺序很重要：先把空白 / 底图地址 / 输入倍率 / 文字的 top 全部写好，
+         最后再让 1.js 量一次 —— 它量到的就是新布局
+         （1.js 的 layout 只读当前 DOM，不会反过来改 top）。
+       ★ 标题留白不在这里写：那三个值全交给 5.css 第 7 节的 !important，
+         本文件只读它（titlePad / leadInHeight），免得和 1.js 抢同一个变量。 */
     function apply(needRelayout) {
         applyBlank();
         applyMap();
+        applyInputSpeed();
         applyTextTops();
         if (needRelayout) refineTextTops();
     }
@@ -333,8 +413,8 @@
         if (waitTries++ < 150) setTimeout(waitForHome, 200);
     }
 
-    /* 初始化：脚本在 body 末尾执行，body / 宝剑容器（1.js 建的）都已经在了。
-       这一轮只写"第一版"（接续底图的长度 + 底图地址 + 文字 top 的目标值），
+    /* 初始化：脚本在 body 末尾执行，body / 宝剑容器（1.js 建的）、__home 都已经在了。
+       这一轮只写"第一版"（标题留白 + 接续底图的长度 + 底图地址 + 5 倍速 + 文字 top），
        1.js 第一遍 layout 就会按它排；真正的校正交给 waitForHome / load。 */
     ensureStylesheet();
     apply(false);
@@ -362,11 +442,13 @@
 
     /* ======================= 6. 调试接口（只读） ======================= */
 
-    /* 控制台里 __m5 可以看当前算出来的接续长度 / 行程，方便对着调 TARGET_SCROLL：
+    /* 控制台里 __m5 可以看当前算出来的接续长度 / 行程 / 标题留白 / 倍率：
          __m5.blank       现在接在多后面（= 再接多长底图，px）
          __m5.map         交给 CSS 的底图地址（--m5-map）
          __m5.scroll      当前文档的可滚动行程（px）
          __m5.target      目标行程（px）
+         __m5.titlePad    标题视频上面的留白（px，= 首屏竖直居中那一段）
+         __m5.speed       当前输入倍率（1 = 原速，手机是 5）
          __m5.layouts     5.js 请 1.js 重排过几次
          __m5.reapply()   手动重算一次（改完参数后不用刷新） */
     window.__m5 = {
@@ -374,6 +456,8 @@
         get scroll() { return Math.max(0, root.scrollHeight - window.innerHeight); },
         get target() { return TARGET_SCROLL; },
         get map() { return root.style.getPropertyValue("--m5-map"); },
+        get titlePad() { return titlePad(); },
+        get speed() { return window.__home && window.__home.inputScale || 1; },
         get mobile() { return isMobile(); },
         get layouts() { return layoutCount; },
         reapply: function () { waitTries = 0; apply(true); }

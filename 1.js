@@ -169,6 +169,13 @@ const AUTO_FIT = true;
 const MAX_SLOWDOWN = 2;
 
 const TOUCH_SPEED = 0.20;
+
+/* ★ 输入倍率（运行时可改）：同样的滚轮 / 手指滑动 / 键盘输入，页面走 inputScale 倍远。
+   1 = 桌面原样（PC 一个字节都不变）；移动端由 5.js 通过 __home.setInputScale(5) 调成 5。
+   ★ 它只乘在“输入 → 进度”这一层，时间轴（每段文字的时长、视频播放）一点都不动：
+     所以就只是“滑同样的距离，页面走得快”，每段动效该多久还是多久。 */
+let inputScale = 1;
+
 const KEY_STEP = 30;          /* 键盘单步（名义进度，会跟随播放速度缩放） */
 const SMOOTHING = 0.08;
 const REF_WHEEL_RATE = 1000;  /* “1 秒”的定义：以每秒 1000 的滚轮 delta 为名义速度 */
@@ -261,7 +268,7 @@ let lastTime = 0;
 let fitScale = 1;      // 自适应播放速度倍率（1 = 不降速）
 
 const playbackRate = () => REF_WHEEL_RATE * WHEEL_SPEED * fitScale;  // 每秒 ≈ 多少进度
-const wheelFactor = () => WHEEL_SPEED * fitScale;                    // 滚轮 delta → 进度
+const wheelFactor = () => WHEEL_SPEED * fitScale * inputScale;       // 滚轮 delta → 进度（含输入倍率）
 const introLen = () => INTRO_SECONDS * playbackRate();
 
 const pageMaxScroll = () => Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
@@ -1150,11 +1157,11 @@ window.addEventListener("touchmove", e => {
         const d = touchY - y;
         if (freezeActive && frozenZone) {
             /* 冻结播放期间触摸同样只推动文字 */
-            freezePos = clamp(freezePos + d * TOUCH_SPEED * fitScale, frozenZone.hit, frozenZone.z1);
+            freezePos = clamp(freezePos + d * TOUCH_SPEED * fitScale * inputScale, frozenZone.hit, frozenZone.z1);
             startLoop();
         } else {
             armFreeze();
-            addTarget(d * TOUCH_SPEED * fitScale);
+            addTarget(d * TOUCH_SPEED * fitScale * inputScale);
         }
     }
     touchY = y;
@@ -1170,7 +1177,7 @@ window.addEventListener("keydown", e => {
 
     const vh = window.innerHeight;
     const page = vh * wheelFactor() * 2;
-    const step = KEY_STEP * fitScale;
+    const step = KEY_STEP * fitScale * inputScale;
 
     const map = {
         ArrowDown: step,
@@ -1337,6 +1344,14 @@ window.__home = {
     get freezeArmed() { return freezeArmed; },
     get freezePos() { return freezePos; },
     get pageTop() { return pageTopFor(cur); },
+    /* 输入倍率：5.js 在手机断点里调成 5（同样的滑动距离，页面走 5 倍远），
+       切回桌面时它会再设回 1。★ 只影响“输入 → 进度”，不动时间轴。 */
+    setInputScale(v) {
+        const n = Number(v);
+        inputScale = isFinite(n) && n > 0 ? n : 1;
+        return inputScale;
+    },
+    get inputScale() { return inputScale; },
     layout,
     render
 };
