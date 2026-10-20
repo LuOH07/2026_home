@@ -4,22 +4,18 @@
    桌面版的 1.js ~ 4.js 一个字节都不动。这个文件只干五件事，而且都只在窄屏断点里生效
    （窄屏 = 屏幕宽 ≤ 高，见下面 ★ 断点那一条）：
 
-     1. 页尾接续的底图（对应 5.css 第 6 节）
-        手机上的底图只有 1900px 上下，整页可滚动行程太短，
-        1.js 把 22 段文字依次演一遍的时间轴塞进去，只能把每段压到几十像素 ——
-        表现就是"滚一点点进度就到底了，字还一段段没看完"。
-        这里按屏幕把"还要再接多长底图"算出来写进 --m5-blank（5.css 的 body::after
-        读它，并用 repeat-y 一张接一张铺满），把【文档可滚动行程】补到
-        TARGET_SCROLL 这么长；顺便把底图地址交给 CSS（--m5-map），
-        接续段和正片用的就是同一张图、同一套缩放。
-
-     2. 把 22 段文字"摊开"到这段行程上（第 4 节，本文件最核心的一段）
-        光接底图还不够：1.js 的规则是"滚到这段文字 CSS top 那一屏它就出场"，
-        而 top 是底图高度的百分比 —— 手机上底图只有 1943px，
-        22 个百分比全挤在 0~1950px 里，于是三四句话同时压在同一条锚线上，
-        后面接的那几张底图反而滚不到（最远进度只到最后一句话的结尾）。
-        所以这里按整页行程给每段文字重算一个 top，让它们从头到尾排开：
-        一段文字一段行程，滚到底 = 最后一句演完 = 接续的底图正好铺完。
+     1 & 2. 页尾接续的底图 + 把 22 段文字排开（对应 5.css 第 6 节 / 本文件第 4 节，
+            这是本文件最核心的一段）
+        手机上底图只有 1900px 上下，1.js 的 22 段文字 top 又都是底图高度的百分比，
+        全挤在 0~1950px 里 → 三四句同时压在同一条锚线上，接续的底图也滚不到。
+        所以窄屏上把每段文字的 top 改成【按时间轴算出来的像素】：
+          · 先量出每段自己的窗口（1.js 的 E − A = 它自己的秒数 × 速度）；
+          · 按【窗口 + MIN_GAP_PX】一段段往后排，谁也不压谁（这是硬要求）；
+          · 页长（= 可滚动行程）= 最后一段演完 + 收尾行程，
+            再由页长反推"页尾再接多长底图"，写进 --m5-blank
+            （5.css 的 body::after 读它，用 repeat-y 一张接一张铺满）——
+            也就是说【底图长度跟着动效的滚轮长度走】，而不是把动效压进一个固定长度；
+          · 顺便把底图地址交给 CSS（--m5-map），接续段和正片用同一张图、同一套缩放。
 
      3. 宝剑进度条（对应 5.css 第 2 节）
         PC 上那把剑（= 滚动进度）在手机上也保留：位置由 1.js 按 scrollY 自己算，
@@ -52,7 +48,7 @@
    ★ 断点必须和 5.css 顶部那条媒体查询一模一样（改要一起改）：
      分界线是【屏幕宽 : 高 = 1 : 1】—— 宽 ≤ 高 = 窄屏走移动端，宽 > 高 = 宽屏走 PC 端。
      所以这里用 (max-aspect-ratio: 1/1)，和像素宽度无关。
-   ★ 想调"整页多长 / 再接几张底图"：只改下面的 TARGET_SCROLL。
+   ★ 想调"每两段之间空多长 / 再接几张底图"：只改下面的 MIN_GAP_PX（页长会跟着变）。
    ★ 想调手机上的滚动快慢：改下面的 MOBILE_INPUT_SPEED（1 = 和 PC 一样快）。
    ★ 手机滚动还有"抖 / 黑底"想试试别的：把下面的 SNAP_SCROLL_TO_PX 改成 false
      （只关掉取整，5.css 里给视频容器提层的那几行仍然有效）。
@@ -63,15 +59,23 @@
 
     /* ======================= 0. 可调参数 ======================= */
 
-    /* 目标"文档可滚动行程"（px）= 滚轮从页面顶部滚到最底部要走的距离。
-       为什么按它算要接多长，而不是写死一个高度：
-         · 22 段文字、每段 4.2 秒的窗口，要摊开得能看清，整页行程需要 6000px 上下
-           （桌面 1440 宽时正好是 ~6400px，这一页在桌面上就是这么走的）；
-         · 手机上底图本身只有 ~1900px，只够 1/3 —— 差的这部分
-           用"再接几张底图"补上（5.css 的 body::after 用 repeat-y 接着铺）。
-       所以"行程"在任何屏幕尺寸下都差不多，而底图该多高就多高。
-       想更慢 / 更长：调大（8000 更从容）；想更短：调小（5000 更紧凑）。 */
+    /* 起始页长（px）：第一次 apply（还没量到任何文字）时先用它，等 1.js 量过一遍以后，
+       真实页长由"一段窗口 + 一段空档"算出来（见第 4 节的 pageLen / planTimeline）。
+       为什么不再写死：必须优先保证所有文字完整、不重叠地演完 —— 页长是结果，不是输入。
+       想更紧凑 / 更从容：改下面的 MIN_GAP_PX（每两段之间至少留多少滚动距离）。 */
     var TARGET_SCROLL = 6200;
+
+    /* ---- 手机上的"文字摊开"参数（页长会跟着这两项自动算，见第 4 节）----
+       MIN_GAP_PX：相邻两段之间【至少】留多长的滚动距离（px）。
+         1.js 里两段之间的设计间隔是 0.4 秒 ≈ 40px（名义速度 100px/s），
+         这里给 48px，把 0.4 秒的余量也留出来，保证不会"前一段还没走完后一段就上来了"。
+       TAIL_SECONDS：最后一段完全消失后，页面还要留多少秒的行程（和 1.js 的
+         TAIL_SECONDS = 1.5 一致；它决定"滚到底"落点，写在这里只是为了让页长刚好收尾）。 */
+    var MIN_GAP_PX = 48;
+    var TAIL_SECONDS = 1.5;
+
+    /* 当前页长（px，= 整页可滚动行程）。宽屏用不到；窄屏由 settleTextTimeline() 算出来。 */
+    var pageLen = TARGET_SCROLL;
 
     /* 手机上的"输入倍率"：同样的手指滑动 / 滚轮距离，页面走 5 倍远。
        ★ 只乘在"输入 → 进度"那一层（1.js 的 __home.setInputScale），时间轴不动：
@@ -141,7 +145,7 @@
 
     /* 整页内容相对文档顶端的下移量 = 视频上留白 + 视频高（= 2.css 的 --lead-in）。
        ★ 5.css 的 body::after 用 --m5-blank 接着铺底图，而 blankLength() 用的是这个值，
-         所以行程仍然是 TARGET_SCROLL —— 多了这块留白不会让整页变长。 */
+         所以页长（pageLen）不受这块留白影响 —— 它只是把整段内容的起点往下推。 */
     function leadInHeight() {
         return titlePad() + titleHeight();
     }
@@ -167,15 +171,17 @@
 
     /* ======================= 2. 页尾接续的底图 ======================= */
 
-    /* 接续长度 = 目标行程 + 视口高 − 底图高 − 视频高。
+    /* 接续长度 = 当前页长 + 视口高 − 底图高 − 视频高。
        （文档可滚动行程 = 文档总高 − 视口高 = 视频高 + 底图高 + 接续长 − 视口高，
-         让它等于 TARGET_SCROLL 就解出下面这个式子。）
+         让它等于 pageLen 就解出下面这个式子。）
+       ★ pageLen 在窄屏上是【算出来的】（一段窗口 + 一段空档，见第 4 节），
+         所以"底图接多长"永远跟着文字动效的实际需要走；宽屏不写这个变量。
        ★ 5.css 的 body::after 把这段高度拿去 repeat-y 铺底图：一张、两张……
          最后一张不足一张就只露出上半截，页面末尾正好是它被切断的地方。
        ★ 算出来是负数（屏幕特别高、底图特别高）就不接：0 = 不需要再接。 */
     function blankLength() {
         var vh = window.innerHeight || root.clientHeight || 0;
-        return Math.max(0, TARGET_SCROLL + vh - mapHeight() - leadInHeight());
+        return Math.max(0, pageLen + vh - mapHeight() - leadInHeight());
     }
 
     /* 写进 --m5-blank（5.css 的 body::after 用它当"再接多长"）。
@@ -330,18 +336,25 @@
          1.js 的规则是"每段文字在滚到它 CSS top 那一屏时出场"（top 是相对底图高度的 %）。
          桌面上底图有 7173px 高，22 句话的 top 摊在 0~6400px 里，正好一段一段来；
          手机上底图只有 1943px，这 22 个 % 全挤在 0~1950px 里，
-         而每段文字的窗口（淡入 0.6s + 停留 3s + 淡出 0.6s）却要占 250px 上下 ——
          于是相邻三、四句同时出现在同一条锚线上（字压字），
          而页面下面接的那几张底图根本滚不到（1.js 的最远进度只到最后一句话的结尾）。
-       做法：
-         窄屏断点里，按【当前屏宽下的总行程】重新给每段文字算一个 top，
-         让它们从头到尾均匀排开（第一段在顶部视频下面，最后一段正好在页面底部收尾），
-         再请 1.js 重排一次。这样：
-           · 每句话单独占一段行程，不会互相压在一起；
-           · 可滚动行程被完整用满 —— 滚到底 = 最后一句演完，进度正好走完；
-           · 那 4000 多 px 的"接续底图"就变成了段与段之间的呼吸，而不是滚不到的死区。
+
+       ★ 现在必须优先保证：22 段全部完整演完、任意两段不同时出现在锚线上。
+         做法是"页长跟着动效走"，而不是把动效压进一个固定页长：
+           1. 量出每段自己的窗口 = 1.js 的 E − A（= 它自己的 淡入+停留+淡出 秒数 × 速度）；
+           2. 按【窗口 + MIN_GAP_PX】一段一段往后排，得到每段该在第几像素出场；
+           3. 页长 = 最后一段演完 + TAIL_SECONDS 的收尾行程；
+              再由页长反推"页尾再接多长底图"（--m5-blank）——
+              底图的长度就是跟着动效的滚轮长度走的；
+           4. 写 top → 请 1.js 重排 → 再量一遍（改页长会微调速度 → 窗口变一点点），
+              反复两三遍，直到"所有相邻空档 ≥ MIN_GAP_PX、最后一段不越过页底"。
+       ★ 为什么不再"平均摊开"：1.js 的 AUTO_FIT 会把整页长度尽量换成速度，
+         平均摊开留下的空档只有几像素，屏宽 / 字高 / 设备稍一变化就挤在一起
+         （原来最后两段就是被末尾那条"必须在页底前演完"的夹取顶到同一时刻的）。
+         现在空档是写死的像素，页长由它反推 —— 空档是硬保证。
        ★ 只改 .text-box 的 inline top（等于"它什么时候出场"），
-         屏幕上文字的竖直位置仍然由 1.js 钉在锚线上，一个字都没挪。 */
+         屏幕上文字的竖直位置仍然由 1.js 钉在锚线上，一个字都没挪。
+       ★ 宽屏（PC）这一段一条都不跑：PC 的 top 是 1.css 里的百分比，5.js 不碰。 */
 
     /* 页面上所有随滚动出场的文字，按 DOM 顺序 = 作者写的先后顺序 */
     function textEls() {
@@ -350,7 +363,7 @@
 
     /* 当前屏宽下，"整页最多能滚多少像素"（= 1.js 的 pageMaxScroll()）：
        顶部视频 + 底图 + 页尾空白 − 视口高。
-       ★ 空白是按 TARGET_SCROLL 反推的，所以正常情况下它就等于 TARGET_SCROLL。 */
+       ★ 空白是按 pageLen 反推的，所以正常情况下它就等于 pageLen。 */
     function currentLimit() {
         var vh = window.innerHeight || root.clientHeight || 0;
         return Math.max(0, leadInHeight() + mapHeight() + blankLength() - vh);
@@ -396,43 +409,100 @@
         return changed;
     }
 
-    /* 用 1.js 真正量到的 A（这段开始淡入的进度）反过来校正 top。
-       为什么需要校正：1.js 的到达点 = top + h/2 − 锚线高度，
-       有的句子命中 ANCHOR_OVERRIDES、有的用 ANCHOR_RATIO 0.4，
-       偏移量每句都不一样（几十到三百像素），一次校正就能对上（关系是线性的）。
-       ★ 最多两轮：第一轮把误差补掉，第二轮只做验证。 */
-    function refineTextTops() {
-        if (!isMobile()) return;                                  /* 桌面：一个字都不碰 */
+    /* 页面此刻真实的"可滚动行程"（验证最后一段有没有越界用；和 1.js 的式子一致） */
+    function pageMaxNow() {
+        return Math.max(0, root.scrollHeight - (window.innerHeight || root.clientHeight || 0));
+    }
+
+    /* 名义播放速度（fitScale = 1 时的速度）。
+       1.js 的 __home.rate = 名义速度 × fitScale，fitScale 会按整页长度自动下调，
+       所以 rate ÷ fitScale 就是名义值（= REF_WHEEL_RATE × WHEEL_SPEED = 100px/s）。
+       ★ 按名义速度排时间轴，AUTO_FIT 才会停在名义速度上：窗口长度才是"设计的那几秒"
+         （4.2s × 100px/s = 420px），空档才是我们写死的像素；
+         按被压过的速度排，AUTO_FIT 会把多出来的长度又变成速度，空档会被重新吃掉。 */
+    function nominalRate() {
         var home = window.__home;
-        if (!home || !home.items || !home.items.length) return;    /* 1.js 还没量过 */
-        var els = textEls();
-        if (!els.length) return;
+        if (!home) return 0;
+        var r = Number(home.rate) || 0;
+        var f = Number(home.fitScale) || 0;
+        if (r > 0 && f > 0 && isFinite(f)) return r / f;
+        return r;
+    }
 
-        var want = desiredArrivals(els.length);
+    /* 时间轴计划：tops[i] = 第 i 段该在第几像素开始淡入；len = 整页页长
+         tops[i] = 第一段位置 + Σ(前面每段的窗口 + MIN_GAP_PX)
+         len     = 最后一段窗口结束 + TAIL_SECONDS × 名义速度
+       ★ 窗口用名义速度换算：secs = (E − A) ÷ 当前速度，再 × 名义速度。 */
+    function planTimeline(items) {
+        var nominal = nominalRate();
+        var rate = Number(window.__home && window.__home.rate) || 0;
+        if (!(nominal > 0) || !(rate > 0) || !items || !items.length) return null;
 
-        for (var pass = 0; pass < 2; pass++) {
-            home.layout();
-            layoutCount++;
-            var worst = 0;
-            var items = home.items;
-            els.forEach(function (el, i) {
-                var it = null;
-                for (var k = 0; k < items.length; k++) {
-                    if (items[k].el === el) { it = items[k]; break; }
-                }
-                if (!it) return;
-                var err = want[i] - it.A;
-                if (Math.abs(err) > worst) worst = Math.abs(err);
-                var cur = parseFloat(el.style.top);
-                if (!isFinite(cur)) cur = 0;
-                el.style.top = Math.round(Math.max(0, cur + err)) + "px";
-            });
-            if (worst < 4) break;
+        var first = leadInHeight() + 40;
+        var tops = [];
+        var cur = first;
+        for (var i = 0; i < items.length; i++) {
+            tops.push(cur);
+            var secs = Math.max(0.05, (items[i].E - items[i].A) / rate);
+            cur += secs * nominal + MIN_GAP_PX;
+        }
+        return { tops: tops, len: cur - MIN_GAP_PX + TAIL_SECONDS * nominal };
+    }
+
+    /* 把计划写进 DOM：先写页长（--m5-blank），再写每段的 inline top。
+       ★ inline top 用"量到的 offsetTop − 当前 inline top"换算偏移底数，
+         不依赖 lead-in / 锚线的具体数值（1.js 里 A 就等于 top0）。 */
+    function applyTimeline(plan) {
+        var home = window.__home;
+        if (!home || !plan || !home.items || !home.items.length) return false;
+        var items = home.items;
+        var changed = false;
+
+        for (var i = 0; i < items.length && i < plan.tops.length; i++) {
+            var el = items[i].el;
+            var inlineTop = parseFloat(el.style.top);
+            if (!isFinite(inlineTop)) inlineTop = 0;
+            var base = items[i].top - inlineTop;      /* offsetTop = base + inline top */
+            var px = Math.round(Math.max(0, plan.tops[i] - base)) + "px";
+            if (el.style.top !== px) { el.style.top = px; changed = true; }
         }
 
-        home.layout();
-        layoutCount++;
+        if (Math.abs(pageLen - plan.len) > 0.5) {
+            pageLen = plan.len;
+            applyBlank();
+            changed = true;
+        }
+        return changed;
+    }
+
+    /* 排 → 量 → 再排，直到"所有相邻空档 ≥ MIN_GAP_PX、最后一段不越过页底"。
+       为什么可能要两三遍：写页长会改速度（AUTO_FIT），窗口长度跟着变一点点。 */
+    function settleTextTimeline() {
+        if (!isMobile()) return false;                             /* 宽屏：一个字都不碰 */
+        var home = window.__home;
+        if (!home || !home.items || !home.items.length) return false;
+
+        var ok = false;
+        for (var pass = 0; pass < 4; pass++) {
+            var plan = planTimeline(home.items);
+            if (!plan) break;
+            applyTimeline(plan);
+            home.layout();
+            layoutCount++;
+
+            var items = home.items;
+            var worst = Infinity;
+            for (var i = 1; i < items.length; i++) {
+                var gap = items[i].A - items[i - 1].E;
+                if (gap < worst) worst = gap;
+            }
+            var lastE = items[items.length - 1].E;
+            ok = (!isFinite(worst) || worst >= MIN_GAP_PX - 3) && lastE <= pageMaxNow() + 1;
+            if (ok) break;
+        }
+
         if (typeof home.render === "function") home.render();
+        return ok;
     }
 
     /* ======================= 5. 应用 / 监听 ======================= */
@@ -448,7 +518,7 @@
         applyMap();
         applyInputSpeed();
         applyTextTops();
-        if (needRelayout) refineTextTops();
+        if (needRelayout) settleTextTimeline();
     }
 
     /* 同一帧里多次调用只跑一次（resize 会连着触发好几次） */
@@ -513,7 +583,7 @@
          __m5.blank       现在接在多后面（= 再接多长底图，px）
          __m5.map         交给 CSS 的底图地址（--m5-map）
          __m5.scroll      当前文档的可滚动行程（px）
-         __m5.target      目标行程（px）
+         __m5.target      当前页长（px，= 可滚动行程，由文字时间轴算出）
          __m5.titlePad    标题视频上面的留白（px，= 首屏竖直居中那一段）
          __m5.speed       当前输入倍率（1 = 原速，手机是 5）
          __m5.layouts     5.js 请 1.js 重排过几次
@@ -521,7 +591,7 @@
     window.__m5 = {
         get blank() { return Math.round(parseFloat(root.style.getPropertyValue("--m5-blank")) || 0); },
         get scroll() { return Math.max(0, root.scrollHeight - window.innerHeight); },
-        get target() { return TARGET_SCROLL; },
+        get target() { return Math.round(pageLen); },
         get map() { return root.style.getPropertyValue("--m5-map"); },
         get titlePad() { return titlePad(); },
         get speed() { return window.__home && window.__home.inputScale || 1; },
