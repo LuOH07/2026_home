@@ -337,32 +337,54 @@ video.bug-icon {
    ============================================================================ */
 
 /* ============================================================================
-   图标 14（suicide.webm）—— text-17 淡入时出现，text-18 淡出之后消失
-   ★ 右边带一个开关按钮（下面 .bug-toggle 那几条）：绿=开、灰=关，
-     点击时正放 / 倒放这段视频（逻辑全在 3.js 的 toggleSwitch / switchAnimate）
-   ★ 按钮上面还有一行字 “Kill Switch”（见下面 .bug-toggle-label）：
-     字形 / 颜色跟正文一模一样（'impact' / #324561 / letter-spacing 1px），
-     只在这个图标亮着的时候才看得到（跟着 slot 的 opacity 一起淡入淡出）
+   图标 14（platform.avif）—— ★ 静态图片版 ★
+   （原来的 suicide.webm + Kill Switch 开关按钮已整段注释掉，备份见本段末尾）
+   ----------------------------------------------------------------------------
+   ★★ 想改这张图的位置 / 大小，只改下面 .bug-icon-14 里这几行 ★★
+        left / top   ：图片【盒子中点】距屏幕左边 / 上边的距离（百分比＝相对屏幕）
+        --icon-height：图片高度（宽度按图片自身比例自适应）
+   · left / top 由 translate(-50%, -50%) 换算成【中心点】：
+        left: 50% = 水平居中；想贴右边就换成 right 那套写法（见 19 ~ 22 号那几条）。
+   · 它【钉在屏幕上】（3.js 里 pin: true），所以百分比＝相对屏幕，页面怎么滚都不动。
+        ★ 手机上 5.css 有一条媒体查询把 .bug-icon-14 强制成 left: 50%，
+          想在小屏也保持自定义位置，记得去 5.css 一起改。
+   · 出场 / 退场完全跟 text-12 走（3.js 的 ico14 那一条）：
+        跟着 text-12 的【淡入区间】一起淡入、跟着它的【淡出区间】一起消失，
+        淡入淡出用的都是文字同一条 easeOut 曲线，所以是逐帧同步的。
+   ★ 它没有 hover 名字 → 亮着的时候也不接鼠标（见下面 .is-live 那条）。
    ============================================================================ */
 .bug-icon-14 {
-    --icon-height: calc(400 * var(--u));               /* ← 视频高度（宽度按比例自动；现在是竖版 1098×1312 ≈ 0.84:1，
-                                            所以 500px 高时宽度约 418px） */
+    --icon-height: calc(400 * var(--u)); /* ← 图片高度（宽度按图片自身比例自动；想大 / 想小就改这个） */
     left: 35%;                          /* ← 水平位置（盒子中点） */
     right: auto;
     top: 68%;                           /* ← 竖直位置（盒子中点；文字中心在屏幕 40%） */
     bottom: auto;
     transform: translate(-50%, -50%);   /* 让 left / top 表示盒子中点 */
-
-    /* ★ 开关的几何：定义在 slot 上，【按钮】和它上面那行【文字】共用同一套数，
-       所以改下面 --toggle-w 一个值，按钮和文字会一起跟着挪 / 一起缩放。 */
-    --toggle-w: clamp(calc(46 * var(--u)), 5.2vw, calc(108 * var(--u)));
-    --toggle-h: calc(var(--toggle-w) * 0.5135);              /* 高 ≈ 宽的 51%（原 38 / 74） */
-    --toggle-knob: calc(var(--toggle-h) - calc(6 * var(--u)));              /* 圆点直径 = 高 − 上下各 3px */
-    --toggle-travel: calc(var(--toggle-w) - calc(6 * var(--u)) - var(--toggle-knob));  /* 圆点行程 */
-    --toggle-gap: calc(var(--toggle-w) * 0.19);              /* 和视频之间的空隙（原 14 / 74） */
 }
 
-/* ----------------------------------------------------------------------------
+/* ============================================================================
+   ★★ 下面整段【注释掉】：图标 14 原来的【视频 + 开关按钮 + Kill Switch 那行字】★★
+   ----------------------------------------------------------------------------
+   这一段现在一个元素都不会命中（3.js 里原来那份 ico14 已经注释掉，
+   不再生成 .bug-toggle / .bug-toggle-label），留着只是备份，恢复时不用重写。
+   · 备份里的行内注释为不破坏外面这层注释，改成了 // 开头（纯文字，不生效）；
+     恢复时把外层注释去掉即可，// 改不改回都一样能跑。
+   · 原来定义在 .bug-icon-14 上的开关几何（现在用不到，只是备份）：
+        --toggle-w      : clamp(calc(46 * var(--u)), 5.2vw, calc(108 * var(--u)))
+        --toggle-h      : calc(var(--toggle-w) * 0.5135)
+        --toggle-knob   : calc(var(--toggle-h) - calc(6 * var(--u)))
+        --toggle-travel : calc(var(--toggle-w) - calc(6 * var(--u)) - var(--toggle-knob))
+        --toggle-gap    : calc(var(--toggle-w) * 0.19)
+   · 效果回顾：按钮贴在视频右缘、竖直对齐中线；开 = 绿 #34C759、关 = 灰 #C9D2DC，
+     白色圆点滑到右边；“Kill Switch” 用正文的 impact / #324561，落在按钮上沿上方 10px；
+     只有图标亮着（.is-live）时按钮才能点。
+   · 恢复步骤：① 3.js 里取消 ico14 旧配置的注释、把静态图那一条注释掉；
+               ② 把本段外层注释去掉（下面 ↓ 之后到 ↑ 之前都是旧规则）。
+   ============================================================================ */
+/*  ↓↓↓ 以下是原样保留的旧规则（整段被上面这层注释包住）↓↓↓
+
+
+// ----------------------------------------------------------------------------
    图标 14 的开关按钮（3.js 里写 toggle 才会有）—— 贴在视频右边、随视频走
    ----------------------------------------------------------------------------
    · 位置：left: 100% = 紧贴视频右缘，再往右拉开一点空隙、竖直对齐视频中线。
@@ -377,10 +399,10 @@ video.bug-icon {
    · 颜色：开 = 绿 #34C759，关 = 灰 #C9D2DC。
    · pointer-events：画框和 slot 都是 none，这里必须自己打开；
      而且只在图标亮着（.is-live）时才可点，暗着的时候绝不挡底下文字。
-   ============================================================================ */
+   ============================================================================
 .bug-icon-14 .bug-toggle {
     position: absolute;
-    left: 100%;                         /* 贴在视频右缘 */
+    left: 100%;                         // 贴在视频右缘
     top: 50%;
     transform: translate(var(--toggle-gap), -50%);
     width: var(--toggle-w);
@@ -388,15 +410,15 @@ video.bug-icon {
     padding: 0;
     border: 0;
     border-radius: calc(999 * var(--u));
-    background: #C9D2DC;                /* 关：灰 */
+    background: #C9D2DC;                // 关：灰
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
     cursor: pointer;
-    pointer-events: none;               /* 默认不可点，图标亮着时才打开（见下一条） */
+    pointer-events: none;               // 默认不可点，图标亮着时才打开（见下一条）
     transition: background-color .25s ease, opacity .25s ease;
     -webkit-tap-highlight-color: transparent;
 }
 
-/* 白色圆点（尺寸同样由 --toggle-w 算出来） */
+// 白色圆点（尺寸同样由 --toggle-w 算出来）
 .bug-icon-14 .bug-toggle::after {
     content: "";
     position: absolute;
@@ -410,7 +432,7 @@ video.bug-icon {
     transition: transform .25s ease;
 }
 
-/* 开：变绿 + 圆点滑到右边 */
+// 开：变绿 + 圆点滑到右边
 .bug-icon-14 .bug-toggle.is-on {
     background: #34C759;
 }
@@ -418,18 +440,18 @@ video.bug-icon {
     transform: translateX(var(--toggle-travel));
 }
 
-/* 只有图标亮着的时候按钮才能点（暗着的时候 .is-live 会被摘掉） */
+// 只有图标亮着的时候按钮才能点（暗着的时候 .is-live 会被摘掉）
 .bug-icon-slot.bug-icon-14.is-live .bug-toggle {
     pointer-events: auto;
 }
 
-/* 键盘聚焦时给个框，鼠标点击不显示（:focus-visible） */
+// 键盘聚焦时给个框，鼠标点击不显示（:focus-visible）
 .bug-icon-14 .bug-toggle:focus-visible {
     outline: 2px solid #465E77;
     outline-offset: 3px;
 }
 
-/* ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
    按钮上方那行字 “Kill Switch”（3.js 里写 toggle.label 才会生成）
    ----------------------------------------------------------------------------
    · 字形 / 颜色 = 【正文】（1.css 的 .text-box）：'impact' / #324561 / letter-spacing 1px。
@@ -442,21 +464,25 @@ video.bug-icon {
      把 left/bottom 换成 left: 100%; top: 50%; transform: translate(gap, -50%) 之类。
    · 只在图标亮着的时候看得见（跟着 slot 的 opacity 一起淡入淡出）；
      pointer-events: none —— 不挡底下文字，也不会抢走开关的点击。
-   ============================================================================ */
+   ============================================================================
 .bug-icon-14 .bug-toggle-label {
     position: absolute;
     left: 100%;
     bottom: calc(50% + var(--toggle-h) * 0.5 + calc(10 * var(--u)));
     transform: translateX(var(--toggle-gap));
-    font-family: 'impact', sans-serif;  /* ← 正文字体（和 1.css 的 .text-box 一致） */
+    font-family: 'impact', sans-serif;  // ← 正文字体（和 1.css 的 .text-box 一致）
     font-size: calc(18 * var(--u));
     line-height: 1.2;
-    letter-spacing: calc(1 * var(--u));                /* 和正文一样有点字距，Impact 不至于挤成一团 */
-    color: #324561;                     /* ← 正文颜色（1.css 的 .text-box） */
-    white-space: nowrap;                /* 不换行 */
+    letter-spacing: calc(1 * var(--u));                // 和正文一样有点字距，Impact 不至于挤成一团
+    color: #324561;                     // ← 正文颜色（1.css 的 .text-box）
+    white-space: nowrap;                // 不换行
     pointer-events: none;
     user-select: none;
 }
+
+   ↑↑↑ 旧规则备份到此为止 ↑↑↑
+   ============================================================================ */
+
 
 /* 它没有 hover 名字 → 亮着的时候也别接鼠标，免得挡住底下文字 */
 .bug-icon-slot.bug-icon-14.is-live {

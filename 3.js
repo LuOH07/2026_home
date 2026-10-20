@@ -237,40 +237,84 @@
             fadeOut: ".text-10"                        /* ★ text-11【淡出】时跟着消失 */
         },
 
-        /* ---- 图标 14（suicide.webm）—— text-17 淡入时出现，text-18 淡出之后消失 ----
-           ★ 右边带一个【开关按钮】（见下面的 toggle）：绿 = 开、灰 = 关。
-             按钮【上方】还有一行字 “Kill Switch”（toggle.label）：
-             字体 / 颜色跟正文一样，样式在 3.css 的 .bug-icon-14 .bug-toggle-label。
-             视频不再自己播，完全由开关控制（所以 autoplay / loop 都写 false，
-             mediaLive() 对这只图标不生效，改由 switchTick() 管）：
-                关 → 开：正放（0 → 最后一帧），细菌一点点变灰死掉，停住后【开 = 灰/最后一帧】
-                开 → 关：倒放（最后一帧 → 0），细菌变回彩色，停住后【关 = 彩/第一帧】
-             不点击的时候就是上面那两个静止帧。 */
+        /* ======================================================================
+           图标 14 —— ★★ 原来的【suicide.webm + Kill Switch 开关】整段注释掉 ★★
+           ----------------------------------------------------------------------
+           原因：按需求，text-12 不再配那段视频和开关按钮，换成一张【静态图片】
+                 platform.avif（见下面紧跟着的那一条 ico14）。
+           所以下面这些行（每行开头都加了 //）现在【不执行】：
+                 · 不再生成 <video src="./suicide.webm">；
+                 · 不再生成 .bug-toggle 那颗开关，也不再生成 “Kill Switch” 那行字；
+                 · 3.css 里对应的样式也整段注释掉了（见 3.css 的 .bug-icon-14 那一段）。
+           ★ 想恢复原来的组件：把下面每行开头的 //  去掉，并把紧跟着的静态图那一条
+             也一起注释掉 —— 两条都留着会叠在同一个位置。
+           ★ 开关引擎本身（下面第 3.x 节的 switchEnd / switchRest / paintToggle /
+             switchAnimate / toggleSwitch / switchTick / mediaOrSwitch）还留在文件里：
+             没有图标写 toggle 时它一个分支都不会进（等于死代码，页面表现无影响），
+             留着是为了恢复方便（mediaOrSwitch 引用了它，删掉要一起改）。
+           ----------------------------------------------------------------------
+           以下是原始配置（备份，逐行 // 注释）：
+           ====================================================================== */
+//        /* ---- 图标 14（suicide.webm）—— text-17 淡入时出现，text-18 淡出之后消失 ----
+//           ★ 右边带一个【开关按钮】（见下面的 toggle）：绿 = 开、灰 = 关。
+//             按钮【上方】还有一行字 “Kill Switch”（toggle.label）：
+//             字体 / 颜色跟正文一样，样式在 3.css 的 .bug-icon-14 .bug-toggle-label。
+//             视频不再自己播，完全由开关控制（所以 autoplay / loop 都写 false，
+//             mediaLive() 对这只图标不生效，改由 switchTick() 管）：
+//                关 → 开：正放（0 → 最后一帧），细菌一点点变灰死掉，停住后【开 = 灰/最后一帧】
+//                开 → 关：倒放（最后一帧 → 0），细菌变回彩色，停住后【关 = 彩/第一帧】
+//             不点击的时候就是上面那两个静止帧。 */
+//        {
+//            cls: "bug-icon-14",
+//            host: ".text-12",
+//            src: "./suicide.webm",                   /* ★ 相对路径：和 index.html 同目录 */
+//            name: "Suicide",
+//            pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-14 决定 */
+//            autoplay: false,                /* ★ 由开关控制，不自己播 */
+//            loop: false,                    /* ★ 不循环：播到头 / 退到头就停 */
+//            /* ★ 跟着 text-17 的【淡入区间】一起淡入（它的 A → H） */
+//            start: { from: ".text-12", mark: "A" },
+//            /* ★ 跟着 text-18 的【淡出区间】一起消失（它的 B → E），倒放时对称亮回来 */
+//            fadeOut: ".text-12",
+//            /* ★★ 开关按钮（3.css 的 .bug-icon-14 .bug-toggle 调样式 / 位置）★★
+//               end = 视频【画面】真正结束的时刻（不是容器时长）：
+//                     这个 webm 的容器时长 2.51s，但画面在 1.545s 就结束了
+//                     （后面是静音的音频尾巴，视频流只有 86 帧 / 60fps）。
+//                     ★ 换素材后必须重新量一次，否则正放会在中途停住（看起来“只播了一半”）。
+//                       量法：ffmpeg -hide_banner -i xxx.webm -map 0:v:0 -f null -
+//                       看最后一行 time=…，或看 showinfo 里最后一帧的 pts_time。
+//                     写 0 或删掉 = 用容器时长（video.duration）：动画一定能放完，
+//                     只是最后会在静止的最后一帧上多等约 1 秒，倒放时也会先空转一会儿。
+//               label = 按钮【上方】那行说明文字（现在是 "Kill Switch"）。
+//                       字形 / 颜色跟正文一样，位置 / 字号在 3.css 的
+//                       .bug-icon-14 .bug-toggle-label 里调；不想显示就删掉这一项。 */
+//            toggle: { end: 1.55, label: "Kill Switch" }
+//        },
+
+        /* ---- 图标 14（platform.avif）—— ★ 静态图片版 ★
+           跟着 text-12 一起淡入 / 一起淡出（原来那段视频 + 开关已注释在上面）：
+             · start   = text-12 的【淡入起点】（A）；淡入时长默认就取 text-12 的淡入窗口，
+                         曲线也是 1.js 画文字用的那条 easeOut —— 所以是同步亮起来的；
+             · fadeOut = ".text-12" → 在 text-12 的【淡出区间】（它的 B → E）里一起暗下去，
+                         text-12 完全消失时它正好也没了；往上滑倒放时会对称地亮回来；
+             · fadeOutEase: true → 淡出也用文字那条曲线（1 - easeOut(t)），
+                         不是图标默认的线性 —— 不加的话最后一段它会比文字亮一点，
+                         看起来像“文字先没了、图还挂着”。
+           ★ 位置 / 大小在 3.css 的 .bug-icon-14 里改（left / top / --icon-height），
+             这一条配置不用再碰。
+           ★ 它是一张 .avif 图片，所以不需要 autoplay / loop 那些视频开关。 */
         {
             cls: "bug-icon-14",
             host: ".text-12",
-            src: "./suicide.webm",                   /* ★ 相对路径：和 index.html 同目录 */
-            name: "Suicide",
+            src: "https://static.igem.wiki/teams/6059/wiki/home/platform.avif",
+            name: "Platform",
             pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-14 决定 */
-            autoplay: false,                /* ★ 由开关控制，不自己播 */
-            loop: false,                    /* ★ 不循环：播到头 / 退到头就停 */
-            /* ★ 跟着 text-17 的【淡入区间】一起淡入（它的 A → H） */
+            /* ★ 跟着 text-12 的【淡入区间】一起淡入（它的 A → H） */
             start: { from: ".text-12", mark: "A" },
-            /* ★ 跟着 text-18 的【淡出区间】一起消失（它的 B → E），倒放时对称亮回来 */
+            /* ★ 跟着 text-12 的【淡出区间】一起消失（它的 B → E），倒放时对称亮回来 */
             fadeOut: ".text-12",
-            /* ★★ 开关按钮（3.css 的 .bug-icon-14 .bug-toggle 调样式 / 位置）★★
-               end = 视频【画面】真正结束的时刻（不是容器时长）：
-                     这个 webm 的容器时长 2.51s，但画面在 1.545s 就结束了
-                     （后面是静音的音频尾巴，视频流只有 86 帧 / 60fps）。
-                     ★ 换素材后必须重新量一次，否则正放会在中途停住（看起来“只播了一半”）。
-                       量法：ffmpeg -hide_banner -i xxx.webm -map 0:v:0 -f null -
-                       看最后一行 time=…，或看 showinfo 里最后一帧的 pts_time。
-                     写 0 或删掉 = 用容器时长（video.duration）：动画一定能放完，
-                     只是最后会在静止的最后一帧上多等约 1 秒，倒放时也会先空转一会儿。
-               label = 按钮【上方】那行说明文字（现在是 "Kill Switch"）。
-                       字形 / 颜色跟正文一样，位置 / 字号在 3.css 的
-                       .bug-icon-14 .bug-toggle-label 里调；不想显示就删掉这一项。 */
-            toggle: { end: 1.55, label: "Kill Switch" }
+            /* ★ 淡出也用文字那条曲线，和 text-12 逐帧一致（见上面说明） */
+            fadeOutEase: true
         },
 
         /* ---- 图标 15（understand-1.avif）—— text-20 淡入时出现，跟 text-20 一起淡出 ----
@@ -526,7 +570,7 @@
        写了 fadeOut 的各自认自己的宿主：图标 1 / 3 / 4 跟 .text-5（三只一起退场）、
        图标 5 / 6 / 7 跟 .text-2、图标 8 跟 .text-9、图标 9 跟 .text-7、
        图标 10 跟 .text-10、图标 11 跟 .text-10、
-       图标 14 跟 .text-18、图标 15 / 16 / 17 / 18 跟 .text-21、
+       图标 14（现在是静态图 platform.avif）跟 .text-12、图标 15 / 16 / 17 / 18 跟 .text-21、
        图标 19 跟 .text-16、图标 20 跟 .text-14、图标 21 跟 .text-19、
        图标 22 跟 .text-19、图标 23 跟 .text-11、图标 24 跟 .text-23
        （图标 12 / 13 已删除，不再有它们的事） */
@@ -781,7 +825,9 @@
             slot.appendChild(label);
         }
 
-        /* ★ 图标 14 的开关按钮（ICONS 里写了 toggle 才有）：
+        /* ★ 开关按钮（ICONS 里写了 toggle 才会有）：
+           ★★ 现在【没有任何图标写 toggle】：ico14 已经换成静态图（见上面的注释），
+              所以下面这一段永远不执行、也不会生成任何节点 —— 留着只是为了恢复方便。
            建在【同一个 slot】里，用 CSS 的 left:100% 挂到视频右边 ——
            所以视频挪到哪儿、放大缩小，它都跟着走（位置 / 样式都在 3.css 的
            .bug-icon-14 .bug-toggle 里调）。
