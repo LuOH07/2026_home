@@ -506,7 +506,7 @@
         {
             cls: "bug-icon-24",
             host: ".text-23",
-            src: "./End.webm",                       /* ★ 相对路径：和 index.html 同目录 */
+            src: "./end.webm",                       /* ★ 相对路径：和 index.html 同目录 */
             name: "End",
             pin: true,                      /* ★ 不飘动：位置由 3.css 的 .bug-icon-24 决定 */
             autoplay: false,                /* ★ 亮起来才播（不然进页面就播完了） */
