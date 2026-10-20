@@ -41,11 +41,21 @@
         只改 1.js 的"输入 → 进度"倍率，时间轴（每段文字的时长、视频播放）不动；
         断点切回桌面时自动设回 1，PC 手感一个像素都不变。
 
+     6. 滚动位置取整（第 3 节③，修"标题视频滚动时上下抖 / 露黑底"）
+        1.js 每帧 scrollTo 的是平滑插值出来的【小数】位置。手机上带着一整页底图，
+        小数偏移会让浏览器每帧按新的亚像素位置重新栅格化；标题视频又是单独一层，
+        于是它和页面差半像素 —— 滚动时看起来在抖，边上还会露出黑底。
+        这里把 top 四舍五入成整像素（配合 5.css 第 7 节③ 给视频容器提层），
+        只抹掉小数（最多 0.5px），滚动映射 / 时间轴 / 冻结区一点都不动；
+        宽屏（PC）原样转给浏览器，一个像素都不改。
+
    ★ 断点必须和 5.css 顶部那条媒体查询一模一样（改要一起改）：
      分界线是【屏幕宽 : 高 = 1 : 1】—— 宽 ≤ 高 = 窄屏走移动端，宽 > 高 = 宽屏走 PC 端。
      所以这里用 (max-aspect-ratio: 1/1)，和像素宽度无关。
    ★ 想调"整页多长 / 再接几张底图"：只改下面的 TARGET_SCROLL。
    ★ 想调手机上的滚动快慢：改下面的 MOBILE_INPUT_SPEED（1 = 和 PC 一样快）。
+   ★ 手机滚动还有"抖 / 黑底"想试试别的：把下面的 SNAP_SCROLL_TO_PX 改成 false
+     （只关掉取整，5.css 里给视频容器提层的那几行仍然有效）。
    ========================================================================== */
 
 (function () {
@@ -68,6 +78,12 @@
          每段文字的淡入淡出 / 视频播放还是原来那套，只是滑同样的距离走得更远。
        ★ 切回桌面断点时自动设回 1（见 applyInputSpeed），PC 手感一个像素都不变。 */
     var MOBILE_INPUT_SPEED = 5;
+
+    /* 窄屏上把"页面滚动位置"取整到整像素（见第 3 节③）。
+       1.js 每帧 scrollTo 的是小数，取整只抹掉小数（最多差 0.5px）；
+       视频滚动时抖 / 露黑底就是"小数位置 + 视频单独一层"造成的。
+       ★ 想回到原来的行为：改成 false（只关取整，5.css 里给视频容器提层的那几行仍然生效）。 */
+    var SNAP_SCROLL_TO_PX = true;
 
     /* 底图原始尺寸（和 1.js 的 updateBodyHeight / 2.css 的 --map-w 一致：
        map-5.avif 是 803 × 4000）。用来算"底图在当前屏宽下有多高"。 */
@@ -230,7 +246,8 @@
 
     /* ======================= 3. 窄屏专属的两件事 =======================
        ① 标题视频竖直居中（样式全在 5.css 第 0/7 节，本文件只负责把这块留白量出来）
-       ② 滚动快 5 倍（只改“输入 → 进度”，时间轴不动） */
+       ② 滚动快 5 倍（只改“输入 → 进度”，时间轴不动）
+       ③ 滚动位置取整（只把小数抹掉，修"标题视频滚动时上下抖 / 露黑底"） */
 
     /* ---- ① 标题视频竖直居中：把上面那块留白量出来 ----
        5.css 第 0 / 7 节已经用纯 CSS 摆好位置了（不用等 JS，也不会和 1.js 抢）：
@@ -265,6 +282,47 @@
         if (home.inputScale === want) return false;
         home.setInputScale(want);
         return true;
+    }
+
+    /* ---- ③ 滚动位置取整（只在窄屏）----
+       1.js 的 tick 每帧写的是平滑插值出来的【小数】位置（例如 1234.37px），
+       浏览器就按亚像素平移整页：底图 / 文字没事，但 <video> 是单独一层，
+       它按设备像素吸附，于是和文档差半个像素 —— 滚动时就是"视频在抖"，
+       抖动时它那一层没盖住的边露出黑底（原因详见 5.css 第 7 节③）。
+       这里把 scrollTo 的 top 四舍五入到整像素：
+         · 只抹掉小数（差 ≤ 0.5px），滚动映射 / 时间轴 / 冻结区 / 输入倍率都不动；
+         · 整像素位置浏览器可以直接复用刚画好的那一帧，视频那一层不再每帧重吸附；
+         · 宽屏（PC）直接把参数原样转给浏览器 —— PC 的滚动位置一个像素都不改。
+       ★ 想关掉：把上面 SNAP_SCROLL_TO_PX 改成 false。 */
+    function installScrollSnap() {
+        var nativeScrollTo = window.scrollTo;
+        if (!nativeScrollTo || nativeScrollTo.__m5snap) return;
+
+        function snapPx(v) {
+            var n = Number(v);
+            return isFinite(n) ? Math.round(n) : v;
+        }
+
+        function snapped(a, b) {
+            /* 宽屏 / 关掉开关：原样转给浏览器 */
+            if (!isMobile() || !SNAP_SCROLL_TO_PX) return nativeScrollTo.apply(window, arguments);
+
+            /* 1.js 用的是 scrollTo({ left, top, behavior }) 这种对象写法 */
+            if (arguments.length === 1 && a && typeof a === "object") {
+                var opt = { top: snapPx(a.top) };
+                if (a.left !== undefined) opt.left = a.left;
+                if (a.behavior) opt.behavior = a.behavior;
+                return nativeScrollTo.call(window, opt);
+            }
+
+            /* 老写法 scrollTo(x, y) */
+            if (arguments.length >= 2) return nativeScrollTo.call(window, a, snapPx(b));
+
+            return nativeScrollTo.apply(window, arguments);
+        }
+
+        snapped.__m5snap = true;
+        window.scrollTo = snapped;
     }
 
     /* ======================= 4. 把 22 段文字"摊开"到整页行程上 =======================
@@ -420,9 +478,12 @@
     }
 
     /* 初始化：脚本在 body 末尾执行，body / 宝剑容器（1.js 建的）、__home 都已经在了。
+       ★ 先装"滚动位置取整"（第 3 节③）：1.js 的 tick 是 rAF 里才第一次 scrollTo，
+         这里比它早，所以能把它之后每一帧的滚动都接管掉。
        这一轮只写"第一版"（标题留白 + 接续底图的长度 + 底图地址 + 5 倍速 + 文字 top），
        1.js 第一遍 layout 就会按它排；真正的校正交给 waitForHome / load。 */
     ensureStylesheet();
+    installScrollSnap();
     apply(false);
 
     /* 窗口尺寸变了（含手机横竖屏切换）：重算接续长度 + 重排 */

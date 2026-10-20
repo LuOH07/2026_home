@@ -411,10 +411,40 @@
             ★ 5.js 只读这个值（量视频实际位置算页尾要接多长），不往回写。
        ★ ② 尺寸：视频是"宽度 100% + 16:9"，本来就随屏幕缩放，不用改；
             只把左下角的播放三角、右下角的"向下滑"箭头保持在手指能点的大小
-            （它们本身已经是 vw 单位，这里给个 px 下限）。 */
+            （它们本身已经是 vw 单位，这里给个 px 下限）。
+       ★ ③ 滚动时不再"上下抖 / 露黑底"（手机上最常见的两个毛病，一起治）
+            症状：手指往下滑的时候，标题视频自己在上下抖（跟页面不同步），
+                  抖的时候视频边上露出一条黑底。
+            原因：手机浏览器（iOS Safari 最明显）会把 <video> 当成一个【独立播放层】，
+                  滚动时它不跟文档逐帧一起走：会按整数像素吸附、或者晚一帧，
+                  于是相对页面上下错位；它自己那一层没盖住的边就是黑的。
+            做法（全部只在窄屏生效）：
+              · 给【容器】强制提成普通合成层（translateZ(0)）：视频成了这层里的
+                普通内容，跟着文档用同一个矩阵一起平移，不再自己单独吸附；
+              · backface-visibility: hidden —— 老 iOS 上避免它被拆成两层（抖就是两层不同步）；
+              · 视频自己的底色再钉一次白（还没解出画面时别画黑）；
+              · 容器最外圈画 1px 白线（outline 不进布局）：万一还差半像素，
+                露出来的也是白边，不会露出黑底。
+            ★ 只作用在容器上，不动 <video> 自己的 transform：iOS 上给视频加
+              transform / will-change 反而有过"视频变黑块"的老毛病，这里不碰它。
+            ★ 1.js 的 offsetTop / offsetHeight 量的是布局，不受 transform 影响。 */
     .top-video-wrap {
         top: var(--m5-title-top, 0px) !important;   /* = (100vh − 视频高) ÷ 2，桌面恒为 0 */
+
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        /* 半像素的缝也只露白：最外圈 1px 白线 */
+        outline: 1px solid #fff;
+        outline-offset: -1px;
     }
+
+    /* 视频本体：只把底色钉成白（浏览器还没解出画面时别画黑），不加 transform */
+    .top-video-media {
+        background-color: #fff;
+    }
+
     .top-video-play {
         --play-h: max(34px, 6.4vw);
     }
